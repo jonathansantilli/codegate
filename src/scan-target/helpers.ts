@@ -56,6 +56,10 @@ export function sanitizePathSegment(value: string): string {
   return sanitized.length > 0 ? sanitized : "artifact";
 }
 
+function normalizeReportPath(value: string): string {
+  return value.replaceAll("\\", "/");
+}
+
 export function preserveTailSegments(pathname: string, count: number): string {
   const segments = pathname
     .split(/[\\/]+/u)
@@ -64,7 +68,7 @@ export function preserveTailSegments(pathname: string, count: number): string {
   if (segments.length === 0) {
     return "artifact";
   }
-  return join(...segments.slice(-count));
+  return normalizeReportPath(join(...segments.slice(-count)));
 }
 
 export function inferLocalFileStagePath(absolutePath: string): string {
@@ -72,7 +76,7 @@ export function inferLocalFileStagePath(absolutePath: string): string {
   const lower = fileName.toLowerCase();
 
   if (lower === "product.json") {
-    return join(".kiro", "product.json");
+    return normalizeReportPath(join(".kiro", "product.json"));
   }
 
   if (
@@ -84,7 +88,7 @@ export function inferLocalFileStagePath(absolutePath: string): string {
     return preserveTailSegments(absolutePath, 2);
   }
 
-  return fileName;
+  return normalizeReportPath(fileName);
 }
 
 export function inferRemoteFileStagePath(url: URL): string {
@@ -92,7 +96,7 @@ export function inferRemoteFileStagePath(url: URL): string {
   const lower = fileName.toLowerCase();
 
   if (lower === "product.json") {
-    return join(".kiro", "product.json");
+    return normalizeReportPath(join(".kiro", "product.json"));
   }
 
   if (
@@ -104,7 +108,7 @@ export function inferRemoteFileStagePath(url: URL): string {
     return preserveTailSegments(url.pathname, 3);
   }
 
-  return sanitizePathSegment(fileName);
+  return normalizeReportPath(sanitizePathSegment(fileName));
 }
 
 export function inferRemoteCandidateFormat(
