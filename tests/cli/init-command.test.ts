@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createCli, type CliDeps } from "../../src/cli";
 import type { CodeGateConfig } from "../../src/config";
@@ -57,12 +58,14 @@ function makeDeps(overrides: Partial<CliDeps>): CliDeps {
 
 describe("init command", () => {
   it("writes default config to ~/.codegate/config.json", async () => {
+    const home = "/tmp/codegate-home";
     let exitCode = -1;
     let writtenPath = "";
     let content = "";
     const cli = createCli(
       "0.2.2",
       makeDeps({
+        homeDir: () => home,
         writeFile: (path, value) => {
           writtenPath = path;
           content = value;
@@ -74,7 +77,7 @@ describe("init command", () => {
     );
 
     await cli.parseAsync(["node", "codegate", "init"]);
-    expect(writtenPath).toBe("/tmp/codegate-home/.codegate/config.json");
+    expect(writtenPath).toBe(resolve(home, ".codegate", "config.json"));
     expect(content).toContain('"severity_threshold"');
     expect(content).toContain('"scan_state_path"');
     expect(exitCode).toBe(0);

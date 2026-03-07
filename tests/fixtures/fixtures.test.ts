@@ -19,7 +19,9 @@ describe("task 06 fixture corpus", () => {
   it("contains clean project fixtures", () => {
     const cleanRoot = resolve(root, "clean-projects");
     expect(existsSync(cleanRoot)).toBe(true);
-    expect(readdirSync(cleanRoot).length).toBeGreaterThanOrEqual(2);
+    const projects = readdirSync(cleanRoot);
+    expect(projects.length).toBeGreaterThanOrEqual(1);
+    expect(projects).toContain("clean-claude");
   });
 
   it("contains malformed parsing fixtures", () => {

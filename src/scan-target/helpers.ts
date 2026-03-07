@@ -58,7 +58,7 @@ export function sanitizePathSegment(value: string): string {
 
 export function preserveTailSegments(pathname: string, count: number): string {
   const segments = pathname
-    .split("/")
+    .split(/[\\/]+/u)
     .filter((segment) => segment.length > 0)
     .map((segment) => sanitizePathSegment(segment));
   if (segments.length === 0) {

@@ -8,6 +8,7 @@ import {
   inferToolFromReportPath,
   isLikelyGitRepoUrl,
   parseGitHubFileSource,
+  preserveTailSegments,
   shouldStageContainingFolder,
 } from "../src/scan-target/helpers";
 
@@ -61,6 +62,12 @@ describe("scan target helpers", () => {
     expect(shouldStageContainingFolder("/tmp/repo/skills/demo/SKILL.md")).toBe(true);
     expect(shouldStageContainingFolder("/tmp/repo/.cursor/rules/review.mdc")).toBe(true);
     expect(shouldStageContainingFolder("/tmp/repo/README.md")).toBe(false);
+  });
+
+  it("preserves trailing path segments for Windows-style paths", () => {
+    expect(
+      preserveTailSegments("D:\\tmp\\repo\\skills\\security-review", 2).replaceAll("\\", "/"),
+    ).toBe("skills/security-review");
   });
 
   it("infers formats and tools for explicit artifact candidates", () => {

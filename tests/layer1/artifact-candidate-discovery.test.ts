@@ -9,6 +9,7 @@ import {
   createScanDiscoveryContext,
 } from "../../src/scan";
 import { resolveScanTarget } from "../../src/scan-target";
+import { normalizeSlashes } from "../helpers/path";
 
 const BASE_CONFIG: CodeGateConfig = {
   severity_threshold: "high",
@@ -59,7 +60,7 @@ describe("artifact candidate discovery", () => {
       report.findings.some(
         (finding) =>
           finding.rule_id === "rule-file-remote-shell" &&
-          finding.file_path === "skills/security-review/SKILL.md",
+          normalizeSlashes(finding.file_path) === "skills/security-review/SKILL.md",
       ),
     ).toBe(true);
   });
@@ -111,7 +112,7 @@ describe("artifact candidate discovery", () => {
       report.findings.some(
         (finding) =>
           finding.rule_id === "plugin-manifest-insecure-source-url" &&
-          finding.file_path === "manifests/plugins.json",
+          normalizeSlashes(finding.file_path) === "manifests/plugins.json",
       ),
     ).toBe(true);
   });
@@ -151,7 +152,7 @@ describe("artifact candidate discovery", () => {
       report.findings.some(
         (finding) =>
           finding.rule_id === "rule-file-remote-shell" &&
-          finding.file_path === "skills/security-review/nested/payload.txt",
+          normalizeSlashes(finding.file_path) === "skills/security-review/nested/payload.txt",
       ),
     ).toBe(true);
   });
