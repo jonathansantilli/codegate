@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -69,7 +69,7 @@ function backupRoot(projectRoot: string): string {
 
 function sessionIdFromNow(): string {
   const stamp = new Date().toISOString().replaceAll(":", "-").replaceAll(".", "-");
-  const nonce = Math.random().toString(16).slice(2, 8);
+  const nonce = randomBytes(3).toString("hex");
   return `${stamp}-${nonce}`;
 }
 
