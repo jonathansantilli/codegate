@@ -582,11 +582,14 @@ function isLikelyGitSource(value: string, parsedUrl: URL | null): boolean {
   if (!parsedUrl) {
     return false;
   }
-  return (
-    parsedUrl.hostname.endsWith("github.com") ||
-    parsedUrl.hostname.endsWith("gitlab.com") ||
-    parsedUrl.hostname.endsWith("bitbucket.org")
-  );
+  const host = parsedUrl.hostname.toLowerCase();
+  const isGithub =
+    host === "github.com" || host.endsWith(".github.com");
+  const isGitlab =
+    host === "gitlab.com" || host.endsWith(".gitlab.com");
+  const isBitbucket =
+    host === "bitbucket.org" || host.endsWith(".bitbucket.org");
+  return isGithub || isGitlab || isBitbucket;
 }
 
 function hasPinnedGitCommit(value: string, parsedUrl: URL | null): boolean {
