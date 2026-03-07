@@ -48,7 +48,7 @@ function defaultDeps(): ResourceFetcherDeps {
 function endpointFor(request: ResourceRequest): string {
   if (request.kind === "npm") {
     const pkg = request.locator.startsWith("@")
-      ? request.locator.replace("/", "%2f")
+      ? request.locator.replace(/\//g, "%2f")
       : request.locator;
     return `https://registry.npmjs.org/${pkg}`;
   }

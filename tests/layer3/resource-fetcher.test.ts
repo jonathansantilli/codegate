@@ -32,6 +32,25 @@ describe("task 25 resource fetcher", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("encodes every slash in scoped npm locators before fetching registry metadata", async () => {
+    const fetch = vi.fn(async () => {
+      return new Response(JSON.stringify({ name: "@org/pkg", version: "1.0.0" }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    });
+
+    await fetchResourceMetadata(
+      { id: "npm:@org/pkg/nested", kind: "npm", locator: "@org/pkg/nested" },
+      depsWithFetch(fetch),
+    );
+
+    expect(fetch).toHaveBeenCalledWith(
+      "https://registry.npmjs.org/@org%2fpkg%2fnested",
+      expect.any(Object),
+    );
+  });
+
   it("returns auth_failure for 401/403 responses without retry loop", async () => {
     const fetch = vi.fn(async () => {
       return new Response("unauthorized", { status: 401 });
