@@ -13,7 +13,7 @@
 Please report vulnerabilities privately first.
 
 1. Do not open a public GitHub issue.
-2. Email: `security@codegate.dev` with:
+2. Email: `jonathansantilli@gmail.com` with:
    - affected version
    - reproduction steps
    - impact assessment
