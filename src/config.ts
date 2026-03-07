@@ -108,7 +108,10 @@ export const DEFAULT_CONFIG: CodeGateConfig = {
   },
   trusted_directories: [],
   blocked_commands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
-  known_safe_mcp_servers: ["@anthropic/mcp-server-filesystem", "@modelcontextprotocol/server-github"],
+  known_safe_mcp_servers: [
+    "@anthropic/mcp-server-filesystem",
+    "@modelcontextprotocol/server-github",
+  ],
   known_safe_formatters: ["prettier", "black", "gofmt", "rustfmt", "clang-format"],
   known_safe_lsp_servers: ["typescript-language-server", "pyright", "rust-analyzer", "gopls"],
   known_safe_hooks: [],
@@ -225,16 +228,19 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
         normalizeOptionalPath(DEFAULT_CONFIG.scan_state_path),
       ) ?? undefined,
     scan_user_scope:
-      pickFirst(projectConfig.scan_user_scope, globalConfig.scan_user_scope, DEFAULT_CONFIG.scan_user_scope) ??
-      DEFAULT_CONFIG.scan_user_scope,
+      pickFirst(
+        projectConfig.scan_user_scope,
+        globalConfig.scan_user_scope,
+        DEFAULT_CONFIG.scan_user_scope,
+      ) ?? DEFAULT_CONFIG.scan_user_scope,
     tui: {
       enabled: options.cli?.noTui
         ? false
-        : pickFirst(
+        : (pickFirst(
             projectConfig.tui?.enabled,
             globalConfig.tui?.enabled,
             DEFAULT_CONFIG.tui.enabled,
-          ) ?? DEFAULT_CONFIG.tui.enabled,
+          ) ?? DEFAULT_CONFIG.tui.enabled),
       colour_scheme:
         pickFirst(
           projectConfig.tui?.colour_scheme,
@@ -309,8 +315,11 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
         DEFAULT_CONFIG.check_ide_settings,
       ) ?? DEFAULT_CONFIG.check_ide_settings,
     owasp_mapping:
-      pickFirst(projectConfig.owasp_mapping, globalConfig.owasp_mapping, DEFAULT_CONFIG.owasp_mapping) ??
-      DEFAULT_CONFIG.owasp_mapping,
+      pickFirst(
+        projectConfig.owasp_mapping,
+        globalConfig.owasp_mapping,
+        DEFAULT_CONFIG.owasp_mapping,
+      ) ?? DEFAULT_CONFIG.owasp_mapping,
     trusted_api_domains: unique([
       DEFAULT_CONFIG.trusted_api_domains,
       globalConfig.trusted_api_domains,

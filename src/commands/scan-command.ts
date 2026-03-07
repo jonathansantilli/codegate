@@ -12,7 +12,10 @@ import {
   buildPromptEvidenceText,
   supportsToollessLocalTextAnalysis,
 } from "../layer3-dynamic/local-text-analysis.js";
-import { buildLocalTextAnalysisPrompt, buildSecurityAnalysisPrompt } from "../layer3-dynamic/meta-agent.js";
+import {
+  buildLocalTextAnalysisPrompt,
+  buildSecurityAnalysisPrompt,
+} from "../layer3-dynamic/meta-agent.js";
 import type { ResourceFetchResult } from "../layer3-dynamic/resource-fetcher.js";
 import {
   layer3OutcomesToFindings,
@@ -22,7 +25,10 @@ import {
 } from "../pipeline.js";
 import type { ScanDiscoveryCandidate, ScanDiscoveryContext } from "../scan.js";
 import type { CodeGateReport } from "../types/report.js";
-import type { RemediationRunnerInput, RemediationRunnerResult } from "../layer4-remediation/remediation-runner.js";
+import type {
+  RemediationRunnerInput,
+  RemediationRunnerResult,
+} from "../layer4-remediation/remediation-runner.js";
 import {
   mergeMetaAgentMetadata,
   metadataSummary,
@@ -125,9 +131,7 @@ export interface ExecuteScanCommandDeps {
   runMetaAgentCommand?: (
     context: MetaAgentCommandConsentContext,
   ) => Promise<MetaAgentCommandRunResult> | MetaAgentCommandRunResult;
-  requestRemediationConsent?: (
-    context: RemediationConsentContext,
-  ) => Promise<boolean> | boolean;
+  requestRemediationConsent?: (context: RemediationConsentContext) => Promise<boolean> | boolean;
   executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
   runRemediation?: (
     input: RemediationRunnerInput,
@@ -136,7 +140,11 @@ export interface ExecuteScanCommandDeps {
   stderr: (message: string) => void;
   writeFile: (path: string, content: string) => void;
   setExitCode: (code: number) => void;
-  renderTui?: (props: { view: "dashboard" | "summary"; report: CodeGateReport; notices?: string[] }) => void;
+  renderTui?: (props: {
+    view: "dashboard" | "summary";
+    report: CodeGateReport;
+    notices?: string[];
+  }) => void;
 }
 
 function toMetaAgentPreference(value: string): DeepAgentOption["id"] | null {
@@ -155,7 +163,9 @@ function toMetaAgentPreference(value: string): DeepAgentOption["id"] | null {
 
 function deepAgentOptions(report: CodeGateReport, config: CodeGateConfig): DeepAgentOption[] {
   const detected = new Set(report.tools_detected);
-  const skipTools = new Set(config.tool_discovery.skip_tools.map((tool) => tool.trim().toLowerCase()));
+  const skipTools = new Set(
+    config.tool_discovery.skip_tools.map((tool) => tool.trim().toLowerCase()),
+  );
   const preferred = toMetaAgentPreference(config.tool_discovery.preferred_agent);
   const candidates: DeepAgentOption[] = [];
 
@@ -238,7 +248,11 @@ export async function executeScanCommand(
       const discoverResources = deps.discoverDeepResources ?? (async () => []);
       const discoverLocalTextTargets = deps.discoverLocalTextTargets ?? (async () => []);
       const resources = await discoverResources(input.scanTarget, input.config, discoveryContext);
-      const localTextTargets = await discoverLocalTextTargets(input.scanTarget, input.config, discoveryContext);
+      const localTextTargets = await discoverLocalTextTargets(
+        input.scanTarget,
+        input.config,
+        discoveryContext,
+      );
       const optionsForAgent = deepAgentOptions(report, input.config);
       let selectedAgent: DeepAgentOption | null = null;
 
@@ -254,9 +268,13 @@ export async function executeScanCommand(
         deepScanNotes.push(...noEligibleDeepResourceNotes());
       } else {
         if (selectedAgent) {
-          deepScanNotes.push(`Deep scan meta-agent selected: ${selectedAgent.label} (${selectedAgent.binary})`);
+          deepScanNotes.push(
+            `Deep scan meta-agent selected: ${selectedAgent.label} (${selectedAgent.binary})`,
+          );
         } else if (optionsForAgent.length > 0) {
-          deepScanNotes.push("Deep scan meta-agent skipped. Running deterministic Layer 3 checks only.");
+          deepScanNotes.push(
+            "Deep scan meta-agent skipped. Running deterministic Layer 3 checks only.",
+          );
         } else {
           deepScanNotes.push(
             "No supported deep-scan agent detected (Claude Code, Codex CLI, or OpenCode). Running deterministic Layer 3 checks only.",
@@ -380,14 +398,18 @@ export async function executeScanCommand(
               );
             } else {
               const suffix = executedMetaAgentCommands === 1 ? "" : "s";
-              deepScanNotes.push(`Deep scan meta-agent executed for ${executedMetaAgentCommands} resource${suffix}.`);
+              deepScanNotes.push(
+                `Deep scan meta-agent executed for ${executedMetaAgentCommands} resource${suffix}.`,
+              );
             }
           }
         }
 
         if (localTextTargets.length > 0) {
           if (!selectedAgent) {
-            deepScanNotes.push("Local instruction-file analysis skipped because no meta-agent was selected.");
+            deepScanNotes.push(
+              "Local instruction-file analysis skipped because no meta-agent was selected.",
+            );
           } else if (!supportsToollessLocalTextAnalysis(selectedAgent.metaTool)) {
             deepScanNotes.push(
               "Local instruction-file analysis was skipped because the selected agent does not support tool-less analysis.",
@@ -398,7 +420,9 @@ export async function executeScanCommand(
               throw new Error("Meta-agent command runner not configured");
             }
 
-            const isolatedWorkingDirectory = mkdtempSync(join(tmpdir(), "codegate-local-analysis-"));
+            const isolatedWorkingDirectory = mkdtempSync(
+              join(tmpdir(), "codegate-local-analysis-"),
+            );
             let executedLocalAnalyses = 0;
             try {
               for (const target of localTextTargets) {
@@ -472,7 +496,10 @@ export async function executeScanCommand(
 
     report = applyConfigPolicy(report, input.config);
     const remediationRequested =
-      input.options.remediate || input.options.fixSafe || input.options.dryRun || input.options.patch;
+      input.options.remediate ||
+      input.options.fixSafe ||
+      input.options.dryRun ||
+      input.options.patch;
     let remediationResult: RemediationRunnerResult | null = null;
 
     const executeRemediation = async (): Promise<void> => {
@@ -569,7 +596,9 @@ export async function executeScanCommand(
           deps.stdout(note);
         }
       }
-      const rendered = renderByFormat(input.config.output_format, report, { verbose: input.options.verbose });
+      const rendered = renderByFormat(input.config.output_format, report, {
+        verbose: input.options.verbose,
+      });
       if (input.options.output) {
         deps.writeFile(resolve(input.cwd, input.options.output), rendered);
       } else {

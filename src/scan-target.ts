@@ -10,7 +10,9 @@ export type {
   ResolveScanTargetInput,
 } from "./scan-target/types.js";
 
-export async function resolveScanTarget(input: ResolveScanTargetInput): Promise<ResolvedScanTarget> {
+export async function resolveScanTarget(
+  input: ResolveScanTargetInput,
+): Promise<ResolvedScanTarget> {
   const localPath = resolve(input.cwd, input.rawTarget);
   if (existsSync(localPath)) {
     const targetStat = statSync(localPath);

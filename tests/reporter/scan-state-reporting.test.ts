@@ -61,7 +61,10 @@ function buildReport(): CodeGateReport {
 describe("task 31 scan-state reporting", () => {
   it("preserves scan-state categories in json output", () => {
     const parsed = JSON.parse(renderJsonReport(buildReport())) as CodeGateReport;
-    expect(parsed.findings.map((finding) => finding.category)).toEqual(["NEW_SERVER", "CONFIG_CHANGE"]);
+    expect(parsed.findings.map((finding) => finding.category)).toEqual([
+      "NEW_SERVER",
+      "CONFIG_CHANGE",
+    ]);
   });
 
   it("preserves scan-state categories and fingerprints in sarif output", () => {
@@ -77,8 +80,9 @@ describe("task 31 scan-state reporting", () => {
 
     expect(categories).toEqual(["NEW_SERVER", "CONFIG_CHANGE"]);
     expect(findingIds).toEqual(["NEW_SERVER-@org/mcp-a", "CONFIG_CHANGE-@org/mcp-b"]);
-    expect(
-      sarif.runs[0]?.tool.driver.rules.map((rule) => rule.properties.category),
-    ).toEqual(["NEW_SERVER", "CONFIG_CHANGE"]);
+    expect(sarif.runs[0]?.tool.driver.rules.map((rule) => rule.properties.category)).toEqual([
+      "NEW_SERVER",
+      "CONFIG_CHANGE",
+    ]);
   });
 });

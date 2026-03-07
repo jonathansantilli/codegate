@@ -24,9 +24,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-insecure-source-url")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-insecure-source-url"),
+    ).toBe(true);
   });
 
   it("flags insecure Kiro extension-registry URLs from product manifest fields", () => {
@@ -49,9 +49,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-insecure-source-url")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-insecure-source-url"),
+    ).toBe(true);
   });
 
   it("does not flag trusted Kiro extension-registry URLs", () => {
@@ -74,12 +74,12 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-insecure-source-url")).toBe(
-      false,
-    );
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-source-url")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-insecure-source-url"),
+    ).toBe(false);
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-source-url"),
+    ).toBe(false);
   });
 
   it("flags non-allowlisted Kiro extension-registry URLs", () => {
@@ -103,7 +103,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-nonallowlisted-extension-registry"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-nonallowlisted-extension-registry",
+      ),
     ).toBe(true);
   });
 
@@ -128,7 +130,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-nonallowlisted-extension-registry"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-nonallowlisted-extension-registry",
+      ),
     ).toBe(false);
   });
 
@@ -138,7 +142,8 @@ describe("plugin manifest detector", () => {
         extensionsGallery: {
           serviceUrl: "https://open-vsx.org/vscode/gallery",
           itemUrl: "https://marketplace.visualstudio.com/items",
-          resourceUrlTemplate: "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
+          resourceUrlTemplate:
+            "https://open-vsx.org/vscode/unpkg/{publisher}/{name}/{version}/{path}",
         },
       },
       null,
@@ -154,7 +159,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-extension-registry-host-mismatch"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-extension-registry-host-mismatch",
+      ),
     ).toBe(true);
   });
 
@@ -179,9 +186,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-publisher-trust-bypass")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-publisher-trust-bypass"),
+    ).toBe(true);
   });
 
   it("flags suspicious install scripts in plugin manifests", () => {
@@ -258,9 +265,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-cross-marketplace-source")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-cross-marketplace-source"),
+    ).toBe(true);
   });
 
   it("does not flag tool-native Roo marketplace source domains", () => {
@@ -285,12 +292,12 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-cross-marketplace-source")).toBe(
-      false,
-    );
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-source-url")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-cross-marketplace-source"),
+    ).toBe(false);
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-source-url"),
+    ).toBe(false);
   });
 
   it("allows trusted domain override for cross-marketplace source domains", () => {
@@ -315,9 +322,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-cross-marketplace-source")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-cross-marketplace-source"),
+    ).toBe(false);
   });
 
   it("flags Roo marketplace entries missing provenance material", () => {
@@ -342,9 +349,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      true,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(true);
   });
 
   it("does not flag Roo marketplace entries with integrity metadata", () => {
@@ -370,9 +379,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      false,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(false);
   });
 
   it("does not flag Roo marketplace entries with attestation metadata", () => {
@@ -402,9 +413,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      false,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(false);
   });
 
   it("flags OpenCode marketplace entries missing provenance material", () => {
@@ -429,9 +442,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      true,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(true);
   });
 
   it("flags Claude SDK plugin entries missing provenance material", () => {
@@ -456,9 +471,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      true,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(true);
   });
 
   it("flags Gemini extension entries missing provenance material", () => {
@@ -483,9 +500,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      true,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(true);
   });
 
   it("does not flag Gemini extension entries with attestation metadata", () => {
@@ -515,9 +534,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      false,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(false);
   });
 
   it("does not flag Claude SDK plugin entries with integrity metadata", () => {
@@ -543,9 +564,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      false,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(false);
   });
 
   it("flags Zed marketplace entries missing provenance material", () => {
@@ -570,9 +593,11 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance")).toBe(
-      true,
-    );
+    expect(
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-missing-marketplace-provenance",
+      ),
+    ).toBe(true);
   });
 
   it("keeps project-scope advisory marketplace source severity at medium", () => {
@@ -681,9 +706,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-local-source-path")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-local-source-path"),
+    ).toBe(true);
   });
 
   it("flags unpinned container image identifiers", () => {
@@ -735,9 +760,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unpinned-git-source")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unpinned-git-source"),
+    ).toBe(true);
   });
 
   it("flags direct artifact URLs without integrity metadata", () => {
@@ -762,9 +787,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-integrity")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-missing-integrity"),
+    ).toBe(true);
   });
 
   it("does not flag artifact URLs when integrity metadata is present", () => {
@@ -790,9 +815,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-integrity")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-missing-integrity"),
+    ).toBe(false);
   });
 
   it("flags wildcard permission grants in plugin manifests", () => {
@@ -817,9 +842,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-wildcard-permissions")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-wildcard-permissions"),
+    ).toBe(true);
   });
 
   it("flags risky capability grants in plugin manifests", () => {
@@ -847,9 +872,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-risky-capabilities")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-risky-capabilities"),
+    ).toBe(true);
   });
 
   it("does not flag read-only permission declarations", () => {
@@ -906,9 +931,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unverified-publisher")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unverified-publisher"),
+    ).toBe(true);
   });
 
   it("flags signature verification bypass flags", () => {
@@ -955,9 +980,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unscoped-extension-id")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unscoped-extension-id"),
+    ).toBe(true);
   });
 
   it("flags URL-like VS Code extension recommendations as invalid extension ids", () => {
@@ -977,9 +1002,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-extension-id")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-extension-id"),
+    ).toBe(true);
   });
 
   it("flags path-like VS Code extension recommendations as invalid extension ids", () => {
@@ -999,9 +1024,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-extension-id")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-extension-id"),
+    ).toBe(true);
   });
 
   it("does not flag scoped VS Code extension recommendations", () => {
@@ -1021,9 +1046,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unscoped-extension-id")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unscoped-extension-id"),
+    ).toBe(false);
   });
 
   it("flags unverified signed attestation metadata", () => {
@@ -1051,9 +1076,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unverified-attestation")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unverified-attestation"),
+    ).toBe(true);
   });
 
   it("does not flag verified attestation metadata", () => {
@@ -1081,9 +1106,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unverified-attestation")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unverified-attestation"),
+    ).toBe(false);
   });
 
   it("flags unstable release channel metadata", () => {
@@ -1108,9 +1133,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unstable-release-channel")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unstable-release-channel"),
+    ).toBe(true);
   });
 
   it("flags prerelease opt-in flags", () => {
@@ -1135,9 +1160,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unstable-release-channel")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unstable-release-channel"),
+    ).toBe(true);
   });
 
   it("does not flag stable release channel metadata", () => {
@@ -1162,9 +1187,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unstable-release-channel")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unstable-release-channel"),
+    ).toBe(false);
   });
 
   it("flags untrusted attestation issuers", () => {
@@ -1194,7 +1219,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer",
+      ),
     ).toBe(true);
   });
 
@@ -1225,7 +1252,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer",
+      ),
     ).toBe(false);
   });
 
@@ -1254,9 +1283,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation"),
+    ).toBe(true);
   });
 
   it("emits base-profile schema rule id for incomplete OpenCode attestation metadata", () => {
@@ -1316,7 +1345,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation-strict"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-incomplete-attestation-strict",
+      ),
     ).toBe(true);
   });
 
@@ -1354,9 +1385,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation"),
+    ).toBe(false);
   });
 
   it("treats OpenCode attestation issuers as trusted on OpenCode manifests", () => {
@@ -1386,7 +1417,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer",
+      ),
     ).toBe(false);
   });
 
@@ -1417,7 +1450,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-untrusted-attestation-issuer",
+      ),
     ).toBe(true);
   });
 
@@ -1447,9 +1482,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation"),
+    ).toBe(true);
   });
 
   it("emits strict-profile schema rule id for incomplete attestation metadata", () => {
@@ -1479,7 +1514,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation-strict"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-incomplete-attestation-strict",
+      ),
     ).toBe(true);
   });
 
@@ -1509,9 +1546,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-incomplete-attestation"),
+    ).toBe(false);
   });
 
   it("flags invalid certificate-chain verification signals", () => {
@@ -1548,9 +1585,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-chain")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-chain"),
+    ).toBe(true);
   });
 
   it("does not flag valid certificate-chain verification signals", () => {
@@ -1587,9 +1624,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-chain")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-chain"),
+    ).toBe(false);
   });
 
   it("flags transparency log proof verification failures", () => {
@@ -1650,9 +1687,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-transparency-bypass")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-transparency-bypass"),
+    ).toBe(true);
   });
 
   it("requires transparency proof metadata in strict attestation profiles", () => {
@@ -1682,9 +1719,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-transparency-proof")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-missing-transparency-proof"),
+    ).toBe(true);
   });
 
   it("does not require transparency proof metadata in base attestation profiles", () => {
@@ -1713,9 +1750,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-transparency-proof")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-missing-transparency-proof"),
+    ).toBe(false);
   });
 
   it("requires transparency proof metadata in Roo marketplace attestation profile", () => {
@@ -1745,9 +1782,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-transparency-proof")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-missing-transparency-proof"),
+    ).toBe(true);
   });
 
   it("flags certificate policies that omit code-signing EKU/OID in strict profiles", () => {
@@ -1789,7 +1826,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-policy")).toBe(true);
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-policy"),
+    ).toBe(true);
   });
 
   it("does not flag certificate policies that include code-signing EKU/OID in strict profiles", () => {
@@ -1830,7 +1869,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-policy")).toBe(false);
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-policy"),
+    ).toBe(false);
   });
 
   it("does not enforce certificate policy checks in base profiles", () => {
@@ -1863,7 +1904,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-policy")).toBe(false);
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-cert-policy"),
+    ).toBe(false);
   });
 
   it("flags transparency checkpoint inconsistencies when log index exceeds tree size", () => {
@@ -1901,7 +1944,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-transparency-checkpoint-inconsistent"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-transparency-checkpoint-inconsistent",
+      ),
     ).toBe(true);
   });
 
@@ -1940,7 +1985,9 @@ describe("plugin manifest detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "plugin-manifest-transparency-checkpoint-inconsistent"),
+      findings.some(
+        (finding) => finding.rule_id === "plugin-manifest-transparency-checkpoint-inconsistent",
+      ),
     ).toBe(false);
   });
 
@@ -1961,9 +2008,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-versioned-extension-id")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-versioned-extension-id"),
+    ).toBe(true);
   });
 
   it("flags source-bearing plugin entries without package identity fields", () => {
@@ -1987,9 +2034,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-package-identity")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-missing-package-identity"),
+    ).toBe(true);
   });
 
   it("does not flag source-bearing entries with package identity fields", () => {
@@ -2014,9 +2061,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-missing-package-identity")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-missing-package-identity"),
+    ).toBe(false);
   });
 
   it("flags unpinned extension version selectors in marketplace manifests", () => {
@@ -2041,7 +2088,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unpinned-version")).toBe(true);
+    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unpinned-version")).toBe(
+      true,
+    );
   });
 
   it("does not flag pinned extension versions in marketplace manifests", () => {
@@ -2066,7 +2115,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unpinned-version")).toBe(false);
+    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unpinned-version")).toBe(
+      false,
+    );
   });
 
   it("flags unscoped Zed extension ids", () => {
@@ -2091,9 +2142,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-unscoped-extension-id")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unscoped-extension-id"),
+    ).toBe(true);
   });
 
   it("flags Zed publisher identity mismatch with extension id namespace", () => {
@@ -2118,9 +2169,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-publisher-identity-mismatch")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-publisher-identity-mismatch"),
+    ).toBe(true);
   });
 
   it("flags invalid path-like package identity values", () => {
@@ -2145,9 +2196,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-package-identity")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-package-identity"),
+    ).toBe(true);
   });
 
   it("flags URL-like package identity values", () => {
@@ -2172,9 +2223,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-package-identity")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-invalid-package-identity"),
+    ).toBe(true);
   });
 
   it("flags disallowed publisher namespaces in VS Code extension recommendations", () => {
@@ -2194,9 +2245,9 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-disallowed-namespace")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-disallowed-namespace"),
+    ).toBe(true);
   });
 
   it("does not flag trusted publisher namespaces in VS Code extension recommendations", () => {
@@ -2216,8 +2267,8 @@ describe("plugin manifest detector", () => {
       blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
     });
 
-    expect(findings.some((finding) => finding.rule_id === "plugin-manifest-disallowed-namespace")).toBe(
-      false,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-disallowed-namespace"),
+    ).toBe(false);
   });
 });

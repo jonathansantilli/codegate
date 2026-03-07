@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { loadKnowledgeBase, validateKnowledgeBaseEntry } from "../../src/layer1-discovery/knowledge-base";
+import {
+  loadKnowledgeBase,
+  validateKnowledgeBaseEntry,
+} from "../../src/layer1-discovery/knowledge-base";
 
 describe("task 07 knowledge base loader", () => {
   it("loads known tool entries from disk", () => {

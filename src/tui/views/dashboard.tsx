@@ -18,9 +18,12 @@ export function DashboardView(props: DashboardViewProps) {
       <Box marginTop={1} flexDirection="column">
         <Text>Installed tools: {props.report.tools_detected.join(", ") || "none"}</Text>
         <Text>
-          Findings: {props.report.summary.total} (CRITICAL {props.report.summary.by_severity.CRITICAL ?? 0}, HIGH{" "}
-          {props.report.summary.by_severity.HIGH ?? 0}, MEDIUM {props.report.summary.by_severity.MEDIUM ?? 0}, LOW{" "}
-          {props.report.summary.by_severity.LOW ?? 0}, INFO {props.report.summary.by_severity.INFO ?? 0})
+          Findings: {props.report.summary.total} (CRITICAL{" "}
+          {props.report.summary.by_severity.CRITICAL ?? 0}, HIGH{" "}
+          {props.report.summary.by_severity.HIGH ?? 0}, MEDIUM{" "}
+          {props.report.summary.by_severity.MEDIUM ?? 0}, LOW{" "}
+          {props.report.summary.by_severity.LOW ?? 0}, INFO{" "}
+          {props.report.summary.by_severity.INFO ?? 0})
         </Text>
         {props.notices && props.notices.length > 0 ? (
           <Box marginTop={1} flexDirection="column">
@@ -39,7 +42,8 @@ export function DashboardView(props: DashboardViewProps) {
           {visibleFindings.map((finding) => (
             <Box key={finding.finding_id} flexDirection="column" marginTop={1}>
               <Text>
-                [{finding.severity}] {toAbsoluteDisplayPath(props.report.scan_target, finding.file_path)}
+                [{finding.severity}]{" "}
+                {toAbsoluteDisplayPath(props.report.scan_target, finding.file_path)}
               </Text>
               <Text>{finding.description}</Text>
               {finding.evidence ? (

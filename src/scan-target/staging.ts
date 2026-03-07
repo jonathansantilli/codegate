@@ -15,9 +15,13 @@ import {
 import type { ResolvedScanTarget } from "./types.js";
 
 function cloneRepository(source: string, destination: string): void {
-  const result = spawnSync("git", ["clone", "--depth", "1", "--filter=blob:none", source, destination], {
-    encoding: "utf8",
-  });
+  const result = spawnSync(
+    "git",
+    ["clone", "--depth", "1", "--filter=blob:none", source, destination],
+    {
+      encoding: "utf8",
+    },
+  );
 
   if (result.status !== 0) {
     const stderr = result.stderr?.trim();
@@ -73,7 +77,11 @@ export function cloneGitRepo(rawTarget: string): ResolvedScanTarget {
   };
 }
 
-export function stageRepoSubdirectory(repoUrl: string, filePath: string, displayTarget: string): ResolvedScanTarget {
+export function stageRepoSubdirectory(
+  repoUrl: string,
+  filePath: string,
+  displayTarget: string,
+): ResolvedScanTarget {
   const tempRoot = mkdtempSync(join(tmpdir(), "codegate-scan-repo-file-"));
   const repoDir = join(tempRoot, "repo");
 

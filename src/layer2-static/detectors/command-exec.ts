@@ -109,7 +109,14 @@ function makeFinding(
     file_path: filePath,
     location,
     description,
-    affected_tools: ["claude-code", "codex-cli", "opencode", "cursor", "windsurf", "github-copilot"],
+    affected_tools: [
+      "claude-code",
+      "codex-cli",
+      "opencode",
+      "cursor",
+      "windsurf",
+      "github-copilot",
+    ],
     cve: null,
     owasp: ["ASI02", "ASI05"],
     cwe: "CWE-78",
@@ -271,7 +278,9 @@ function collectCommandEntries(value: unknown, prefix = ""): CommandEntry[] {
 
   const record = value as Record<string, unknown>;
   const entries: CommandEntry[] = [];
-  const hasExplicitCommandField = Object.keys(record).some((key) => COMMAND_FIELD_KEYS.has(normalizeKey(key)));
+  const hasExplicitCommandField = Object.keys(record).some((key) =>
+    COMMAND_FIELD_KEYS.has(normalizeKey(key)),
+  );
 
   if (!hasExplicitCommandField && prefix.length > 0 && isLikelyExecutableContext(prefix)) {
     const implicitCommandTokens = commandTokensFromTemplateObject(record);
@@ -316,7 +325,10 @@ function collectCommandEntries(value: unknown, prefix = ""): CommandEntry[] {
 }
 
 function normalizeMarkupCommandText(value: string): string {
-  return value.replace(/<[^>]+>/gu, " ").replace(/\s+/gu, " ").trim();
+  return value
+    .replace(/<[^>]+>/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
 }
 
 function collectMarkdownExecuteCommandEntries(value: string): CommandEntry[] {

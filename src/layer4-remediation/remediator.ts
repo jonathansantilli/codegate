@@ -62,7 +62,6 @@ function serializeStructuredContent(format: DiscoveryFormat, value: unknown): st
 }
 
 function chooseAction(finding: Finding, fieldPath: string | undefined): RemediationAction | null {
-
   if (finding.category === "ENV_OVERRIDE" && fieldPath) {
     return { type: "remove_field", fieldPath };
   }
@@ -125,14 +124,18 @@ export function applyRemediationAction(
   if (action.type === "remove_field") {
     const result = removeField(parsed, action.fieldPath);
     return {
-      updatedContent: result.changed ? serializeStructuredContent(file.format, result.value) : file.content,
+      updatedContent: result.changed
+        ? serializeStructuredContent(file.format, result.value)
+        : file.content,
       changed: result.changed,
     };
   }
 
   const result = replaceValue(parsed, action.fieldPath, action.value);
   return {
-    updatedContent: result.changed ? serializeStructuredContent(file.format, result.value) : file.content,
+    updatedContent: result.changed
+      ? serializeStructuredContent(file.format, result.value)
+      : file.content,
     changed: result.changed,
   };
 }

@@ -122,7 +122,9 @@ describe("task 30 rug-pull scan-state", () => {
   });
 
   it("expands leading tilde in custom scan-state paths", () => {
-    expect(getScanStatePath("~/scan-state.json")).toBe(resolve(process.env.HOME ?? "", "scan-state.json"));
+    expect(getScanStatePath("~/scan-state.json")).toBe(
+      resolve(process.env.HOME ?? "", "scan-state.json"),
+    );
   });
 
   it("returns empty state when state file is malformed", () => {

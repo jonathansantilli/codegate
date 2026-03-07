@@ -12,7 +12,11 @@ export interface GitHooksInput {
   knownSafeHooks?: string[];
 }
 
-function makeFinding(path: string, description: string, evidence?: FindingEvidence | null): Finding {
+function makeFinding(
+  path: string,
+  description: string,
+  evidence?: FindingEvidence | null,
+): Finding {
   const location: Finding["location"] = { field: "hook_content" };
   if (typeof evidence?.line === "number") {
     location.line = evidence.line;
@@ -30,7 +34,14 @@ function makeFinding(path: string, description: string, evidence?: FindingEviden
     file_path: path,
     location,
     description,
-    affected_tools: ["claude-code", "codex-cli", "opencode", "cursor", "windsurf", "github-copilot"],
+    affected_tools: [
+      "claude-code",
+      "codex-cli",
+      "opencode",
+      "cursor",
+      "windsurf",
+      "github-copilot",
+    ],
     cve: null,
     owasp: ["ASI05", "ASI06"],
     cwe: "CWE-78",
@@ -44,7 +55,9 @@ function makeFinding(path: string, description: string, evidence?: FindingEviden
 
 export function detectGitHookIssues(input: GitHooksInput): Finding[] {
   const findings: Finding[] = [];
-  const knownSafeHooks = new Set((input.knownSafeHooks ?? []).map((hook) => hook.trim()).filter((hook) => hook.length > 0));
+  const knownSafeHooks = new Set(
+    (input.knownSafeHooks ?? []).map((hook) => hook.trim()).filter((hook) => hook.length > 0),
+  );
   const suspiciousPattern = /\b(curl|wget|nc|ncat|socat)\b|[|;&`]|[$][(]/u;
   const exfilPattern = /(~\/\.ssh|~\/\.aws|\.env|id_rsa|git-credentials)/u;
 
@@ -64,7 +77,11 @@ export function detectGitHookIssues(input: GitHooksInput): Finding[] {
         fallbackValue: "suspicious hook content detected",
       });
       findings.push(
-        makeFinding(hook.path, "Executable hook contains suspicious command or exfiltration pattern", evidence),
+        makeFinding(
+          hook.path,
+          "Executable hook contains suspicious command or exfiltration pattern",
+          evidence,
+        ),
       );
     }
   }

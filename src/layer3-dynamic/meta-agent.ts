@@ -40,9 +40,10 @@ export function buildLocalTextAnalysisPrompt(input: LocalTextAnalysisPromptInput
     input.referencedUrls && input.referencedUrls.length > 0
       ? input.referencedUrls.map((url) => `- ${normalize(url)}`).join("\n")
       : "- none";
-  const truncatedContent = input.textContent.length > 18_000
-    ? `${input.textContent.slice(0, 18_000)}\n...[truncated ${input.textContent.length - 18_000} chars]`
-    : input.textContent;
+  const truncatedContent =
+    input.textContent.length > 18_000
+      ? `${input.textContent.slice(0, 18_000)}\n...[truncated ${input.textContent.length - 18_000} chars]`
+      : input.textContent;
 
   return readTemplate("local-text-analysis.md")
     .replaceAll("{{FILE_PATH}}", normalize(input.filePath))

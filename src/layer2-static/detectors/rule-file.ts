@@ -16,9 +16,14 @@ interface FindingNarrative {
   incidentPrimary?: boolean;
 }
 
-const DIRECT_OVERRIDE_PHRASES = ["ignore previous instructions", "skip permissions", "bypass permissions"] as const;
+const DIRECT_OVERRIDE_PHRASES = [
+  "ignore previous instructions",
+  "skip permissions",
+  "bypass permissions",
+] as const;
 const NEGATION_PATTERN = /\b(?:must not|should not|do not|don't|never)\b/iu;
-const SENSITIVE_READ_PATTERN = /\b(?:read|cat)\s+(?:~\/\.ssh(?:\/[^\s]+)?|\.env\b|~\/\.[a-z0-9._-]+(?:\/[^\s]+)*)/iu;
+const SENSITIVE_READ_PATTERN =
+  /\b(?:read|cat)\s+(?:~\/\.ssh(?:\/[^\s]+)?|\.env\b|~\/\.[a-z0-9._-]+(?:\/[^\s]+)*)/iu;
 const OUTBOUND_TRANSFER_PATTERN =
   /\b(?:upload externally|send to (?:an |a )?(?:external )?(?:webhook|endpoint|server)|curl\b|wget\b|invoke-webrequest\b|post to\b|https?:\/\/|exfiltrat(?:e|ion|ing))\b/iu;
 const SUSPICIOUS_LONG_LINE_PATTERN =
@@ -65,7 +70,14 @@ function makeFinding(
     file_path: filePath,
     location,
     description,
-    affected_tools: ["claude-code", "codex-cli", "opencode", "cursor", "windsurf", "github-copilot"],
+    affected_tools: [
+      "claude-code",
+      "codex-cli",
+      "opencode",
+      "cursor",
+      "windsurf",
+      "github-copilot",
+    ],
     cve: null,
     owasp: ["ASI01"],
     cwe: "CWE-116",
@@ -93,7 +105,9 @@ function buildLineEvidence(line: string, lineNumber: number, column: number): Fi
 
 function buildMultilineEvidence(lines: string[], lineNumbers: number[]): FindingEvidence {
   const uniqueLines = Array.from(new Set(lineNumbers)).sort((left, right) => left - right);
-  const snippets = uniqueLines.map((lineNumber) => `${lineNumber} | ${lines[lineNumber - 1] ?? ""}`);
+  const snippets = uniqueLines.map(
+    (lineNumber) => `${lineNumber} | ${lines[lineNumber - 1] ?? ""}`,
+  );
   return {
     evidence: `lines ${uniqueLines.join(", ")}\n${snippets.join("\n")}`,
     line: uniqueLines[0] ?? 1,
@@ -106,7 +120,9 @@ function hasNearbyNegation(line: string, matchIndex: number): boolean {
   return NEGATION_PATTERN.test(prefix);
 }
 
-function detectSuspiciousInstruction(lines: string[]): { phrase: string; evidence: FindingEvidence } | null {
+function detectSuspiciousInstruction(
+  lines: string[],
+): { phrase: string; evidence: FindingEvidence } | null {
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? "";
     const lower = line.toLowerCase();
@@ -188,7 +204,10 @@ function detectHiddenCommentPayload(input: RuleFileInput, lines: string[]): Find
 
     const startLine = input.textContent.slice(0, match.index ?? 0).split(/\r?\n/u).length;
     const endLine = startLine + match[0].split(/\r?\n/u).length - 1;
-    const lineNumbers = Array.from({ length: endLine - startLine + 1 }, (_, index) => startLine + index);
+    const lineNumbers = Array.from(
+      { length: endLine - startLine + 1 },
+      (_, index) => startLine + index,
+    );
     return buildMultilineEvidence(lines, lineNumbers);
   }
 
@@ -258,7 +277,11 @@ function detectBootstrapControlPoints(lines: string[]): FindingEvidence | null {
     return null;
   }
 
-  return buildMultilineEvidence(lines, [...installLines.slice(0, 2), ...controlPointLines.slice(0, 2), restartLines[0]]);
+  return buildMultilineEvidence(lines, [
+    ...installLines.slice(0, 2),
+    ...controlPointLines.slice(0, 2),
+    restartLines[0],
+  ]);
 }
 
 export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
@@ -269,7 +292,8 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
     incidentTitle: "Hidden remote shell payload in skill file",
   };
 
-  const hiddenMatch = input.unicodeAnalysis === false ? null : input.textContent.match(hiddenUnicodeRegex);
+  const hiddenMatch =
+    input.unicodeAnalysis === false ? null : input.textContent.match(hiddenUnicodeRegex);
   if (hiddenMatch?.[0]) {
     const evidence = buildFindingEvidence({
       textContent: input.textContent,
@@ -305,7 +329,8 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
             "A hidden HTML comment block contains agent-directed instructions.",
             "The hidden block includes a secret instruction directive aimed at the agent.",
           ],
-          inference: "The skill conceals instructions from the human reader while attempting to steer agent behavior.",
+          inference:
+            "The skill conceals instructions from the human reader while attempting to steer agent behavior.",
           notVerified: [
             "CodeGate did not execute any instruction from the hidden block.",
             "CodeGate did not fetch or inspect any referenced remote content.",
@@ -335,7 +360,8 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
         "The file instructs the agent to download remote content with curl.",
         `The downloaded content is piped directly into ${shellLabelFromEvidence(remoteShell)}.`,
       ],
-      inference: "Following this instruction would execute remote code supplied by the referenced URL.",
+      inference:
+        "Following this instruction would execute remote code supplied by the referenced URL.",
       notVerified: [
         "CodeGate did not fetch the referenced URL.",
         "CodeGate did not execute the piped shell command.",
@@ -400,7 +426,8 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
   }
 
   const longLineIndex = lines.findIndex(
-    (line) => line.length > 300 && SUSPICIOUS_LONG_LINE_PATTERN.test(line) && !NEGATION_PATTERN.test(line),
+    (line) =>
+      line.length > 300 && SUSPICIOUS_LONG_LINE_PATTERN.test(line) && !NEGATION_PATTERN.test(line),
   );
   if (longLineIndex >= 0) {
     const lineNumber = longLineIndex + 1;

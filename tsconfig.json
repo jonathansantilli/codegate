@@ -11,17 +11,8 @@
     "declaration": true,
     "outDir": "dist",
     "rootDir": "src",
-    "types": [
-      "node"
-    ]
+    "types": ["node"]
   },
-  "include": [
-    "src/**/*.ts",
-    "src/**/*.tsx"
-  ],
-  "exclude": [
-    "dist",
-    "node_modules",
-    "tests"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+  "exclude": ["dist", "node_modules", "tests"]
 }

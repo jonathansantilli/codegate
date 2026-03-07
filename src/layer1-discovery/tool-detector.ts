@@ -46,7 +46,7 @@ const defaultDeps: ToolDetectorDeps = {
       return null;
     }
     const output = `${result.stdout ?? ""}`.trim();
-    return output.length > 0 ? output.split(/\s+/u).pop() ?? output : null;
+    return output.length > 0 ? (output.split(/\s+/u).pop() ?? output) : null;
   },
   pathExists: (path) => existsSync(path),
   listDirectory: (path) => {

@@ -29,4 +29,3 @@ This Code of Conduct applies in project spaces and in public spaces when an indi
 Project maintainers are responsible for clarifying and enforcing standards of acceptable behavior.
 
 Report incidents to the maintainers through the contact path in [SUPPORT.md](./SUPPORT.md).
-

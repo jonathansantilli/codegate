@@ -37,7 +37,11 @@ function appendEvidence(lines: string[], evidence: string): void {
   }
 }
 
-function formatLocation(location: { field?: string; line?: number; column?: number }): string | null {
+function formatLocation(location: {
+  field?: string;
+  line?: number;
+  column?: number;
+}): string | null {
   const parts: string[] = [];
   if (location.field) {
     parts.push(location.field);
@@ -49,7 +53,10 @@ function formatLocation(location: { field?: string; line?: number; column?: numb
   return parts.length > 0 ? parts.join(" @ ") : null;
 }
 
-export function renderTerminalReport(report: CodeGateReport, options: TerminalRenderOptions = {}): string {
+export function renderTerminalReport(
+  report: CodeGateReport,
+  options: TerminalRenderOptions = {},
+): string {
   const verbose = options.verbose === true;
   const lines: string[] = [];
   lines.push(`CodeGate v${report.version}`);
@@ -68,7 +75,9 @@ export function renderTerminalReport(report: CodeGateReport, options: TerminalRe
   }
 
   for (const finding of report.findings) {
-    lines.push(`[${finding.severity}] ${toAbsoluteDisplayPath(report.scan_target, finding.file_path)}`);
+    lines.push(
+      `[${finding.severity}] ${toAbsoluteDisplayPath(report.scan_target, finding.file_path)}`,
+    );
     lines.push(`  ${finding.description}`);
     if (finding.incident_title) {
       appendLabeledText(lines, "Incident", finding.incident_title);
@@ -84,7 +93,9 @@ export function renderTerminalReport(report: CodeGateReport, options: TerminalRe
     if (verbose) {
       lines.push(`  Rule: ${finding.rule_id}`);
       lines.push(`  Finding ID: ${finding.finding_id}`);
-      lines.push(`  Category: ${finding.category} | Layer: ${finding.layer} | Confidence: ${finding.confidence}`);
+      lines.push(
+        `  Category: ${finding.category} | Layer: ${finding.layer} | Confidence: ${finding.confidence}`,
+      );
       const formattedLocation = formatLocation(finding.location);
       if (formattedLocation) {
         lines.push(`  Location: ${formattedLocation}`);

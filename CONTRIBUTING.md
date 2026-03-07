@@ -10,6 +10,7 @@ Thanks for contributing.
    ```bash
    npm install
    ```
+   This also installs the Husky-managed `pre-commit` hook, which runs staged-file linting and formatting before a commit is created.
 4. Run local verification before pushing:
    ```bash
    npm run lint
@@ -38,4 +39,3 @@ Thanks for contributing.
 
 Please do not open public issues for vulnerabilities.
 See [SECURITY.md](./SECURITY.md) and follow the private disclosure process.
-

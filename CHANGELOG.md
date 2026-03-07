@@ -5,12 +5,14 @@ All notable changes to this project will be documented in this file.
 ## [Unreleased]
 
 ### Fixed
+
 - Layer 4 remediation now composes multiple same-file fixes against evolving file content instead of dropping later plans.
 - Layer 4 remediation now loads and edits `source_config.file_path` targets for Layer 3 findings.
 - `scan_state_path` now resolves `~` and `~/...` against the user's home directory for read, write, and reset operations.
 - `codegate run <tool>` now snapshots the scanned config surface, including selected user-scope config files, before launch TOCTOU checks.
 
 ### Changed
+
 - `codegate run <tool>` is terminal/TUI only and no longer documents machine-readable `--format` output.
 - `codegate run <tool>` can require explicit confirmation for warning-level findings when `auto_proceed_below_threshold` is disabled and the cwd is not covered by `trusted_directories`.
 - `--force` on `codegate run <tool>` now skips the warning-level launch confirmation prompt.
@@ -18,21 +20,25 @@ All notable changes to this project will be documented in this file.
 - When `codegate scan [target]` is given a skill/plugin-style entrypoint file, it now stages and scans the containing artifact folder recursively instead of analyzing only the entrypoint file.
 
 ### Added
+
 - Config toggles now control delivered behavior for `known_safe_hooks`, `unicode_analysis`, `check_ide_settings`, and `owasp_mapping`.
 - Layer 2 rule-file analysis now catches hidden comment payloads, remote download-to-shell instructions, and clustered cookie/session transfer guidance in local instruction files.
 - `codegate scan --deep` now supports text-only local instruction-file analysis for discovered markdown/text rule surfaces when a tool-less agent mode is available.
 
 ### Security
+
 - Local instruction-file deep analysis now treats file content and referenced URLs as inert text and does not execute referenced content.
 - Codex CLI is intentionally excluded from the new local instruction-file analysis path until a shell-less mode is proven; Claude Code is used for that path because it can run with tools disabled.
 
 ### Performance
+
 - `codegate scan --deep` now reuses prepared Layer 1 discovery context between the main scan and deep resource discovery.
 - `codegate scan` now reuses one prepared discovery context across static scanning and deep-scan target discovery.
 
 ## [0.2.2] - 2026-02-28
 
 ### Added
+
 - MCP rug-pull state tracking with `NEW_SERVER`/`CONFIG_CHANGE` findings and `codegate scan --reset-state`.
 - Configurable scan-state path support via `scan_state_path`.
 - Layer 3 tool-description derived findings (`RULE_INJECTION`) and Toxic Flow Analysis (`TOXIC_FLOW`) from `metadata.tools[]`.
@@ -44,6 +50,7 @@ All notable changes to this project will be documented in this file.
 ## [0.2.0] - 2026-02-28
 
 ### Added
+
 - Layer 3 dynamic resource fetcher with retry strategy and auth/timeout failure normalization.
 - Consent-gated deep scan orchestration to prevent network execution without explicit approval.
 - Meta-agent command builder with tool-specific safety flags and prompt template system.
@@ -53,6 +60,7 @@ All notable changes to this project will be documented in this file.
 ## [0.1.5] - 2026-02-28
 
 ### Added
+
 - Layer 4 remediation planner and action engine (`remove_field`, `replace_value`, `strip_unicode`, `quarantine`).
 - Unified diff generation for remediation output and patch workflows.
 - Backup session manager with SHA-256 manifest verification and latest-session undo command support.
@@ -62,6 +70,7 @@ All notable changes to this project will be documented in this file.
 ## [0.1.0] - 2026-02-28
 
 ### Added
+
 - Core TypeScript CLI scaffolding with `scan` and `run` commands.
 - Layer 1+2 scan pipeline: knowledge-base loading, file discovery/parsing, static detectors, and report summary generation.
 - Reporters: terminal, JSON, SARIF, Markdown, and HTML.
@@ -71,4 +80,5 @@ All notable changes to this project will be documented in this file.
 - OSS governance files, CI matrix, release dry-run workflow, and npm release workflow.
 
 ### Notes
+
 - This is the first public pre-release baseline for open-source iteration.

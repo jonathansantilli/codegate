@@ -17,7 +17,10 @@ import {
   type ResolveConfigOptions,
 } from "./config.js";
 import { APP_NAME } from "./index.js";
-import { fetchResourceMetadata, type ResourceFetchResult } from "./layer3-dynamic/resource-fetcher.js";
+import {
+  fetchResourceMetadata,
+  type ResourceFetchResult,
+} from "./layer3-dynamic/resource-fetcher.js";
 import type { LocalTextAnalysisTarget } from "./layer3-dynamic/local-text-analysis.js";
 import { acquireToolDescriptions } from "./layer3-dynamic/tool-description-acquisition.js";
 import { runSandboxCommand } from "./layer3-dynamic/sandbox.js";
@@ -80,14 +83,19 @@ export interface CliDeps {
     config?: CodeGateConfig,
     options?: { explicitCandidates?: ScanDiscoveryCandidate[] },
   ) => Promise<ScanDiscoveryContext> | ScanDiscoveryContext;
-  resolveScanTarget?: (
-    input: { rawTarget: string; cwd: string },
-  ) => Promise<ResolvedScanTarget> | ResolvedScanTarget;
+  resolveScanTarget?: (input: {
+    rawTarget: string;
+    cwd: string;
+  }) => Promise<ResolvedScanTarget> | ResolvedScanTarget;
   stdout: (message: string) => void;
   stderr: (message: string) => void;
   writeFile: (path: string, content: string) => void;
   setExitCode: (code: number) => void;
-  renderTui?: (props: { view: "dashboard" | "summary"; report: CodeGateReport; notices?: string[] }) => void;
+  renderTui?: (props: {
+    view: "dashboard" | "summary";
+    report: CodeGateReport;
+    notices?: string[];
+  }) => void;
   runRemediation?: (
     input: RemediationRunnerInput,
   ) => Promise<RemediationRunnerResult> | RemediationRunnerResult;
@@ -104,7 +112,9 @@ export interface CliDeps {
     discoveryContext?: ScanDiscoveryContext,
   ) => Promise<LocalTextAnalysisTarget[]> | LocalTextAnalysisTarget[];
   requestDeepScanConsent?: (resource: DeepScanResource) => Promise<boolean> | boolean;
-  requestDeepAgentSelection?: (options: DeepAgentOption[]) => Promise<DeepAgentOption | null> | DeepAgentOption | null;
+  requestDeepAgentSelection?: (
+    options: DeepAgentOption[],
+  ) => Promise<DeepAgentOption | null> | DeepAgentOption | null;
   requestMetaAgentCommandConsent?: (
     context: MetaAgentCommandConsentContext,
   ) => Promise<boolean> | boolean;
@@ -129,10 +139,21 @@ function isNoTuiEnabled(options: { noTui?: boolean; tui?: boolean }): boolean {
 }
 
 function mapAcquisitionFailure(
-  status: "auth_failure" | "timeout" | "network_error" | "command_error" | "rejected_unsafe_stdio" | "schema_mismatch",
+  status:
+    | "auth_failure"
+    | "timeout"
+    | "network_error"
+    | "command_error"
+    | "rejected_unsafe_stdio"
+    | "schema_mismatch",
   error?: string,
 ): ResourceFetchResult {
-  if (status === "auth_failure" || status === "timeout" || status === "network_error" || status === "command_error") {
+  if (
+    status === "auth_failure" ||
+    status === "timeout" ||
+    status === "network_error" ||
+    status === "command_error"
+  ) {
     return {
       status,
       attempts: 1,
@@ -251,7 +272,9 @@ const defaultCliDeps: CliDeps = {
 function addScanCommand(program: Command, version: string, deps: CliDeps): void {
   program
     .command("scan [dir]")
-    .description("Scan a directory, file, or safely staged artifact target for AI tool config risks")
+    .description(
+      "Scan a directory, file, or safely staged artifact target for AI tool config risks",
+    )
     .option("--deep", "enable Layer 3 dynamic analysis")
     .option("--remediate", "enter remediation mode after scan")
     .option("--fix-safe", "auto-fix unambiguous critical findings")
@@ -281,7 +304,9 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
       let resolvedTarget: ResolvedScanTarget | undefined;
 
       try {
-        const resolveTarget = deps.resolveScanTarget ?? ((input: { rawTarget: string; cwd: string }) => resolveScanTarget(input));
+        const resolveTarget =
+          deps.resolveScanTarget ??
+          ((input: { rawTarget: string; cwd: string }) => resolveScanTarget(input));
         resolvedTarget = await resolveTarget({
           rawTarget,
           cwd: deps.cwd(),
@@ -327,23 +352,24 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
             prepareScanDiscovery: deps.prepareScanDiscovery,
             discoverDeepResources: deps.discoverDeepResources,
             discoverLocalTextTargets: deps.discoverLocalTextTargets,
-            requestDeepScanConsent:
-              promptCallbacksEnabled
-                ? (deps.requestDeepScanConsent ?? (interactivePromptsEnabled ? promptDeepScanConsent : undefined))
-                : undefined,
-            requestDeepAgentSelection:
-              promptCallbacksEnabled
-                ? (deps.requestDeepAgentSelection ?? (interactivePromptsEnabled ? promptDeepAgentSelection : undefined))
-                : undefined,
-            requestMetaAgentCommandConsent:
-              promptCallbacksEnabled
-                ? (deps.requestMetaAgentCommandConsent ??
-                  (interactivePromptsEnabled ? promptMetaAgentCommandConsent : undefined))
-                : undefined,
+            requestDeepScanConsent: promptCallbacksEnabled
+              ? (deps.requestDeepScanConsent ??
+                (interactivePromptsEnabled ? promptDeepScanConsent : undefined))
+              : undefined,
+            requestDeepAgentSelection: promptCallbacksEnabled
+              ? (deps.requestDeepAgentSelection ??
+                (interactivePromptsEnabled ? promptDeepAgentSelection : undefined))
+              : undefined,
+            requestMetaAgentCommandConsent: promptCallbacksEnabled
+              ? (deps.requestMetaAgentCommandConsent ??
+                (interactivePromptsEnabled ? promptMetaAgentCommandConsent : undefined))
+              : undefined,
             executeDeepResource: deps.executeDeepResource,
             runMetaAgentCommand:
               deps.runMetaAgentCommand ??
-              (async (context: MetaAgentCommandConsentContext): Promise<MetaAgentCommandRunResult> => {
+              (async (
+                context: MetaAgentCommandConsentContext,
+              ): Promise<MetaAgentCommandRunResult> => {
                 const commandResult = await runSandboxCommand({
                   command: context.command.command,
                   args: context.command.args,
@@ -357,10 +383,10 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
                   stderr: commandResult.stderr,
                 };
               }),
-            requestRemediationConsent:
-              promptCallbacksEnabled
-                ? (deps.requestRemediationConsent ?? (interactivePromptsEnabled ? promptRemediationConsent : undefined))
-                : undefined,
+            requestRemediationConsent: promptCallbacksEnabled
+              ? (deps.requestRemediationConsent ??
+                (interactivePromptsEnabled ? promptRemediationConsent : undefined))
+              : undefined,
             runRemediation: deps.runRemediation,
             stdout: deps.stdout,
             stderr: deps.stderr,
@@ -393,31 +419,35 @@ function addRunCommand(program: Command, version: string, deps: CliDeps): void {
     .option("--no-tui", "disable TUI and interactive prompts")
     .option("--config <path>", "use a specific global config file")
     .option("--force", "skip interactive confirmations")
-    .action(async (tool: string, options: { noTui?: boolean; tui?: boolean; config?: string; force?: boolean }) => {
-      const cwd = resolve(deps.cwd());
-      const noTui = isNoTuiEnabled(options);
-      const cliConfig: CliConfigOverrides = {
-        configPath: options.config,
-        noTui: noTui || !deps.isTTY(),
-      };
+    .action(
+      async (
+        tool: string,
+        options: { noTui?: boolean; tui?: boolean; config?: string; force?: boolean },
+      ) => {
+        const cwd = resolve(deps.cwd());
+        const noTui = isNoTuiEnabled(options);
+        const cliConfig: CliConfigOverrides = {
+          configPath: options.config,
+          noTui: noTui || !deps.isTTY(),
+        };
 
-      try {
-        const config = deps.resolveConfig({
-          scanTarget: cwd,
-          cli: cliConfig,
-        });
-        const runWrapper =
-          deps.runWrapper ??
-          ((input: {
-            target: string;
-            cwd: string;
-            version: string;
-            config: CodeGateConfig;
-            force?: boolean;
-            requestWarningProceed?: (report: CodeGateReport) => Promise<boolean> | boolean;
-          }) =>
-            {
-              const shouldUseTui = config.tui.enabled && deps.isTTY() && deps.renderTui !== undefined;
+        try {
+          const config = deps.resolveConfig({
+            scanTarget: cwd,
+            cli: cliConfig,
+          });
+          const runWrapper =
+            deps.runWrapper ??
+            ((input: {
+              target: string;
+              cwd: string;
+              version: string;
+              config: CodeGateConfig;
+              force?: boolean;
+              requestWarningProceed?: (report: CodeGateReport) => Promise<boolean> | boolean;
+            }) => {
+              const shouldUseTui =
+                config.tui.enabled && deps.isTTY() && deps.renderTui !== undefined;
               return executeWrapperRun({
                 target: input.target,
                 cwd: input.cwd,
@@ -432,31 +462,31 @@ function addRunCommand(program: Command, version: string, deps: CliDeps): void {
                   : undefined,
                 requestWarningProceed: input.requestWarningProceed,
               });
-            }
-          );
+            });
 
-        await runWrapper({
-          target: tool,
-          cwd,
-          version,
-          config,
-          force: options.force,
-          requestWarningProceed:
-            options.force || !deps.isTTY() || noTui === true
-              ? undefined
-              : async (report) => {
-                  const requestConsent =
-                    deps.requestRunWarningConsent ??
-                    ((context: RunWarningConsentContext) => promptRunWarningConsent(context));
-                  return await requestConsent({ target: tool, report });
-                },
-        });
-      } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
-        deps.stderr(`Run failed: ${message}`);
-        deps.setExitCode(3);
-      }
-    });
+          await runWrapper({
+            target: tool,
+            cwd,
+            version,
+            config,
+            force: options.force,
+            requestWarningProceed:
+              options.force || !deps.isTTY() || noTui === true
+                ? undefined
+                : async (report) => {
+                    const requestConsent =
+                      deps.requestRunWarningConsent ??
+                      ((context: RunWarningConsentContext) => promptRunWarningConsent(context));
+                    return await requestConsent({ target: tool, report });
+                  },
+          });
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          deps.stderr(`Run failed: ${message}`);
+          deps.setExitCode(3);
+        }
+      },
+    );
 }
 
 function addUndoCommand(program: Command, deps: CliDeps): void {
@@ -466,9 +496,12 @@ function addUndoCommand(program: Command, deps: CliDeps): void {
     .action((dir: string | undefined) => {
       const projectRoot = resolve(deps.cwd(), dir ?? ".");
       try {
-        const runUndo = deps.runUndo ?? ((target: string) => undoLatestSession({ projectRoot: target }));
+        const runUndo =
+          deps.runUndo ?? ((target: string) => undoLatestSession({ projectRoot: target }));
         const result = runUndo(projectRoot);
-        deps.stdout(`Restored ${result.restoredFiles} file(s) from backup session ${result.sessionId}.`);
+        deps.stdout(
+          `Restored ${result.restoredFiles} file(s) from backup session ${result.sessionId}.`,
+        );
         deps.setExitCode(0);
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);

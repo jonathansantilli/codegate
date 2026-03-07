@@ -12,7 +12,9 @@ export interface IdeSettingsInput {
 const KNOWN_DANGEROUS_KEYS = new Set(["php.validate.executablePath", "PATH_TO_GIT"]);
 
 function isInsideProject(pathValue: string, projectRoot: string): boolean {
-  const resolved = isAbsolute(pathValue) ? normalize(pathValue) : normalize(join(projectRoot, pathValue));
+  const resolved = isAbsolute(pathValue)
+    ? normalize(pathValue)
+    : normalize(join(projectRoot, pathValue));
   const rel = relative(normalize(projectRoot), resolved);
   return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
 }

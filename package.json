@@ -2,7 +2,26 @@
   "name": "codegate",
   "version": "0.1.0",
   "description": "Pre-flight security scanner for AI coding tool configurations.",
+  "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jonathansantilli/codegate.git"
+  },
+  "homepage": "https://github.com/jonathansantilli/codegate#readme",
+  "bugs": {
+    "url": "https://github.com/jonathansantilli/codegate/issues"
+  },
+  "keywords": [
+    "ai-security",
+    "cli",
+    "code-scanning",
+    "codex",
+    "config-security",
+    "mcp",
+    "prompt-injection",
+    "security"
+  ],
   "bin": {
     "codegate": "./dist/cli.js"
   },
@@ -15,7 +34,8 @@
     "test:reliability": "vitest run tests/reliability/signal-handling.test.ts",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "prepare": "husky"
   },
   "engines": {
     "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
@@ -25,6 +45,19 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "lint-staged": {
+    "*.{js,mjs,cjs,ts,tsx}": [
+      "eslint --fix --max-warnings=0 --no-warn-ignored",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml}": [
+      "prettier --write"
+    ]
+  },
   "dependencies": {
     "ajv": "^8.18.0",
     "commander": "^14.0.3",
@@ -44,7 +77,9 @@
     "@types/which": "^3.0.4",
     "eslint": "^10.0.2",
     "globals": "^17.3.0",
+    "husky": "^9.1.7",
     "ink-testing-library": "^4.0.0",
+    "lint-staged": "^16.3.2",
     "prettier": "^3.8.1",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.56.1",

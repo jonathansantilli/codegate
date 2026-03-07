@@ -96,7 +96,12 @@ describe("scan target resolution", () => {
     }));
 
     const cli = createCli("0.1.0", deps);
-    await cli.parseAsync(["node", "codegate", "scan", "https://example.com/security-review/SKILL.md"]);
+    await cli.parseAsync([
+      "node",
+      "codegate",
+      "scan",
+      "https://example.com/security-review/SKILL.md",
+    ]);
 
     expect(deps.resolveScanTarget).toHaveBeenCalledWith({
       rawTarget: "https://example.com/security-review/SKILL.md",
@@ -153,7 +158,13 @@ describe("scan target resolution", () => {
     }));
 
     const cli = createCli("0.1.0", deps);
-    await cli.parseAsync(["node", "codegate", "scan", "https://github.com/example/skills.git", "--deep"]);
+    await cli.parseAsync([
+      "node",
+      "codegate",
+      "scan",
+      "https://github.com/example/skills.git",
+      "--deep",
+    ]);
 
     expect(discoverDeepResources).toHaveBeenCalledWith(
       "/tmp/staged-repo",

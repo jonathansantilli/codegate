@@ -102,13 +102,15 @@ describe("task 15 terminal reporter", () => {
       findings: [
         {
           rule_id: "rule-file-hidden-comment-payload",
-          finding_id: "RULE_INJECTION-.codex/skills/security-review/SKILL.md-hidden_comment_payload",
+          finding_id:
+            "RULE_INJECTION-.codex/skills/security-review/SKILL.md-hidden_comment_payload",
           severity: "CRITICAL",
           category: "RULE_INJECTION",
           layer: "L2",
           file_path: ".codex/skills/security-review/SKILL.md",
           location: { field: "hidden_comment_payload", line: 3, column: 1 },
-          description: "Rule file contains a hidden comment payload with executable or override instructions",
+          description:
+            "Rule file contains a hidden comment payload with executable or override instructions",
           affected_tools: ["codex-cli"],
           cve: null,
           owasp: ["ASI01"],
@@ -127,7 +129,8 @@ describe("task 15 terminal reporter", () => {
             "A hidden HTML comment block contains agent-directed instructions.",
             "The hidden block includes a secret instruction directive aimed at the agent.",
           ],
-          inference: "The skill conceals instructions from the human reader while attempting to steer agent behavior.",
+          inference:
+            "The skill conceals instructions from the human reader while attempting to steer agent behavior.",
           not_verified: [
             "CodeGate did not execute any instruction from the hidden block.",
             "CodeGate did not fetch or inspect any referenced remote content.",
@@ -151,7 +154,9 @@ describe("task 15 terminal reporter", () => {
     expect(output).toContain("Incident: Hidden remote shell payload in skill file");
     expect(output).toContain("Observed:");
     expect(output).toContain("A hidden HTML comment block contains agent-directed instructions.");
-    expect(output).toContain("Inference: The skill conceals instructions from the human reader while attempting to steer agent behavior.");
+    expect(output).toContain(
+      "Inference: The skill conceals instructions from the human reader while attempting to steer agent behavior.",
+    );
     expect(output).toContain("Not verified:");
     expect(output).toContain("CodeGate did not fetch or inspect any referenced remote content.");
   });

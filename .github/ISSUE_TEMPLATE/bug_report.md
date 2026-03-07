@@ -33,4 +33,3 @@ What actually happened.
 ## Logs / Output
 
 Paste relevant command output.
-

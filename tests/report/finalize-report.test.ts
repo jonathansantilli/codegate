@@ -3,10 +3,7 @@ import { applyReportSummary, summarizeFindings } from "../../src/report-summary"
 import type { Finding } from "../../src/types/finding";
 import type { CodeGateReport } from "../../src/types/report";
 
-function makeFinding(
-  severity: Finding["severity"],
-  overrides: Partial<Finding> = {},
-): Finding {
+function makeFinding(severity: Finding["severity"], overrides: Partial<Finding> = {}): Finding {
   return {
     rule_id: `rule-${severity.toLowerCase()}`,
     finding_id: `F-${severity}-${overrides.suppressed ? "suppressed" : "active"}`,

@@ -126,7 +126,9 @@ describe("task 17 run command wrapper", () => {
         config: BASE_CONFIG,
       },
       createWrapperDeps({
-        detectTools: () => [{ tool: "claude-code", installed: false, version: null, path: null, source: "none" }],
+        detectTools: () => [
+          { tool: "claude-code", installed: false, version: null, path: null, source: "none" },
+        ],
         stderr,
         setExitCode: (code) => {
           exitCode = code;
@@ -153,7 +155,13 @@ describe("task 17 run command wrapper", () => {
       },
       createWrapperDeps({
         detectTools: () => [
-          { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+          {
+            tool: "claude-code",
+            installed: true,
+            version: "1.0.0",
+            path: "/usr/bin/claude",
+            source: "path",
+          },
         ],
         captureSnapshot: () => {
           snapshots += 1;
@@ -169,7 +177,9 @@ describe("task 17 run command wrapper", () => {
 
     expect(exitCode).toBe(3);
     expect(launch).not.toHaveBeenCalled();
-    expect(stderr).toHaveBeenCalledWith("Config files changed after scan. Re-run `codegate scan` before launch.");
+    expect(stderr).toHaveBeenCalledWith(
+      "Config files changed after scan. Re-run `codegate scan` before launch.",
+    );
   });
 
   it("returns exit 3 when files change during scan execution", async () => {
@@ -187,7 +197,13 @@ describe("task 17 run command wrapper", () => {
       },
       createWrapperDeps({
         detectTools: () => [
-          { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+          {
+            tool: "claude-code",
+            installed: true,
+            version: "1.0.0",
+            path: "/usr/bin/claude",
+            source: "path",
+          },
         ],
         runScan: async () => {
           mutated = true;
@@ -204,7 +220,9 @@ describe("task 17 run command wrapper", () => {
 
     expect(exitCode).toBe(3);
     expect(launch).not.toHaveBeenCalled();
-    expect(stderr).toHaveBeenCalledWith("Config files changed after scan. Re-run `codegate scan` before launch.");
+    expect(stderr).toHaveBeenCalledWith(
+      "Config files changed after scan. Re-run `codegate scan` before launch.",
+    );
   });
 
   it("falls back to manual guidance for GUI tools without CLI launcher", async () => {
@@ -260,7 +278,13 @@ describe("task 17 run command wrapper", () => {
       },
       createWrapperDeps({
         detectTools: () => [
-          { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+          {
+            tool: "claude-code",
+            installed: true,
+            version: "1.0.0",
+            path: "/usr/bin/claude",
+            source: "path",
+          },
         ],
         runScan: async () => makeWarningReport(),
         launchTool: launch,
@@ -276,10 +300,7 @@ describe("task 17 run command wrapper", () => {
 
   it("uses the discovered scan surface for snapshot checks", async () => {
     const captureSnapshot = vi.fn(() => new Map([["a", "1"]]));
-    const surface = [
-      "/tmp/project/.mcp.json",
-      "/Users/tester/.codex/config.toml",
-    ];
+    const surface = ["/tmp/project/.mcp.json", "/Users/tester/.codex/config.toml"];
 
     await executeWrapperRun(
       {
@@ -291,7 +312,13 @@ describe("task 17 run command wrapper", () => {
       {
         ...createWrapperDeps({
           detectTools: () => [
-            { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+            {
+              tool: "claude-code",
+              installed: true,
+              version: "1.0.0",
+              path: "/usr/bin/claude",
+              source: "path",
+            },
           ],
           captureSnapshot: captureSnapshot as unknown as WrapperDeps["captureSnapshot"],
         }),
@@ -320,7 +347,13 @@ describe("task 17 run command wrapper", () => {
       },
       createWrapperDeps({
         detectTools: () => [
-          { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+          {
+            tool: "claude-code",
+            installed: true,
+            version: "1.0.0",
+            path: "/usr/bin/claude",
+            source: "path",
+          },
         ],
         collectScanSurface,
         captureSnapshot: captureSnapshot as unknown as WrapperDeps["captureSnapshot"],
@@ -353,7 +386,13 @@ describe("task 17 run command wrapper", () => {
       },
       createWrapperDeps({
         detectTools: () => [
-          { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+          {
+            tool: "claude-code",
+            installed: true,
+            version: "1.0.0",
+            path: "/usr/bin/claude",
+            source: "path",
+          },
         ],
         runScan: async () => makeWarningReport(),
         launchTool: launch,
@@ -384,7 +423,13 @@ describe("task 17 run command wrapper", () => {
       },
       createWrapperDeps({
         detectTools: () => [
-          { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+          {
+            tool: "claude-code",
+            installed: true,
+            version: "1.0.0",
+            path: "/usr/bin/claude",
+            source: "path",
+          },
         ],
         runScan: async () => makeWarningReport(),
         launchTool: launch,
@@ -416,7 +461,13 @@ describe("task 17 run command wrapper", () => {
       },
       createWrapperDeps({
         detectTools: () => [
-          { tool: "claude-code", installed: true, version: "1.0.0", path: "/usr/bin/claude", source: "path" },
+          {
+            tool: "claude-code",
+            installed: true,
+            version: "1.0.0",
+            path: "/usr/bin/claude",
+            source: "path",
+          },
         ],
         runScan: async () => makeWarningReport(),
         launchTool: launch,

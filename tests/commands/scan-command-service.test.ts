@@ -51,10 +51,12 @@ describe("scan command service", () => {
       expect(input.discoveryContext).toBe(discoveryContext);
       return emptyReport();
     });
-    const discoverDeepResources = vi.fn(async (_scanTarget: string, _config: CodeGateConfig, context?: unknown) => {
-      expect(context).toBe(discoveryContext);
-      return [];
-    });
+    const discoverDeepResources = vi.fn(
+      async (_scanTarget: string, _config: CodeGateConfig, context?: unknown) => {
+        expect(context).toBe(discoveryContext);
+        return [];
+      },
+    );
 
     const stdout: string[] = [];
     let exitCode = -1;

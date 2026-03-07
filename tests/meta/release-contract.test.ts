@@ -14,7 +14,8 @@ describe("task 20 release contract", () => {
     expect(existsSync(resolve(root, "CHANGELOG.md"))).toBe(true);
 
     const hasPrivateReleaseDocs =
-      existsSync(resolve(root, "docs/release/v1.0-checklist.md")) || existsSync(resolve(root, "docs/deep-scan.md"));
+      existsSync(resolve(root, "docs/release/v1.0-checklist.md")) ||
+      existsSync(resolve(root, "docs/deep-scan.md"));
     if (!hasPrivateReleaseDocs) {
       expect(true).toBe(true);
       return;
@@ -28,7 +29,9 @@ describe("task 20 release contract", () => {
 
   it("publishes to npm with provenance in release workflow", () => {
     const workflow = read(".github/workflows/release.yml");
-    expect(workflow).toContain("NPM_TOKEN");
+    expect(workflow).toContain("id-token: write");
     expect(workflow).toContain("npm publish --access public --provenance");
+    expect(workflow).toContain("gh release create");
+    expect(workflow).not.toContain("NODE_AUTH_TOKEN");
   });
 });

@@ -85,7 +85,14 @@ function makeFinding(
     file_path: filePath,
     location,
     description,
-    affected_tools: ["claude-code", "codex-cli", "opencode", "cursor", "windsurf", "github-copilot"],
+    affected_tools: [
+      "claude-code",
+      "codex-cli",
+      "opencode",
+      "cursor",
+      "windsurf",
+      "github-copilot",
+    ],
     cve: null,
     owasp: ["ASI03", "ASI06"],
     cwe: "CWE-522",
@@ -98,7 +105,10 @@ function makeFinding(
 }
 
 export function detectEnvOverrides(input: EnvOverrideInput): Finding[] {
-  const root = input.parsed && typeof input.parsed === "object" ? (input.parsed as Record<string, unknown>) : null;
+  const root =
+    input.parsed && typeof input.parsed === "object"
+      ? (input.parsed as Record<string, unknown>)
+      : null;
   const hasEnvObject = !!(root && root.env && typeof root.env === "object");
   const env = getEnvRecord(input.parsed);
   const findings: Finding[] = [];
@@ -145,7 +155,10 @@ export function detectEnvOverrides(input: EnvOverrideInput): Finding[] {
     }
 
     const looksLikeEndpoint =
-      CRITICAL_KEYS.has(key) || key.endsWith("_BASE_URL") || key.endsWith("_API_URL") || key.endsWith("_ENDPOINT");
+      CRITICAL_KEYS.has(key) ||
+      key.endsWith("_BASE_URL") ||
+      key.endsWith("_API_URL") ||
+      key.endsWith("_ENDPOINT");
     if (!looksLikeEndpoint) {
       continue;
     }

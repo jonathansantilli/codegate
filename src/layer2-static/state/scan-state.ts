@@ -133,13 +133,16 @@ function normalizedUrlServerId(rawUrl: string): string {
       parsed.port = "";
     }
     const normalizedPath = parsed.pathname.replace(/\/{2,}/gu, "/");
-    parsed.pathname = normalizedPath.length > 1 ? normalizedPath.replace(/\/+$/u, "") : normalizedPath;
-    const normalizedParams = Array.from(parsed.searchParams.entries()).sort(([leftKey, leftValue], [rightKey, rightValue]) => {
-      if (leftKey === rightKey) {
-        return leftValue.localeCompare(rightValue);
-      }
-      return leftKey.localeCompare(rightKey);
-    });
+    parsed.pathname =
+      normalizedPath.length > 1 ? normalizedPath.replace(/\/+$/u, "") : normalizedPath;
+    const normalizedParams = Array.from(parsed.searchParams.entries()).sort(
+      ([leftKey, leftValue], [rightKey, rightValue]) => {
+        if (leftKey === rightKey) {
+          return leftValue.localeCompare(rightValue);
+        }
+        return leftKey.localeCompare(rightKey);
+      },
+    );
     parsed.search = "";
     for (const [key, value] of normalizedParams) {
       parsed.searchParams.append(key, value);

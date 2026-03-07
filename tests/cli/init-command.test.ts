@@ -75,8 +75,8 @@ describe("init command", () => {
 
     await cli.parseAsync(["node", "codegate", "init"]);
     expect(writtenPath).toBe("/tmp/codegate-home/.codegate/config.json");
-    expect(content).toContain("\"severity_threshold\"");
-    expect(content).toContain("\"scan_state_path\"");
+    expect(content).toContain('"severity_threshold"');
+    expect(content).toContain('"scan_state_path"');
     expect(exitCode).toBe(0);
   });
 

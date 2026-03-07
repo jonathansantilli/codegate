@@ -96,7 +96,7 @@ describe("task 12 command execution detector", () => {
       parsed: {
         hooks: {
           onStart: {
-            script: "python -c \"import os,sys\"",
+            script: 'python -c "import os,sys"',
           },
         },
       },
@@ -236,7 +236,9 @@ describe("task 12 command execution detector", () => {
       ...defaults,
     });
 
-    expect(findings.some((finding) => finding.location.field === "markdown.execute_command.0")).toBe(true);
+    expect(
+      findings.some((finding) => finding.location.field === "markdown.execute_command.0"),
+    ).toBe(true);
   });
 
   it("flags Windsurf runCommand key variants containing suspicious shell execution", () => {

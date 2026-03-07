@@ -2,11 +2,11 @@
 
 ## Supported Versions
 
-| Version | Supported |
-|---|---|
-| Latest `0.x` release | ✅ |
+| Version              | Supported      |
+| -------------------- | -------------- |
+| Latest `0.x` release | ✅             |
 | Older `0.x` releases | ⚠️ Best effort |
-| Unreleased branches | ❌ |
+| Unreleased branches  | ❌             |
 
 ## How to report a vulnerability
 

@@ -3,7 +3,10 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const root = resolve(process.cwd());
-const scenarioIds = Array.from({ length: 29 }, (_, index) => `SG-${String(index).padStart(2, "0")}`);
+const scenarioIds = Array.from(
+  { length: 29 },
+  (_, index) => `SG-${String(index).padStart(2, "0")}`,
+);
 const userScopeScenarioIds = new Set(["SG-10"]);
 
 function readJson(path: string): unknown {
@@ -41,7 +44,8 @@ function readProjectConfig(id: string): Record<string, unknown> | null {
 describe("manual showcase contract", () => {
   it("includes required showcase docs when private showcase pack is present", () => {
     const hasShowcasePack =
-      existsSync(resolve(root, "showcase/README.md")) || existsSync(resolve(root, "docs/showcase/scenario-matrix.md"));
+      existsSync(resolve(root, "showcase/README.md")) ||
+      existsSync(resolve(root, "docs/showcase/scenario-matrix.md"));
     if (!hasShowcasePack) {
       expect(true).toBe(true);
       return;
@@ -64,7 +68,10 @@ describe("manual showcase contract", () => {
     }
 
     for (const id of scenarioIds) {
-      const matches = readFileSync(resolve(root, "docs/showcase/scenario-matrix.md"), "utf8").includes(`\`${id}\``);
+      const matches = readFileSync(
+        resolve(root, "docs/showcase/scenario-matrix.md"),
+        "utf8",
+      ).includes(`\`${id}\``);
       expect(matches).toBe(true);
 
       const scenarioDir = resolve(root, `showcase/scenarios/${id}`);
@@ -86,17 +93,22 @@ describe("manual showcase contract", () => {
       const command = readExpected(id).command;
       const commandString = typeof command === "string" ? command : "";
       const usesProjectFixture =
-        commandString.includes(`showcase/scenarios/${id}/project`) || commandString.includes(`cd "$TMP/project"`);
+        commandString.includes(`showcase/scenarios/${id}/project`) ||
+        commandString.includes(`cd "$TMP/project"`);
 
       if (!existsSync(projectDir) || userScopeScenarioIds.has(id) || !usesProjectFixture) {
         continue;
       }
 
       const config = readProjectConfig(id);
-      expect(config, `${id} should include project/.codegate.json to isolate the fixture`).not.toBeNull();
-      expect(config?.scan_user_scope, `${id} should disable user-scope scanning for deterministic showcase runs`).toBe(
-        false,
-      );
+      expect(
+        config,
+        `${id} should include project/.codegate.json to isolate the fixture`,
+      ).not.toBeNull();
+      expect(
+        config?.scan_user_scope,
+        `${id} should disable user-scope scanning for deterministic showcase runs`,
+      ).toBe(false);
     }
   });
 
@@ -116,7 +128,9 @@ describe("manual showcase contract", () => {
         continue;
       }
 
-      expect(commandString, `${id} uses removed run --format showcase syntax`).not.toContain("--format");
+      expect(commandString, `${id} uses removed run --format showcase syntax`).not.toContain(
+        "--format",
+      );
     }
   });
 });

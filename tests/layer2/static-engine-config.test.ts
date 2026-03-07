@@ -56,7 +56,9 @@ describe("static engine config wiring", () => {
       config: makeConfig({ unicode_analysis: false }),
     });
 
-    expect(report.findings.some((finding) => finding.rule_id === "rule-file-hidden-unicode")).toBe(false);
+    expect(report.findings.some((finding) => finding.rule_id === "rule-file-hidden-unicode")).toBe(
+      false,
+    );
   });
 
   it("skips allowlisted git hooks", async () => {

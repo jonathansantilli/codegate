@@ -33,7 +33,9 @@ describe("task 08 rule engine", () => {
     };
 
     expect(evaluateRule(rule, input({ parsed: { enableAllProjectMcpServers: true } }))).toBe(true);
-    expect(evaluateRule(rule, input({ parsed: { enableAllProjectMcpServers: false } }))).toBe(false);
+    expect(evaluateRule(rule, input({ parsed: { enableAllProjectMcpServers: false } }))).toBe(
+      false,
+    );
   });
 
   it("evaluates toml_path and env_key rules", () => {
@@ -111,9 +113,9 @@ describe("task 08 rule engine", () => {
       condition: "line_length_exceeds",
     };
 
-    expect(evaluateRule(regexRule, input({ filePath: ".cursorrules", textContent: "abc\u200Bdef" }))).toBe(
-      true,
-    );
+    expect(
+      evaluateRule(regexRule, input({ filePath: ".cursorrules", textContent: "abc\u200Bdef" })),
+    ).toBe(true);
     expect(
       evaluateRule(
         longLineRule,

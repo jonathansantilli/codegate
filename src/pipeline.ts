@@ -1,9 +1,16 @@
-import { runStaticEngine, type StaticEngineConfig, type StaticFileInput } from "./layer2-static/engine.js";
+import {
+  runStaticEngine,
+  type StaticEngineConfig,
+  type StaticFileInput,
+} from "./layer2-static/engine.js";
 import { createEmptyReport, type CodeGateReport } from "./types/report.js";
 import type { GitHookEntry } from "./layer2-static/detectors/git-hooks.js";
 import type { SymlinkEscapeEntry } from "./layer2-static/detectors/symlink.js";
 import type { ResourceFetchResult, ResourceRequest } from "./layer3-dynamic/resource-fetcher.js";
-import { scanToolDescriptions, type ToolDescription } from "./layer3-dynamic/tool-description-scanner.js";
+import {
+  scanToolDescriptions,
+  type ToolDescription,
+} from "./layer3-dynamic/tool-description-scanner.js";
 import { detectToxicFlows, type ToxicToolClass } from "./layer3-dynamic/toxic-flow.js";
 import { applyReportSummary } from "./report-summary.js";
 import type { Finding } from "./types/finding.js";
@@ -167,7 +174,11 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 function parseToxicClass(value: string): ToxicToolClass | null {
-  if (value === "untrusted_input" || value === "sensitive_access" || value === "exfiltration_sink") {
+  if (
+    value === "untrusted_input" ||
+    value === "sensitive_access" ||
+    value === "exfiltration_sink"
+  ) {
     return value;
   }
   return null;
@@ -212,7 +223,10 @@ function parseToolEntries(metadata: unknown): Layer3ToolEntry[] {
     .filter((entry) => entry.name.length > 0 && entry.description.length > 0);
 }
 
-function parseToolClassifications(metadata: unknown, tools: Layer3ToolEntry[]): ToolClassificationMap {
+function parseToolClassifications(
+  metadata: unknown,
+  tools: Layer3ToolEntry[],
+): ToolClassificationMap {
   const map: ToolClassificationMap = {};
   const root = asRecord(metadata);
 
@@ -269,7 +283,11 @@ function deriveLayer3ToolFindings(
   ];
 }
 
-function layer3ErrorFinding(resourceId: string, status: DeepScanOutcome["status"], description: string): Finding {
+function layer3ErrorFinding(
+  resourceId: string,
+  status: DeepScanOutcome["status"],
+  description: string,
+): Finding {
   const severity: Finding["severity"] =
     status === "timeout" ? "MEDIUM" : status === "skipped_without_consent" ? "INFO" : "LOW";
 
@@ -294,7 +312,9 @@ function layer3ErrorFinding(resourceId: string, status: DeepScanOutcome["status"
 }
 
 function isRegistryMetadataResource(resourceId: string): boolean {
-  return resourceId.startsWith("npm:") || resourceId.startsWith("pypi:") || resourceId.startsWith("git:");
+  return (
+    resourceId.startsWith("npm:") || resourceId.startsWith("pypi:") || resourceId.startsWith("git:")
+  );
 }
 
 export function layer3OutcomesToFindings(
@@ -349,7 +369,10 @@ export function layer3OutcomesToFindings(
   return findings;
 }
 
-export function mergeLayer3Findings(baseReport: CodeGateReport, layer3Findings: Finding[]): CodeGateReport {
+export function mergeLayer3Findings(
+  baseReport: CodeGateReport,
+  layer3Findings: Finding[],
+): CodeGateReport {
   return applyReportSummary({
     ...baseReport,
     findings: [...baseReport.findings, ...layer3Findings],

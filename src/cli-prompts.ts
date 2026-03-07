@@ -28,7 +28,9 @@ export async function promptDeepScanConsent(resource: DeepScanResource): Promise
   }
 }
 
-export async function promptDeepAgentSelection(options: DeepAgentOption[]): Promise<DeepAgentOption | null> {
+export async function promptDeepAgentSelection(
+  options: DeepAgentOption[],
+): Promise<DeepAgentOption | null> {
   if (options.length === 0) {
     return null;
   }
@@ -65,7 +67,9 @@ export async function promptDeepAgentSelection(options: DeepAgentOption[]): Prom
   }
 }
 
-export async function promptMetaAgentCommandConsent(context: MetaAgentCommandConsentContext): Promise<boolean> {
+export async function promptMetaAgentCommandConsent(
+  context: MetaAgentCommandConsentContext,
+): Promise<boolean> {
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -89,7 +93,9 @@ export async function promptMetaAgentCommandConsent(context: MetaAgentCommandCon
   }
 }
 
-export async function promptRemediationConsent(context: RemediationConsentContext): Promise<boolean> {
+export async function promptRemediationConsent(
+  context: RemediationConsentContext,
+): Promise<boolean> {
   const rl = createInterface({
     input: process.stdin,
     output: process.stdout,

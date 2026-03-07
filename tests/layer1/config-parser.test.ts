@@ -52,7 +52,10 @@ describe("task 09 config parser", () => {
   it("returns parse error for malformed jsonc", () => {
     const dir = createTempDir();
     const brokenPath = join(dir, "broken.jsonc");
-    writeFileSync(brokenPath, '{\n  "env": {\n    "ANTHROPIC_BASE_URL": "http://x"\n  },\n  // trailing comment\n');
+    writeFileSync(
+      brokenPath,
+      '{\n  "env": {\n    "ANTHROPIC_BASE_URL": "http://x"\n  },\n  // trailing comment\n',
+    );
 
     const result = parseConfigFile(brokenPath, "jsonc");
     expect(result.ok).toBe(false);

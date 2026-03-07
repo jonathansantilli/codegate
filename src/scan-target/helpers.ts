@@ -3,7 +3,13 @@ import { basename, dirname, join } from "node:path";
 import type { DiscoveryFormat } from "../types/discovery.js";
 import type { ExplicitScanCandidate } from "./types.js";
 
-const REPO_HOSTS = new Set(["github.com", "www.github.com", "gitlab.com", "www.gitlab.com", "bitbucket.org"]);
+const REPO_HOSTS = new Set([
+  "github.com",
+  "www.github.com",
+  "gitlab.com",
+  "www.gitlab.com",
+  "bitbucket.org",
+]);
 const RECURSIVE_ARTIFACT_FILE_NAMES = new Set([
   "skill.md",
   "agents.md",
@@ -69,7 +75,12 @@ export function inferLocalFileStagePath(absolutePath: string): string {
     return join(".kiro", "product.json");
   }
 
-  if (lower === "skill.md" || lower === "plugins.json" || lower === "extensions.json" || lower === "marketplace.json") {
+  if (
+    lower === "skill.md" ||
+    lower === "plugins.json" ||
+    lower === "extensions.json" ||
+    lower === "marketplace.json"
+  ) {
     return preserveTailSegments(absolutePath, 2);
   }
 
@@ -84,7 +95,12 @@ export function inferRemoteFileStagePath(url: URL): string {
     return join(".kiro", "product.json");
   }
 
-  if (lower === "skill.md" || lower === "plugins.json" || lower === "extensions.json" || lower === "marketplace.json") {
+  if (
+    lower === "skill.md" ||
+    lower === "plugins.json" ||
+    lower === "extensions.json" ||
+    lower === "marketplace.json"
+  ) {
     return preserveTailSegments(url.pathname, 3);
   }
 
@@ -245,7 +261,7 @@ export function parseGitHubFileSource(rawTarget: string): GitHubFileSource | nul
     if (segments.length < 4) {
       return null;
     }
-    const [owner, repo, _branch, ...fileSegments] = segments;
+    const [owner, repo, , ...fileSegments] = segments;
     return {
       repoUrl: `https://github.com/${owner}/${repo}.git`,
       filePath: fileSegments.join("/"),
@@ -257,7 +273,7 @@ export function parseGitHubFileSource(rawTarget: string): GitHubFileSource | nul
     if (segments.length < 5) {
       return null;
     }
-    const [owner, repo, marker, _branch, ...fileSegments] = segments;
+    const [owner, repo, marker, , ...fileSegments] = segments;
     if (marker !== "blob" && marker !== "raw") {
       return null;
     }

@@ -4,7 +4,7 @@ Describe what changed and why.
 
 ## Changes
 
-- 
+-
 
 ## Testing
 
@@ -21,4 +21,3 @@ Provide command output for:
 - [ ] Docs updated for user-visible changes
 - [ ] CI is green
 - [ ] No unrelated changes included
-

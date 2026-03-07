@@ -20,4 +20,3 @@ for (const [sourceRelative, destinationRelative] of mappings) {
   mkdirSync(dirname(destination), { recursive: true });
   cpSync(source, destination, { recursive: true });
 }
-

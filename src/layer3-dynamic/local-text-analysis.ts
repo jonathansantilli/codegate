@@ -61,15 +61,13 @@ export function extractReferencedUrls(textContent: string): string[] {
 export function collectLocalTextAnalysisTargets(
   candidates: LocalTextAnalysisCandidate[],
 ): LocalTextAnalysisTarget[] {
-  return candidates
-    .filter(isLocalTextCandidate)
-    .map((candidate) => ({
-      id: `local:${candidate.reportPath}`,
-      reportPath: candidate.reportPath,
-      absolutePath: candidate.absolutePath,
-      textContent: candidate.textContent,
-      referencedUrls: extractReferencedUrls(candidate.textContent),
-    }));
+  return candidates.filter(isLocalTextCandidate).map((candidate) => ({
+    id: `local:${candidate.reportPath}`,
+    reportPath: candidate.reportPath,
+    absolutePath: candidate.absolutePath,
+    textContent: candidate.textContent,
+    referencedUrls: extractReferencedUrls(candidate.textContent),
+  }));
 }
 
 export function supportsToollessLocalTextAnalysis(tool: MetaAgentTool): boolean {
@@ -97,7 +95,9 @@ export function buildPromptEvidenceText(textContent: string): string {
     .sort((left, right) => left - right)
     .slice(0, 80);
 
-  const excerptBlocks = selected.map((lineNumber) => `${lineNumber} | ${lines[lineNumber - 1] ?? ""}`);
+  const excerptBlocks = selected.map(
+    (lineNumber) => `${lineNumber} | ${lines[lineNumber - 1] ?? ""}`,
+  );
   return [
     "File stats:",
     `- total lines: ${lines.length}`,

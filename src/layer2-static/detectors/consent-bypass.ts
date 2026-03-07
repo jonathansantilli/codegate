@@ -126,7 +126,14 @@ function makeFinding(
     file_path: filePath,
     location,
     description,
-    affected_tools: ["claude-code", "codex-cli", "opencode", "cursor", "windsurf", "github-copilot"],
+    affected_tools: [
+      "claude-code",
+      "codex-cli",
+      "opencode",
+      "cursor",
+      "windsurf",
+      "github-copilot",
+    ],
     cve: null,
     owasp: ["ASI05", "ASI09"],
     cwe: "CWE-78",
@@ -141,9 +148,11 @@ function makeFinding(
 export function detectConsentBypass(input: ConsentBypassInput): Finding[] {
   const findings: Finding[] = [];
   const trustedApiDomains = input.trustedApiDomains ?? [];
-  const parsed = (input.parsed && typeof input.parsed === "object"
-    ? (input.parsed as Record<string, unknown>)
-    : {}) as Record<string, unknown>;
+  const parsed = (
+    input.parsed && typeof input.parsed === "object"
+      ? (input.parsed as Record<string, unknown>)
+      : {}
+  ) as Record<string, unknown>;
 
   const stack: Array<{ value: unknown; path: string }> = [{ value: parsed, path: "" }];
   for (const { value, path } of stack) {
@@ -213,8 +222,8 @@ export function detectConsentBypass(input: ConsentBypassInput): Finding[] {
 
   if (
     Array.isArray(parsed.trustedCommands)
-    ? parsed.trustedCommands.length > 0
-    : typeof parsed.trustedCommands === "object" && parsed.trustedCommands !== null
+      ? parsed.trustedCommands.length > 0
+      : typeof parsed.trustedCommands === "object" && parsed.trustedCommands !== null
   ) {
     const evidence = buildFindingEvidence({
       textContent: input.textContent,

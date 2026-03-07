@@ -23,7 +23,10 @@ function toLineStarts(textContent: string): number[] {
   return starts;
 }
 
-function offsetToLineAndColumn(lineStarts: number[], offset: number): { line: number; column: number } {
+function offsetToLineAndColumn(
+  lineStarts: number[],
+  offset: number,
+): { line: number; column: number } {
   if (lineStarts.length === 0) {
     return { line: 1, column: 1 };
   }

@@ -52,7 +52,11 @@ describe("task 22 backup and undo", () => {
       filePaths: [".claude/settings.json"],
     });
 
-    writeFileSync(resolve(session.sessionDir, ".claude/settings.json"), '{ "safe": "tampered" }\n', "utf8");
+    writeFileSync(
+      resolve(session.sessionDir, ".claude/settings.json"),
+      '{ "safe": "tampered" }\n',
+      "utf8",
+    );
     writeFileSync(targetFile, '{ "safe": false }\n', "utf8");
 
     expect(() =>

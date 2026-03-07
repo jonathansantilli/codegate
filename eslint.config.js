@@ -4,7 +4,19 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: ["dist/**", "node_modules/**", "coverage/**", "eslint.config.js"],
+    ignores: [
+      "dist/**",
+      "node_modules/**",
+      "coverage/**",
+      "docs/plans/**",
+      "docs/showcase/**",
+      "showcase/**",
+      "scripts/showcase/**",
+      "~/**",
+      ".codegate/**",
+      ".codegate-backup/**",
+      "eslint.config.js",
+    ],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

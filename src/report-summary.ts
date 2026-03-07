@@ -26,11 +26,16 @@ export function computeExitCode(findings: Finding[], threshold: ReportThreshold 
   }
 
   const thresholdLevel = THRESHOLD_LEVEL[threshold];
-  const hasDangerous = unsuppressed.some((finding) => SEVERITY_LEVEL[finding.severity] >= thresholdLevel);
+  const hasDangerous = unsuppressed.some(
+    (finding) => SEVERITY_LEVEL[finding.severity] >= thresholdLevel,
+  );
   return hasDangerous ? 2 : 1;
 }
 
-export function summarizeFindings(findings: Finding[], threshold: ReportThreshold = "high"): ReportSummary {
+export function summarizeFindings(
+  findings: Finding[],
+  threshold: ReportThreshold = "high",
+): ReportSummary {
   const bySeverity: Record<string, number> = {
     CRITICAL: 0,
     HIGH: 0,

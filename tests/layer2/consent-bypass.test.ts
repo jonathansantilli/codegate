@@ -96,9 +96,9 @@ describe("task 11 consent bypass detector", () => {
       textContent: "",
     });
 
-    expect(
-      findings.some((finding) => finding.rule_id === "cline-block-personal-remote-mcp"),
-    ).toBe(true);
+    expect(findings.some((finding) => finding.rule_id === "cline-block-personal-remote-mcp")).toBe(
+      true,
+    );
   });
 
   it("flags insecure HTTP remote MCP server URLs in Cline remote config", () => {
@@ -137,9 +137,9 @@ describe("task 11 consent bypass detector", () => {
       textContent: "",
     });
 
-    expect(findings.some((finding) => finding.rule_id === "cline-remote-mcp-sensitive-header")).toBe(
-      true,
-    );
+    expect(
+      findings.some((finding) => finding.rule_id === "cline-remote-mcp-sensitive-header"),
+    ).toBe(true);
   });
 
   it("flags routing override headers in Cline remote MCP alias arrays", () => {
@@ -223,7 +223,9 @@ describe("task 11 consent bypass detector", () => {
     });
 
     expect(
-      findings.some((finding) => finding.rule_id === "cline-remote-mcp-unallowlisted-header-domain"),
+      findings.some(
+        (finding) => finding.rule_id === "cline-remote-mcp-unallowlisted-header-domain",
+      ),
     ).toBe(true);
   });
 });

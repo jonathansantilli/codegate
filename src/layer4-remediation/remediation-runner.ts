@@ -107,7 +107,10 @@ function isSafeCriticalPlan(plan: RemediationPlanItem, report: CodeGateReport): 
   return plan.action.type === "remove_field" || plan.action.type === "replace_value";
 }
 
-function choosePlans(input: RemediationRunnerInput, plans: RemediationPlanItem[]): RemediationPlanItem[] {
+function choosePlans(
+  input: RemediationRunnerInput,
+  plans: RemediationPlanItem[],
+): RemediationPlanItem[] {
   if (input.flags.fixSafe) {
     return plans.filter((plan) => isSafeCriticalPlan(plan, input.report));
   }
@@ -121,7 +124,9 @@ function toPatchContent(plans: RemediationPlanItem[]): string {
     .join("\n\n");
 }
 
-function toActionSummaries(plans: RemediationPlanItem[]): RemediationRunnerResult["plannedActions"] {
+function toActionSummaries(
+  plans: RemediationPlanItem[],
+): RemediationRunnerResult["plannedActions"] {
   return plans.map((plan) => ({
     findingId: plan.findingId,
     filePath: plan.filePath,
@@ -259,13 +264,14 @@ export function runRemediation(input: RemediationRunnerInput): RemediationRunner
   }
 
   if (input.flags.dryRun || (!input.flags.remediate && !input.flags.fixSafe)) {
-      return {
-        report: input.report,
+    return {
+      report: input.report,
       plannedCount: composedPlans.length,
       appliedCount: 0,
       plannedActions: toActionSummaries(composedPlans),
       appliedActions: [],
-      patchContent: input.flags.patch && !input.flags.output && !input.isTTY ? patchContent : undefined,
+      patchContent:
+        input.flags.patch && !input.flags.output && !input.isTTY ? patchContent : undefined,
       patchPath,
     };
   }
@@ -312,7 +318,8 @@ export function runRemediation(input: RemediationRunnerInput): RemediationRunner
     plannedActions: toActionSummaries(composedPlans),
     appliedActions: toActionSummaries(composedPlans),
     backupSessionId: session.sessionId,
-    patchContent: input.flags.patch && !input.flags.output && !input.isTTY ? patchContent : undefined,
+    patchContent:
+      input.flags.patch && !input.flags.output && !input.isTTY ? patchContent : undefined,
     patchPath,
   };
 }

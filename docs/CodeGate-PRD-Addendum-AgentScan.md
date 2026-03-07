@@ -29,21 +29,21 @@
 
 ### What it does NOT do (CodeGate's advantage)
 
-| Attack class | Agent Scan | CodeGate |
-|---|---|---|
-| Environment variable override detection (`ANTHROPIC_BASE_URL`) | ❌ | ✅ Layer 2 |
-| Claude Code hooks RCE | ❌ | ✅ Layer 2 |
-| Consent bypass (`enableAllProjectMcpServers`) | ❌ | ✅ Layer 2 |
-| IDE settings manipulation (IDEsaster) | ❌ | ✅ Layer 2 |
-| Symlink escape to credentials | ❌ | ✅ Layer 2 |
-| Git hook scanning | ❌ | ✅ Layer 2 |
-| Rule file Unicode injection (Rules File Backdoor) | ❌ | ✅ Layer 2 |
-| LSP/Formatter command execution (OpenCode) | ❌ | ✅ Layer 2 |
-| Interactive remediation with diffs | ❌ | ✅ Layer 4 |
-| Wrapper mode (`codegate run claude`) | ❌ | ✅ |
-| Fully offline static analysis | ❌ (phones home) | ✅ Layers 1+2 |
-| SARIF output for GitHub Code Scanning | ❌ (JSON only) | ✅ |
-| Cross-tool coverage (OpenCode, Codex, Kiro) | Partial | ✅ 7+ tools |
+| Attack class                                                   | Agent Scan       | CodeGate      |
+| -------------------------------------------------------------- | ---------------- | ------------- |
+| Environment variable override detection (`ANTHROPIC_BASE_URL`) | ❌               | ✅ Layer 2    |
+| Claude Code hooks RCE                                          | ❌               | ✅ Layer 2    |
+| Consent bypass (`enableAllProjectMcpServers`)                  | ❌               | ✅ Layer 2    |
+| IDE settings manipulation (IDEsaster)                          | ❌               | ✅ Layer 2    |
+| Symlink escape to credentials                                  | ❌               | ✅ Layer 2    |
+| Git hook scanning                                              | ❌               | ✅ Layer 2    |
+| Rule file Unicode injection (Rules File Backdoor)              | ❌               | ✅ Layer 2    |
+| LSP/Formatter command execution (OpenCode)                     | ❌               | ✅ Layer 2    |
+| Interactive remediation with diffs                             | ❌               | ✅ Layer 4    |
+| Wrapper mode (`codegate run claude`)                           | ❌               | ✅            |
+| Fully offline static analysis                                  | ❌ (phones home) | ✅ Layers 1+2 |
+| SARIF output for GitHub Code Scanning                          | ❌ (JSON only)   | ✅            |
+| Cross-tool coverage (OpenCode, Codex, Kiro)                    | Partial          | ✅ 7+ tools   |
 
 ### Critical architectural difference — privacy
 
@@ -81,6 +81,7 @@ CodeGate maintains a scan state file at `~/.codegate/scan-state.json` containing
 ```
 
 **Detection logic:**
+
 - On each scan, CodeGate computes a SHA-256 hash of each MCP server's full configuration block (command array, args, env, all fields)
 - If a server was previously seen and its hash has changed, CodeGate reports a HIGH finding: `CONFIG_CHANGE — MCP server "{name}" configuration has changed since last scan ({date}). Review the changes before proceeding.`
 - New (never-before-seen) servers are reported as INFO: `NEW_SERVER — MCP server "{name}" first seen in this project. Not previously scanned.`
@@ -91,6 +92,7 @@ CodeGate maintains a scan state file at `~/.codegate/scan-state.json` containing
 **New finding categories:** `CONFIG_CHANGE`, `NEW_SERVER`
 
 **Where in the PRD:**
+
 - Add `CONFIG_CHANGE` and `NEW_SERVER` to the finding categories list in **Section 5.5.1**
 - Add a new subsection **5.2.8 MCP Configuration Change Detection** after Git Hook Detection (5.2.7)
 - Add `~/.codegate/scan-state.json` to the global config description in **Section 5.7.1**
@@ -133,6 +135,7 @@ This scanning is identical to the existing Rule File Analyser (5.2.4) applied to
 **Scope:** v2.0 (Tier 1 and 2), v3.0 (Tier 3)
 
 **Where in the PRD:**
+
 - Add to **Section 5.3 Layer 3** as a new subsection **5.3.5 MCP Tool Description Analysis** after Error Handling (5.3.4)
 - Expand the existing bullet "MCP tool description poisoning analysis" in the **v2.0 roadmap** with the tiered approach
 - Add Tier 3 (running server connection) to the **v3.0 roadmap**
@@ -182,18 +185,19 @@ No individual tool is malicious. But combined, they enable: attacker plants prom
 
 The classification can be deterministic based on known tool names and server names from the knowledge base:
 
-| Server | Tool pattern | Classification |
-|---|---|---|
-| `@anthropic/mcp-server-filesystem` | `read_file`, `list_directory` | `sensitive_access` |
-| `@modelcontextprotocol/server-github` | `read_issue`, `read_pr` | `untrusted_input` |
-| `@modelcontextprotocol/server-slack` | `send_message` | `exfiltration_sink` |
-| Any server with `fetch`, `http`, `request` tools | — | `untrusted_input` + `exfiltration_sink` |
+| Server                                           | Tool pattern                  | Classification                          |
+| ------------------------------------------------ | ----------------------------- | --------------------------------------- |
+| `@anthropic/mcp-server-filesystem`               | `read_file`, `list_directory` | `sensitive_access`                      |
+| `@modelcontextprotocol/server-github`            | `read_issue`, `read_pr`       | `untrusted_input`                       |
+| `@modelcontextprotocol/server-slack`             | `send_message`                | `exfiltration_sink`                     |
+| Any server with `fetch`, `http`, `request` tools | —                             | `untrusted_input` + `exfiltration_sink` |
 
 For unknown tools (not in KB), the tool description analysis from Feature B provides the classification signal. The meta-agent can also be prompted to classify tools.
 
 **Scope:** v2.0 (basic three-category classification with KB-based labels), v2.5 (AI-assisted classification for unknown tools)
 
 **Where in the PRD:**
+
 - Replace the current vague ASI08 placeholder in **Appendix B** with a concrete Toxic Flow Analysis specification
 - Add a new subsection **5.3.6 Toxic Flow Analysis** in Layer 3
 - Add `TOXIC_FLOW` to the finding categories in **Section 5.5.1**
@@ -205,13 +209,13 @@ For unknown tools (not in KB), the tool description analysis from Feature B prov
 
 ## 3. What NOT to Take from Agent Scan
 
-| Agent Scan feature | Why CodeGate should NOT adopt it |
-|---|---|
-| **Cloud API dependency** | Agent Scan sends tool descriptions to Snyk's servers. CodeGate's offline-first model is a core differentiator for enterprise, privacy-conscious users, and air-gapped environments. Don't sacrifice this. |
+| Agent Scan feature                             | Why CodeGate should NOT adopt it                                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Cloud API dependency**                       | Agent Scan sends tool descriptions to Snyk's servers. CodeGate's offline-first model is a core differentiator for enterprise, privacy-conscious users, and air-gapped environments. Don't sacrifice this.                                                                                                                       |
 | **Executing MCP server commands to scan them** | Running `command: ["npx", "-y", "@malicious/server"]` to retrieve tool descriptions executes the attack payload. Agent Scan is vulnerable to the same command injection attacks that CodeGate's Layer 2 catches statically. Use safe extraction instead (source code analysis for stdio, HTTP connection for remote endpoints). |
-| **Python/uv toolchain** | Their choice of Python. CodeGate's Node.js is correct — 100% of Claude Code users have Node.js installed. |
-| **Background/MDM fleet mode** | Enterprise fleet monitoring via Snyk Evo. Interesting for v3.0+ but adds SaaS dependency and is not core to the developer-facing pre-flight gate mission. |
-| **Closed contribution model** | "Agent Scan does not accept external contributions." CodeGate should be community-driven with open rules and KB contributions. |
+| **Python/uv toolchain**                        | Their choice of Python. CodeGate's Node.js is correct — 100% of Claude Code users have Node.js installed.                                                                                                                                                                                                                       |
+| **Background/MDM fleet mode**                  | Enterprise fleet monitoring via Snyk Evo. Interesting for v3.0+ but adds SaaS dependency and is not core to the developer-facing pre-flight gate mission.                                                                                                                                                                       |
+| **Closed contribution model**                  | "Agent Scan does not accept external contributions." CodeGate should be community-driven with open rules and KB contributions.                                                                                                                                                                                                  |
 
 ---
 
@@ -219,8 +223,8 @@ For unknown tools (not in KB), the tool description analysis from Feature B prov
 
 Replace the current MCP-scan row in **Section 8** with:
 
-| Tool | Type | Overlap | Gap (what CodeGate adds) |
-|---|---|---|---|
+| Tool                                                                       | Type                               | Overlap                                                                                                                                                                                                                                                                                                                                                                                                                       | Gap (what CodeGate adds)                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------------------------------------------------------------------- | ---------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Snyk Agent Scan** (formerly MCP-scan, Invariant Labs — acquired by Snyk) | MCP + skill scanner with cloud API | Auto-discovers MCP configs across Claude, Cursor, Windsurf, Gemini CLI. Connects to MCP servers at runtime to scan tool descriptions for prompt injection and tool poisoning. Toxic Flow Analysis models tool interaction graphs for compound attack paths. Rug pull detection via tool description hashing. Skill scanning for malware payloads and prompt injection. 1.6k GitHub stars, active development, backed by Snyk. | Requires cloud API (sends tool descriptions to Snyk servers) — not offline. No env override detection, no hooks/consent bypass/IDE settings/symlink/git hook scanning. No LSP/formatter coverage. No interactive remediation. No wrapper mode. No SARIF output. Executes MCP server commands to scan them — vulnerable to the command injection attacks that CodeGate catches statically. Limited to MCP and skills — doesn't cover the full config attack surface. |
 
 Also add to **CodeGate's differentiation** list:
@@ -252,11 +256,11 @@ Also add to **CodeGate's differentiation** list:
 
 ## 6. Summary
 
-| Feature | Source | Scope | Effort | Value |
-|---|---|---|---|---|
-| Rug pull detection (config hashing) | Agent Scan | v1.0, Layer 2 | Low (~50 LoC) | High — catches a real attack class CodeGate currently misses |
-| Tool description scanning (safe extraction) | Agent Scan (adapted) | v2.0, Layer 3 | Medium | High — addresses the primary MCP threat vector |
-| Toxic Flow Analysis | Agent Scan / Invariant Labs | v2.0, Layer 3 | Medium | High — replaces vague ASI08 placeholder with concrete technique |
-| Updated competitive positioning | — | Immediate | Minimal | Necessary — current entry is stale |
+| Feature                                     | Source                      | Scope         | Effort        | Value                                                           |
+| ------------------------------------------- | --------------------------- | ------------- | ------------- | --------------------------------------------------------------- |
+| Rug pull detection (config hashing)         | Agent Scan                  | v1.0, Layer 2 | Low (~50 LoC) | High — catches a real attack class CodeGate currently misses    |
+| Tool description scanning (safe extraction) | Agent Scan (adapted)        | v2.0, Layer 3 | Medium        | High — addresses the primary MCP threat vector                  |
+| Toxic Flow Analysis                         | Agent Scan / Invariant Labs | v2.0, Layer 3 | Medium        | High — replaces vague ASI08 placeholder with concrete technique |
+| Updated competitive positioning             | —                           | Immediate     | Minimal       | Necessary — current entry is stale                              |
 
 The key insight: Agent Scan's strongest features (tool description scanning, TFA) can be incorporated into CodeGate **without their weaknesses** (cloud dependency, unsafe command execution). CodeGate's safe extraction approach (source code analysis for stdio servers, HTTP connection for remote endpoints) gets the same detection coverage while maintaining the offline-first, never-execute-untrusted-commands safety model.

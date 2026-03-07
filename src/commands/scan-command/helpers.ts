@@ -72,10 +72,7 @@ export function parseMetaAgentOutput(stdout: string): unknown | null {
     match = fenced.exec(trimmed);
   }
 
-  const candidates = [
-    trimmed.match(/\{[\s\S]*\}/u)?.[0],
-    trimmed.match(/\[[\s\S]*\]/u)?.[0],
-  ];
+  const candidates = [trimmed.match(/\{[\s\S]*\}/u)?.[0], trimmed.match(/\[[\s\S]*\]/u)?.[0]];
   for (const candidate of candidates) {
     if (!candidate) {
       continue;
@@ -146,7 +143,10 @@ export function noEligibleDeepResourceNotes(): string[] {
   ];
 }
 
-export function parseLocalTextFindings(filePath: string, metadata: unknown): CodeGateReport["findings"] {
+export function parseLocalTextFindings(
+  filePath: string,
+  metadata: unknown,
+): CodeGateReport["findings"] {
   if (!isRecord(metadata) || !Array.isArray(metadata.findings)) {
     return [];
   }
@@ -180,10 +180,13 @@ export function parseLocalTextFindings(filePath: string, metadata: unknown): Cod
       layer: "L3" as const,
       file_path: typeof item.file_path === "string" ? item.file_path : filePath,
       location: { field: typeof item.field === "string" ? item.field : "content" },
-      description: typeof item.description === "string" ? item.description : "Local text analysis finding",
+      description:
+        typeof item.description === "string" ? item.description : "Local text analysis finding",
       affected_tools: [],
       cve: null,
-      owasp: Array.isArray(item.owasp) ? item.owasp.filter((value): value is string => typeof value === "string") : [],
+      owasp: Array.isArray(item.owasp)
+        ? item.owasp.filter((value): value is string => typeof value === "string")
+        : [],
       cwe: typeof item.cwe === "string" ? item.cwe : "CWE-20",
       confidence:
         item.confidence === "HIGH" || item.confidence === "MEDIUM" ? item.confidence : "LOW",
@@ -259,7 +262,9 @@ export function remediationSummaryLines(input: {
   if (actionLines.length > 0) {
     lines.push("Remediation actions:");
     for (const action of actionLines.slice(0, 10)) {
-      lines.push(`- ${action.action} -> ${resolve(input.scanTarget, action.filePath)} (${action.findingId})`);
+      lines.push(
+        `- ${action.action} -> ${resolve(input.scanTarget, action.filePath)} (${action.findingId})`,
+      );
     }
     if (actionLines.length > 10) {
       lines.push(`- ...and ${actionLines.length - 10} more`);
@@ -269,7 +274,11 @@ export function remediationSummaryLines(input: {
   return lines;
 }
 
-export function renderByFormat(format: OutputFormat, report: CodeGateReport, options?: { verbose?: boolean }): string {
+export function renderByFormat(
+  format: OutputFormat,
+  report: CodeGateReport,
+  options?: { verbose?: boolean },
+): string {
   if (format === "json") {
     return renderJsonReport(report);
   }

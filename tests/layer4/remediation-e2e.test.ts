@@ -52,7 +52,9 @@ describe("task 24 remediation end-to-end", () => {
       scanTarget: root,
       config: CONFIG,
     });
-    expect(before.findings.some((finding) => finding.finding_id.includes("ENV_OVERRIDE"))).toBe(true);
+    expect(before.findings.some((finding) => finding.finding_id.includes("ENV_OVERRIDE"))).toBe(
+      true,
+    );
 
     const remediated = runRemediation({
       scanTarget: root,
@@ -68,7 +70,9 @@ describe("task 24 remediation end-to-end", () => {
       scanTarget: root,
       config: CONFIG,
     });
-    expect(after.findings.some((finding) => finding.finding_id.includes("ENV_OVERRIDE"))).toBe(false);
+    expect(after.findings.some((finding) => finding.finding_id.includes("ENV_OVERRIDE"))).toBe(
+      false,
+    );
 
     const undone = undoLatestSession({ projectRoot: root });
     expect(undone.restoredFiles).toBeGreaterThan(0);
@@ -79,7 +83,9 @@ describe("task 24 remediation end-to-end", () => {
       scanTarget: root,
       config: CONFIG,
     });
-    expect(restored.findings.some((finding) => finding.finding_id.includes("ENV_OVERRIDE"))).toBe(true);
+    expect(restored.findings.some((finding) => finding.finding_id.includes("ENV_OVERRIDE"))).toBe(
+      true,
+    );
   });
 
   it("applies all fixable findings targeting the same file", () => {

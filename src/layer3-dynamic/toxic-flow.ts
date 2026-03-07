@@ -25,7 +25,9 @@ function classifyByDescription(description: string): Set<ToxicToolClass> {
   if (/(read jira|read issue|read pr|fetch web|read email|ticket content|untrusted)/u.test(text)) {
     classes.add("untrusted_input");
   }
-  if (/(read local file|filesystem|\.ssh|id_rsa|credential|environment variable|\.env)/u.test(text)) {
+  if (
+    /(read local file|filesystem|\.ssh|id_rsa|credential|environment variable|\.env)/u.test(text)
+  ) {
     classes.add("sensitive_access");
   }
   if (/(send|upload|post|webhook|http request|message|external endpoint|slack)/u.test(text)) {

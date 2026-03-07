@@ -111,17 +111,20 @@ describe("scan --deep behavior", () => {
   });
 
   it("does not execute deep resources without explicit consent", async () => {
-    const discoverDeepResources = vi.fn(async () => [
-      {
-        id: "http:https://mcp.example/tools",
-        request: {
-          id: "http:https://mcp.example/tools",
-          kind: "http",
-          locator: "https://mcp.example/tools",
-        },
-        commandPreview: "GET https://mcp.example/tools",
-      },
-    ] satisfies DeepScanResource[]);
+    const discoverDeepResources = vi.fn(
+      async () =>
+        [
+          {
+            id: "http:https://mcp.example/tools",
+            request: {
+              id: "http:https://mcp.example/tools",
+              kind: "http",
+              locator: "https://mcp.example/tools",
+            },
+            commandPreview: "GET https://mcp.example/tools",
+          },
+        ] satisfies DeepScanResource[],
+    );
 
     const executeDeepResource = vi.fn();
     const cli = createCli(
@@ -149,8 +152,12 @@ describe("scan --deep behavior", () => {
     );
 
     await cli.parseAsync(["node", "codegate", "scan", ".", "--deep"]);
-    expect(stdout.some((line) => line.includes("Deep scan skipped: no eligible external resources"))).toBe(true);
-    expect(stdout.some((line) => line.includes("Deep scan analyzes only remote MCP URLs"))).toBe(true);
+    expect(
+      stdout.some((line) => line.includes("Deep scan skipped: no eligible external resources")),
+    ).toBe(true);
+    expect(stdout.some((line) => line.includes("Deep scan analyzes only remote MCP URLs"))).toBe(
+      true,
+    );
   });
 
   it("reports when a meta-agent is selected but never executed", async () => {
@@ -180,7 +187,9 @@ describe("scan --deep behavior", () => {
         }),
         discoverDeepResources: vi.fn(async () => deepResources),
         requestDeepScanConsent: vi.fn(async () => true),
-        requestDeepAgentSelection: vi.fn(async (options: Array<{ id: string }>) => options[0] ?? null),
+        requestDeepAgentSelection: vi.fn(
+          async (options: Array<{ id: string }>) => options[0] ?? null,
+        ),
         executeDeepResource: vi.fn(
           async (): Promise<ResourceFetchResult> => ({
             status: "auth_failure",
@@ -194,10 +203,14 @@ describe("scan --deep behavior", () => {
 
     await cli.parseAsync(["node", "codegate", "scan", ".", "--deep"]);
 
-    expect(stdout.some((line) => line.includes("Deep scan meta-agent selected: Claude Code (claude)"))).toBe(true);
+    expect(
+      stdout.some((line) => line.includes("Deep scan meta-agent selected: Claude Code (claude)")),
+    ).toBe(true);
     expect(
       stdout.some((line) =>
-        line.includes("Selected meta-agent was not executed because no approved resources returned metadata successfully."),
+        line.includes(
+          "Selected meta-agent was not executed because no approved resources returned metadata successfully.",
+        ),
       ),
     ).toBe(true);
   });
@@ -223,15 +236,24 @@ describe("scan --deep behavior", () => {
         attempts: 1,
         elapsedMs: 5,
         metadata: {
-          tools: [{ name: "jira_read_ticket", description: "Read issue content from remote tracker" }],
+          tools: [
+            { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
+          ],
         },
       }),
     );
 
-    const requestDeepAgentSelection = vi.fn(async (options: Array<{ id: string }>) => options[0] ?? null);
+    const requestDeepAgentSelection = vi.fn(
+      async (options: Array<{ id: string }>) => options[0] ?? null,
+    );
     const requestMetaAgentCommandConsent = vi.fn(async () => true);
     const runMetaAgentCommand = vi.fn(
-      async (): Promise<{ command: MetaAgentCommand; code: number; stdout: string; stderr: string }> => ({
+      async (): Promise<{
+        command: MetaAgentCommand;
+        code: number;
+        stdout: string;
+        stderr: string;
+      }> => ({
         command: {
           command: "claude",
           args: ["--print", "prompt"],
@@ -301,15 +323,24 @@ describe("scan --deep behavior", () => {
         attempts: 1,
         elapsedMs: 5,
         metadata: {
-          tools: [{ name: "jira_read_ticket", description: "Read issue content from remote tracker" }],
+          tools: [
+            { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
+          ],
         },
       }),
     );
 
-    const requestDeepAgentSelection = vi.fn(async (options: Array<{ id: string }>) => options[0] ?? null);
+    const requestDeepAgentSelection = vi.fn(
+      async (options: Array<{ id: string }>) => options[0] ?? null,
+    );
     const requestMetaAgentCommandConsent = vi.fn(async () => true);
     const runMetaAgentCommand = vi.fn(
-      async (): Promise<{ command: MetaAgentCommand; code: number; stdout: string; stderr: string }> => ({
+      async (): Promise<{
+        command: MetaAgentCommand;
+        code: number;
+        stdout: string;
+        stderr: string;
+      }> => ({
         command: {
           command: "claude",
           args: ["--print", "--output-format", "json", "prompt"],
@@ -320,7 +351,8 @@ describe("scan --deep behavior", () => {
         stdout: JSON.stringify({
           type: "result",
           subtype: "success",
-          result: '```json\n{"findings":[{"id":"meta-agent-high-risk","severity":"HIGH","category":"COMMAND_EXEC","description":"Meta-agent detected suspicious credential exfiltration behavior","file_path":".mcp.json","field":"mcpServers.jira_read_ticket.command"}]}\n```',
+          result:
+            '```json\n{"findings":[{"id":"meta-agent-high-risk","severity":"HIGH","category":"COMMAND_EXEC","description":"Meta-agent detected suspicious credential exfiltration behavior","file_path":".mcp.json","field":"mcpServers.jira_read_ticket.command"}]}\n```',
         }),
         stderr: "",
       }),
@@ -364,7 +396,9 @@ describe("scan --deep behavior", () => {
 
     const discoverDeepResources = vi.fn(async () => deepResources);
     const requestDeepScanConsent = vi.fn(async () => true);
-    const requestDeepAgentSelection = vi.fn(async (options: Array<{ id: string }>) => options[0] ?? null);
+    const requestDeepAgentSelection = vi.fn(
+      async (options: Array<{ id: string }>) => options[0] ?? null,
+    );
     const requestMetaAgentCommandConsent = vi.fn(async () => true);
     const executeDeepResource = vi.fn();
 
@@ -435,10 +469,12 @@ describe("scan --deep behavior", () => {
       expect(input.discoveryContext).toBe(discoveryContext);
       return makeBaseReport();
     });
-    const discoverDeepResources = vi.fn(async (_scanTarget: string, _config?: CodeGateConfig, context?: unknown) => {
-      expect(context).toBe(discoveryContext);
-      return [];
-    });
+    const discoverDeepResources = vi.fn(
+      async (_scanTarget: string, _config?: CodeGateConfig, context?: unknown) => {
+        expect(context).toBe(discoveryContext);
+        return [];
+      },
+    );
 
     const cli = createCli(
       "0.2.2",
@@ -468,7 +504,12 @@ describe("scan --deep behavior", () => {
     ];
 
     const runMetaAgentCommand = vi.fn(
-      async (): Promise<{ command: MetaAgentCommand; code: number; stdout: string; stderr: string }> => ({
+      async (): Promise<{
+        command: MetaAgentCommand;
+        code: number;
+        stdout: string;
+        stderr: string;
+      }> => ({
         command: {
           command: "claude",
           args: ["--print", "--tools=", "prompt"],
@@ -503,7 +544,9 @@ describe("scan --deep behavior", () => {
         isTTY: () => true,
         discoverDeepResources: vi.fn(async () => []),
         discoverLocalTextTargets: vi.fn(async () => localTargets),
-        requestDeepAgentSelection: vi.fn(async (options: Array<{ id: string }>) => options[0] ?? null),
+        requestDeepAgentSelection: vi.fn(
+          async (options: Array<{ id: string }>) => options[0] ?? null,
+        ),
         requestMetaAgentCommandConsent: vi.fn(async () => true),
         runMetaAgentCommand,
         setExitCode: (value) => {
@@ -548,7 +591,9 @@ describe("scan --deep behavior", () => {
         }),
         discoverDeepResources: vi.fn(async () => []),
         discoverLocalTextTargets: vi.fn(async () => localTargets),
-        requestDeepAgentSelection: vi.fn(async (options: Array<{ id: string }>) => options[0] ?? null),
+        requestDeepAgentSelection: vi.fn(
+          async (options: Array<{ id: string }>) => options[0] ?? null,
+        ),
       }),
     );
 
@@ -556,7 +601,9 @@ describe("scan --deep behavior", () => {
 
     expect(
       stdout.some((line) =>
-        line.includes("Local instruction-file analysis was skipped because the selected agent does not support tool-less analysis."),
+        line.includes(
+          "Local instruction-file analysis was skipped because the selected agent does not support tool-less analysis.",
+        ),
       ),
     ).toBe(true);
   });

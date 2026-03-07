@@ -15,9 +15,7 @@ export interface SandboxCommandInput {
   timeoutMs?: number;
 }
 
-export async function runSandboxCommand(
-  input: SandboxCommandInput,
-): Promise<SandboxCommandResult> {
+export async function runSandboxCommand(input: SandboxCommandInput): Promise<SandboxCommandResult> {
   return await new Promise((resolve) => {
     const child = spawn(input.command, input.args, {
       cwd: input.cwd,

@@ -202,9 +202,7 @@ export async function executeWrapperRun(
 ): Promise<void> {
   const normalizedTarget = input.target.trim().toLowerCase();
   if (!isRunTarget(normalizedTarget)) {
-    deps.stderr(
-      `Unknown tool: ${input.target}. Valid targets: ${RUN_TARGETS.join(", ")}.`,
-    );
+    deps.stderr(`Unknown tool: ${input.target}. Valid targets: ${RUN_TARGETS.join(", ")}.`);
     deps.setExitCode(3);
     return;
   }

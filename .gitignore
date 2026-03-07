@@ -36,5 +36,6 @@ pnpm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+.husky/_/
 *.swp
 *.swo

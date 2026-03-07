@@ -134,7 +134,9 @@ export function runStaticEngine(input: StaticEngineInput): Finding[] {
   }
 
   findings.push(...detectSymlinkEscapes({ symlinkEscapes: input.symlinkEscapes }));
-  findings.push(...detectGitHookIssues({ hooks: input.hooks, knownSafeHooks: input.config.knownSafeHooks }));
+  findings.push(
+    ...detectGitHookIssues({ hooks: input.hooks, knownSafeHooks: input.config.knownSafeHooks }),
+  );
 
   return dedupeFindings(findings);
 }

@@ -56,7 +56,9 @@ describe("task 14 static pipeline orchestration", () => {
       },
     });
 
-    const commandFindings = report.findings.filter((finding) => finding.category === "COMMAND_EXEC");
+    const commandFindings = report.findings.filter(
+      (finding) => finding.category === "COMMAND_EXEC",
+    );
     expect(commandFindings).toHaveLength(1);
     expect(commandFindings[0]?.affected_locations?.length).toBe(2);
     expect(report.summary.total).toBe(2);

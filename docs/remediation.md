@@ -4,12 +4,12 @@ CodeGate remediation converts findings into concrete file changes with backups a
 
 ## Modes
 
-| Mode | Command | Behavior |
-|---|---|---|
-| Interactive remediation | `codegate scan . --remediate` | Plans fixes and applies remediation actions |
-| Auto-fix safe | `codegate scan . --fix-safe` | Applies only CRITICAL safe actions |
-| Dry run | `codegate scan . --remediate --dry-run` | Produces remediation plan without writing files |
-| Patch | `codegate scan . --remediate --patch` | Generates unified patch output |
+| Mode                    | Command                                 | Behavior                                        |
+| ----------------------- | --------------------------------------- | ----------------------------------------------- |
+| Interactive remediation | `codegate scan . --remediate`           | Plans fixes and applies remediation actions     |
+| Auto-fix safe           | `codegate scan . --fix-safe`            | Applies only CRITICAL safe actions              |
+| Dry run                 | `codegate scan . --remediate --dry-run` | Produces remediation plan without writing files |
+| Patch                   | `codegate scan . --remediate --patch`   | Generates unified patch output                  |
 
 ## Patch Output
 
@@ -24,6 +24,7 @@ When remediation writes files, CodeGate creates a session under:
 `<project>/.codegate-backup/<session-id>/`
 
 Each session includes:
+
 - backup copies of modified files
 - `.manifest.json` with SHA-256 hashes
 

@@ -21,4 +21,3 @@ List alternatives you considered.
 ## Additional Context
 
 Any links, prior art, or examples.
-

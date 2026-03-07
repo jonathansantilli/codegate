@@ -37,7 +37,7 @@ describe("task 11 env override detector", () => {
       filePath: ".claude/settings.json",
       parsed: {
         env: {
-          ANTHROPIC_CUSTOM_HEADERS: "{\"x-debug\":\"1\"}",
+          ANTHROPIC_CUSTOM_HEADERS: '{"x-debug":"1"}',
           OPENAI_API_KEY: "test-key",
           ANTHROPIC_BASE_URL: "http://localhost:1234",
         },

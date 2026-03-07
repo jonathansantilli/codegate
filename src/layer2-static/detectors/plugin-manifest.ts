@@ -462,7 +462,10 @@ function shouldInspectFile(filePath: string): boolean {
 
 function isTrustedSourceDomain(hostname: string, trustedApiDomains: string[]): boolean {
   const lower = hostname.toLowerCase();
-  for (const domain of [...TRUSTED_SOURCE_DOMAINS, ...trustedApiDomains.map((value) => value.toLowerCase())]) {
+  for (const domain of [
+    ...TRUSTED_SOURCE_DOMAINS,
+    ...trustedApiDomains.map((value) => value.toLowerCase()),
+  ]) {
     if (lower === domain || lower.endsWith(`.${domain}`)) {
       return true;
     }
@@ -498,7 +501,10 @@ function isAllowedByMarketplacePolicy(hostname: string, policy: MarketplaceSourc
   return policy.allowedMarketplaceDomains.some((domain) => matchesDomain(hostname, domain));
 }
 
-function isTrustedKiroExtensionRegistryDomain(hostname: string, trustedApiDomains: string[]): boolean {
+function isTrustedKiroExtensionRegistryDomain(
+  hostname: string,
+  trustedApiDomains: string[],
+): boolean {
   for (const domain of [...TRUSTED_KIRO_EXTENSION_REGISTRY_DOMAINS, ...trustedApiDomains]) {
     if (matchesDomain(hostname, domain)) {
       return true;
@@ -601,18 +607,9 @@ function isArtifactSourceUrl(parsedUrl: URL): boolean {
     return true;
   }
 
-  return [
-    ".tgz",
-    ".tar.gz",
-    ".tar",
-    ".zip",
-    ".vsix",
-    ".whl",
-    ".jar",
-    ".gz",
-    ".bz2",
-    ".xz",
-  ].some((suffix) => lowerPath.endsWith(suffix));
+  return [".tgz", ".tar.gz", ".tar", ".zip", ".vsix", ".whl", ".jar", ".gz", ".bz2", ".xz"].some(
+    (suffix) => lowerPath.endsWith(suffix),
+  );
 }
 
 function permissionTokensFromString(value: string): string[] {
@@ -1194,7 +1191,8 @@ function hasAttestationContextFailure(
 
   for (const [key, child] of Object.entries(value)) {
     const normalizedKey = normalizeKey(key);
-    const nextContext = inContext || Array.from(contextHints).some((hint) => normalizedKey.includes(hint));
+    const nextContext =
+      inContext || Array.from(contextHints).some((hint) => normalizedKey.includes(hint));
     if (hasAttestationContextFailure(child, contextHints, nextContext)) {
       return true;
     }
@@ -1265,13 +1263,18 @@ function extractPolicyTokens(value: unknown): string[] {
   return Array.from(tokens);
 }
 
-function assessCertificatePolicy(value: unknown): { hasPolicyMaterial: boolean; hasCodeSigningPolicy: boolean } {
+function assessCertificatePolicy(value: unknown): {
+  hasPolicyMaterial: boolean;
+  hasCodeSigningPolicy: boolean;
+} {
   const nodes = walkRecord(value);
   const tokens = new Set<string>();
 
   for (const node of nodes) {
     const normalizedKey = normalizeKey(node.key);
-    const isPolicyField = CERT_POLICY_FIELD_MARKERS.some((marker) => normalizedKey.includes(marker));
+    const isPolicyField = CERT_POLICY_FIELD_MARKERS.some((marker) =>
+      normalizedKey.includes(marker),
+    );
     if (!isPolicyField || !pathHasContextHint(node.path, ATTESTATION_CERT_CHAIN_CONTEXT_KEYS)) {
       continue;
     }
@@ -1284,7 +1287,9 @@ function assessCertificatePolicy(value: unknown): { hasPolicyMaterial: boolean; 
     return { hasPolicyMaterial: false, hasCodeSigningPolicy: false };
   }
 
-  const hasCodeSigningPolicy = Array.from(tokens).some((token) => CODE_SIGNING_POLICY_TOKENS.has(token));
+  const hasCodeSigningPolicy = Array.from(tokens).some((token) =>
+    CODE_SIGNING_POLICY_TOKENS.has(token),
+  );
   return {
     hasPolicyMaterial: true,
     hasCodeSigningPolicy,
@@ -1344,7 +1349,10 @@ function parseCheckpointTreeSize(value: string): number | null {
   return null;
 }
 
-function assessTransparencyCheckpointConsistency(value: unknown): { inconsistent: boolean; reasons: string[] } {
+function assessTransparencyCheckpointConsistency(value: unknown): {
+  inconsistent: boolean;
+  reasons: string[];
+} {
   const nodes = walkRecord(value);
   const logIndexes: number[] = [];
   const treeSizes: number[] = [];
@@ -1354,12 +1362,16 @@ function assessTransparencyCheckpointConsistency(value: unknown): { inconsistent
     const normalizedKey = normalizeKey(node.key);
     const inTransparencyContext =
       pathHasContextHint(node.path, ATTESTATION_TRANSPARENCY_CONTEXT_KEYS) ||
-      Array.from(ATTESTATION_TRANSPARENCY_CONTEXT_KEYS).some((hint) => normalizedKey.includes(hint));
+      Array.from(ATTESTATION_TRANSPARENCY_CONTEXT_KEYS).some((hint) =>
+        normalizedKey.includes(hint),
+      );
     if (!inTransparencyContext) {
       continue;
     }
 
-    const isLogIndexKey = TRANSPARENCY_LOG_INDEX_KEY_MARKERS.some((marker) => normalizedKey.includes(marker));
+    const isLogIndexKey = TRANSPARENCY_LOG_INDEX_KEY_MARKERS.some((marker) =>
+      normalizedKey.includes(marker),
+    );
     if (isLogIndexKey) {
       const parsed = parseNumber(node.value);
       if (parsed !== null) {
@@ -1367,7 +1379,9 @@ function assessTransparencyCheckpointConsistency(value: unknown): { inconsistent
       }
     }
 
-    const isTreeSizeKey = TRANSPARENCY_TREE_SIZE_KEY_MARKERS.some((marker) => normalizedKey.includes(marker));
+    const isTreeSizeKey = TRANSPARENCY_TREE_SIZE_KEY_MARKERS.some((marker) =>
+      normalizedKey.includes(marker),
+    );
     if (isTreeSizeKey) {
       const parsed = parseNumber(node.value);
       if (parsed !== null) {
@@ -1577,7 +1591,9 @@ function hasIntegrityMetadata(parent: Record<string, unknown> | null): boolean {
       return value.length > 0;
     }
     if (isRecord(value)) {
-      return Object.values(value).some((entry) => entry !== null && entry !== undefined && `${entry}`.length > 0);
+      return Object.values(value).some(
+        (entry) => entry !== null && entry !== undefined && `${entry}`.length > 0,
+      );
     }
   }
 
@@ -1632,7 +1648,9 @@ function tokenizeCommand(command: string): string[] {
 function hasSuspiciousInstallCommand(command: string, blockedCommands: string[]): boolean {
   const tokens = tokenizeCommand(command);
   const hasBlockedBinary = tokens.some((token) => blockedCommands.includes(token));
-  return hasBlockedBinary || SHELL_META_PATTERN.test(command) || NETWORK_UTILITY_PATTERN.test(command);
+  return (
+    hasBlockedBinary || SHELL_META_PATTERN.test(command) || NETWORK_UTILITY_PATTERN.test(command)
+  );
 }
 
 function isUserScopeManifest(filePath: string): boolean {
@@ -1718,7 +1736,11 @@ interface TraversalNode {
   parent: Record<string, unknown> | null;
 }
 
-function walkRecord(value: unknown, path = "", parent: Record<string, unknown> | null = null): TraversalNode[] {
+function walkRecord(
+  value: unknown,
+  path = "",
+  parent: Record<string, unknown> | null = null,
+): TraversalNode[] {
   const nodes: TraversalNode[] = [];
   if (Array.isArray(value)) {
     value.forEach((entry, index) => {
@@ -1839,7 +1861,11 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
 
       const parsed = parseSourceUrl(node.value);
 
-      if (IMAGE_KEYS.has(normalizedKey) && isImageReference(node.value) && !isDigestPinnedImage(node.value)) {
+      if (
+        IMAGE_KEYS.has(normalizedKey) &&
+        isImageReference(node.value) &&
+        !isDigestPinnedImage(node.value)
+      ) {
         const evidence = buildFindingEvidence({
           textContent: input.textContent,
           jsonPaths: [node.path],
@@ -1878,7 +1904,11 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
       }
 
       if (parsed) {
-        if (parsed.protocol === "https:" && isArtifactSourceUrl(parsed) && !hasIntegrityMetadata(node.parent)) {
+        if (
+          parsed.protocol === "https:" &&
+          isArtifactSourceUrl(parsed) &&
+          !hasIntegrityMetadata(node.parent)
+        ) {
           const evidence = buildFindingEvidence({
             textContent: input.textContent,
             jsonPaths: [node.path],
@@ -1917,8 +1947,14 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
           continue;
         }
 
-        if (isKiroExtensionRegistryField(input.filePath, normalizedKey, node.path) && parsed.protocol === "https:") {
-          kiroRegistryHostObservations.push({ path: node.path, host: parsed.hostname.toLowerCase() });
+        if (
+          isKiroExtensionRegistryField(input.filePath, normalizedKey, node.path) &&
+          parsed.protocol === "https:"
+        ) {
+          kiroRegistryHostObservations.push({
+            path: node.path,
+            host: parsed.hostname.toLowerCase(),
+          });
           if (!isTrustedKiroExtensionRegistryDomain(parsed.hostname, input.trustedApiDomains)) {
             const evidence = buildFindingEvidence({
               textContent: input.textContent,
@@ -1940,7 +1976,10 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
           continue;
         }
 
-        if (parsed.protocol === "https:" && !isTrustedSourceDomain(parsed.hostname, input.trustedApiDomains)) {
+        if (
+          parsed.protocol === "https:" &&
+          !isTrustedSourceDomain(parsed.hostname, input.trustedApiDomains)
+        ) {
           const evidence = buildFindingEvidence({
             textContent: input.textContent,
             jsonPaths: [node.path],
@@ -2019,7 +2058,9 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
       typeof node.value === "string" &&
       isMarketplaceSemanticsManifest(input.filePath) &&
       !isAttestationPath(node.path) &&
-      (isManifestEntryPath(node.path) || hasPackageIdentityFields(node.parent) || hasSourceFields(node.parent))
+      (isManifestEntryPath(node.path) ||
+        hasPackageIdentityFields(node.parent) ||
+        hasSourceFields(node.parent))
     ) {
       if (isUnpinnedVersionSelector(node.value)) {
         const evidence = buildFindingEvidence({
@@ -2375,7 +2416,9 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
     }
 
     if (RELEASE_CHANNEL_KEYS.has(normalizedKey)) {
-      const unstableTokens = Array.from(new Set(findUnstableReleaseChannelTokens(releaseChannelTokens(node.value))));
+      const unstableTokens = Array.from(
+        new Set(findUnstableReleaseChannelTokens(releaseChannelTokens(node.value))),
+      );
       if (unstableTokens.length > 0) {
         const evidence = buildFindingEvidence({
           textContent: input.textContent,
@@ -2420,7 +2463,11 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
             evidence,
           ),
         );
-      } else if (node.parent && typeof node.parent.publisher === "string" && node.parent.publisher.trim().length > 0) {
+      } else if (
+        node.parent &&
+        typeof node.parent.publisher === "string" &&
+        node.parent.publisher.trim().length > 0
+      ) {
         const idNamespace = namespaceFromScopedExtensionId(trimmed);
         const publisherNamespace = node.parent.publisher.trim().toLowerCase();
         if (idNamespace && idNamespace !== publisherNamespace) {
@@ -2444,7 +2491,10 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
       }
     }
 
-    if (isVsCodeExtensionsManifest(input.filePath) && VSCODE_RECOMMENDATION_KEYS.has(normalizedKey)) {
+    if (
+      isVsCodeExtensionsManifest(input.filePath) &&
+      VSCODE_RECOMMENDATION_KEYS.has(normalizedKey)
+    ) {
       if (!Array.isArray(node.value)) {
         continue;
       }
@@ -2540,7 +2590,9 @@ export function detectPluginManifestIssues(input: PluginManifestInput): Finding[
   }
 
   if (isKiroProductManifest(input.filePath)) {
-    const uniqueHosts = Array.from(new Set(kiroRegistryHostObservations.map((entry) => entry.host)));
+    const uniqueHosts = Array.from(
+      new Set(kiroRegistryHostObservations.map((entry) => entry.host)),
+    );
     if (uniqueHosts.length > 1) {
       const evidence = buildFindingEvidence({
         textContent: input.textContent,

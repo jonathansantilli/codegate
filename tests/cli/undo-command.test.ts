@@ -46,9 +46,7 @@ describe("undo command", () => {
     await cli.parseAsync(["node", "codegate", "undo"]);
     expect(runUndo).toHaveBeenCalledTimes(1);
     expect(exitCode).toBe(0);
-    expect(stdout).toHaveBeenCalledWith(
-      "Restored 2 file(s) from backup session session-a.",
-    );
+    expect(stdout).toHaveBeenCalledWith("Restored 2 file(s) from backup session session-a.");
   });
 
   it("returns exit code 3 when undo fails", async () => {

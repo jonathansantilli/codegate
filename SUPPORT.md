@@ -21,4 +21,3 @@ Follow [SECURITY.md](./SECURITY.md).
 ## Maintainer Contact
 
 General maintainer contact: `maintainers@codegate.dev`
-

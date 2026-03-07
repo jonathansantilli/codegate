@@ -1,12 +1,18 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
-import { collectLocalTextAnalysisTargets, type LocalTextAnalysisTarget } from "./layer3-dynamic/local-text-analysis.js";
+import {
+  collectLocalTextAnalysisTargets,
+  type LocalTextAnalysisTarget,
+} from "./layer3-dynamic/local-text-analysis.js";
 import { runStaticPipeline } from "./pipeline.js";
 import type { StaticFileInput } from "./layer2-static/engine.js";
 import { applyReportSummary } from "./report-summary.js";
 import { parseConfigFile, type ParseResult } from "./layer1-discovery/config-parser.js";
-import { loadKnowledgeBase, type KnowledgeBaseLoadResult } from "./layer1-discovery/knowledge-base.js";
+import {
+  loadKnowledgeBase,
+  type KnowledgeBaseLoadResult,
+} from "./layer1-discovery/knowledge-base.js";
 import { detectTools } from "./layer1-discovery/tool-detector.js";
 import { walkProjectTree, type WalkResult } from "./layer1-discovery/file-walker.js";
 import {
@@ -365,7 +371,10 @@ function mergeExplicitCandidates(
   return Array.from(merged.values());
 }
 
-function inferArtifactCandidate(relativePath: string, absolutePath: string): ScanDiscoveryCandidate | null {
+function inferArtifactCandidate(
+  relativePath: string,
+  absolutePath: string,
+): ScanDiscoveryCandidate | null {
   for (const rule of INFERRED_ARTIFACT_RULES) {
     if (!rule.pattern.test(relativePath)) {
       continue;
@@ -382,7 +391,9 @@ function inferArtifactCandidate(relativePath: string, absolutePath: string): Sca
   return null;
 }
 
-function parseSelectedCandidates(selected: ScanDiscoveryCandidate[]): ParsedScanDiscoveryCandidate[] {
+function parseSelectedCandidates(
+  selected: ScanDiscoveryCandidate[],
+): ParsedScanDiscoveryCandidate[] {
   return selected.map((candidate) => ({
     ...candidate,
     parsed: parseConfigFile(candidate.absolutePath, candidate.format),
@@ -646,7 +657,9 @@ export function createScanDiscoveryContext(
   };
 }
 
-export function discoverDeepScanResourcesFromContext(context: ScanDiscoveryContext): DeepScanResource[] {
+export function discoverDeepScanResourcesFromContext(
+  context: ScanDiscoveryContext,
+): DeepScanResource[] {
   const discovered = new Map<string, DeepScanResource>();
   for (const item of ensureParsedCandidates(context)) {
     if (!item.parsed.ok) {
@@ -676,7 +689,9 @@ export function collectScanSurface(
   return Array.from(surface).sort((left, right) => left.localeCompare(right));
 }
 
-export function discoverLocalTextAnalysisTargetsFromContext(context: ScanDiscoveryContext): LocalTextAnalysisTarget[] {
+export function discoverLocalTextAnalysisTargetsFromContext(
+  context: ScanDiscoveryContext,
+): LocalTextAnalysisTarget[] {
   return collectLocalTextAnalysisTargets(
     context.selected.map((item) => ({
       reportPath: item.reportPath,

@@ -53,7 +53,9 @@ function parseTools(metadata: unknown): AcquiredToolDescription[] {
   }
 
   return root.tools
-    .filter((entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null)
+    .filter(
+      (entry): entry is Record<string, unknown> => typeof entry === "object" && entry !== null,
+    )
     .map((entry) => ({
       name: typeof entry.name === "string" ? entry.name : "",
       description: typeof entry.description === "string" ? entry.description : "",

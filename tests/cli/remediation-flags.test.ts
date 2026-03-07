@@ -182,10 +182,14 @@ describe("task 23 remediation flags", () => {
     expect(printed.some((line) => line.includes("Remediation summary"))).toBe(true);
     expect(printed.some((line) => line.includes("Planned changes: 2"))).toBe(true);
     expect(printed.some((line) => line.includes("Applied changes: 2"))).toBe(true);
-    expect(printed.some((line) => line.includes(".codegate-backup/2026-03-01T12-00-00-aaaaaa"))).toBe(true);
+    expect(
+      printed.some((line) => line.includes(".codegate-backup/2026-03-01T12-00-00-aaaaaa")),
+    ).toBe(true);
     expect(printed.some((line) => line.includes("codegate undo"))).toBe(true);
     expect(printed.some((line) => line.includes("remove_field"))).toBe(true);
-    expect(printed.some((line) => line.includes("ENV_OVERRIDE-.mcp.json-env.OPENAI_BASE_URL"))).toBe(true);
+    expect(
+      printed.some((line) => line.includes("ENV_OVERRIDE-.mcp.json-env.OPENAI_BASE_URL")),
+    ).toBe(true);
   });
 
   it("skips remediation execution when no fixable findings exist", async () => {
@@ -207,6 +211,8 @@ describe("task 23 remediation flags", () => {
 
     await cli.parseAsync(["node", "codegate", "scan", ".", "--remediate"]);
     expect(runRemediation).not.toHaveBeenCalled();
-    expect(printed.some((line) => line.includes("No fixable findings available for remediation."))).toBe(true);
+    expect(
+      printed.some((line) => line.includes("No fixable findings available for remediation.")),
+    ).toBe(true);
   });
 });

@@ -67,7 +67,8 @@ async function parseResponse(response: Response): Promise<unknown> {
 }
 
 function timeoutError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  const message =
+    error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
   return message.includes("timeout") || message.includes("aborted");
 }
 
