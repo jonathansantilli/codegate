@@ -5,6 +5,7 @@ export interface ExplicitScanCandidate {
   absolutePath: string;
   format: DiscoveryFormat;
   tool: string;
+  textContent?: string;
 }
 
 export interface ResolvedScanTarget {

@@ -45,6 +45,22 @@ export interface RestoreBackupSessionResult {
   sessionId: string;
 }
 
+function isIgnorableBackupReadError(error: unknown): boolean {
+  const code = (error as NodeJS.ErrnoException | undefined)?.code;
+  return code === "ENOENT" || code === "ENOTDIR" || code === "EISDIR";
+}
+
+function readBackupSourceFile(sourcePath: string): string | null {
+  try {
+    return readFileSync(sourcePath, "utf8");
+  } catch (error) {
+    if (isIgnorableBackupReadError(error)) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 function safeRelativePath(filePath: string): string {
   if (isAbsolute(filePath)) {
     throw new Error(`Backup path must be relative: ${filePath}`);
@@ -88,10 +104,10 @@ export function createBackupSession(input: CreateBackupSessionInput): BackupSess
   for (const filePath of input.filePaths) {
     const relativePath = safeRelativePath(filePath);
     const sourcePath = resolve(input.projectRoot, relativePath);
-    if (!existsSync(sourcePath) || !statSync(sourcePath).isFile()) {
+    const content = readBackupSourceFile(sourcePath);
+    if (content === null) {
       continue;
     }
-    const content = readFileSync(sourcePath, "utf8");
     const destinationPath = resolve(sessionDir, relativePath);
     ensureParentDirectory(destinationPath);
     writeFileSync(destinationPath, content, "utf8");

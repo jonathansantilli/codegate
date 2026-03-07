@@ -22,9 +22,8 @@ function fail(error: unknown): ParseFailure {
   return { ok: false, error: `parse error: ${message}` };
 }
 
-export function parseConfigFile(path: string, format: DiscoveryFormat): ParseResult {
+export function parseConfigContent(content: string, format: DiscoveryFormat): ParseResult {
   try {
-    const content = readFileSync(path, "utf8");
     if (content.includes("\u0000")) {
       return fail(new Error("binary or corrupt file content"));
     }
@@ -64,6 +63,14 @@ export function parseConfigFile(path: string, format: DiscoveryFormat): ParseRes
     }
 
     return fail(new Error(`unsupported format: ${format}`));
+  } catch (error) {
+    return fail(error);
+  }
+}
+
+export function parseConfigFile(path: string, format: DiscoveryFormat): ParseResult {
+  try {
+    return parseConfigContent(readFileSync(path, "utf8"), format);
   } catch (error) {
     return fail(error);
   }

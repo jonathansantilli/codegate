@@ -107,6 +107,35 @@ export function inferRemoteFileStagePath(url: URL): string {
   return sanitizePathSegment(fileName);
 }
 
+export function inferRemoteCandidateFormat(
+  relativePath: string,
+  contentType: string | null,
+): DiscoveryFormat | null {
+  const inferredFromPath = inferTextLikeFormat(relativePath);
+  if (inferredFromPath) {
+    return inferredFromPath;
+  }
+
+  const normalizedContentType = contentType?.toLowerCase() ?? "";
+  if (normalizedContentType.includes("json")) {
+    return "json";
+  }
+  if (normalizedContentType.includes("yaml") || normalizedContentType.includes("yml")) {
+    return "yaml";
+  }
+  if (normalizedContentType.includes("toml")) {
+    return "toml";
+  }
+  if (normalizedContentType.includes("markdown")) {
+    return "markdown";
+  }
+  if (normalizedContentType.startsWith("text/")) {
+    return "text";
+  }
+
+  return null;
+}
+
 export function shouldStageContainingFolder(filePath: string): boolean {
   const fileName = basename(filePath).toLowerCase();
   return RECURSIVE_ARTIFACT_FILE_NAMES.has(fileName) || fileName.endsWith(".mdc");

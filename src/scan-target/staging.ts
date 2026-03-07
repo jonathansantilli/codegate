@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -6,13 +6,15 @@ import {
   cleanupTempDir,
   collectExplicitCandidates,
   copyDirectoryRecursive,
+  inferRemoteCandidateFormat,
   inferLocalFileStagePath,
   inferRemoteFileStagePath,
+  inferToolFromReportPath,
   parseGitHubFileSource,
   preserveTailSegments,
   shouldStageContainingFolder,
 } from "./helpers.js";
-import type { ResolvedScanTarget } from "./types.js";
+import type { ExplicitScanCandidate, ResolvedScanTarget } from "./types.js";
 
 function cloneRepository(source: string, destination: string): void {
   const result = spawnSync(
@@ -121,18 +123,30 @@ export async function downloadRemoteFile(rawTarget: string): Promise<ResolvedSca
     throw new Error(`Failed to download scan target: ${response.status} ${response.statusText}`);
   }
 
-  const content = new Uint8Array(await response.arrayBuffer());
   const tempRoot = mkdtempSync(join(tmpdir(), "codegate-scan-download-"));
   const url = new URL(rawTarget);
   const relativePath = inferRemoteFileStagePath(url);
-  const stagedPath = join(tempRoot, relativePath);
-  mkdirSync(dirname(stagedPath), { recursive: true });
-  writeFileSync(stagedPath, content);
+  const textContent = await response.text();
+  const format = inferRemoteCandidateFormat(relativePath, response.headers.get("content-type"));
+  if (!format) {
+    cleanupTempDir(tempRoot);
+    throw new Error(`Unsupported remote scan target format for ${rawTarget}`);
+  }
+
+  // Keep direct remote file contents in memory so untrusted downloads are analyzed without
+  // persisting arbitrary response bytes to disk.
+  const explicitCandidate: ExplicitScanCandidate = {
+    reportPath: relativePath,
+    absolutePath: join(tempRoot, relativePath),
+    format,
+    tool: inferToolFromReportPath(relativePath),
+    textContent,
+  };
 
   return {
     scanTarget: tempRoot,
     displayTarget: rawTarget,
-    explicitCandidates: collectExplicitCandidates(tempRoot),
+    explicitCandidates: [explicitCandidate],
     cleanup: () => cleanupTempDir(tempRoot),
   };
 }

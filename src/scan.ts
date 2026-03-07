@@ -8,7 +8,11 @@ import {
 import { runStaticPipeline } from "./pipeline.js";
 import type { StaticFileInput } from "./layer2-static/engine.js";
 import { applyReportSummary } from "./report-summary.js";
-import { parseConfigFile, type ParseResult } from "./layer1-discovery/config-parser.js";
+import {
+  parseConfigContent,
+  parseConfigFile,
+  type ParseResult,
+} from "./layer1-discovery/config-parser.js";
 import {
   loadKnowledgeBase,
   type KnowledgeBaseLoadResult,
@@ -64,6 +68,7 @@ export interface ScanDiscoveryCandidate {
   absolutePath: string;
   format: DiscoveryFormat;
   tool: string;
+  textContent?: string;
 }
 
 export interface ParsedScanDiscoveryCandidate extends ScanDiscoveryCandidate {
@@ -396,7 +401,10 @@ function parseSelectedCandidates(
 ): ParsedScanDiscoveryCandidate[] {
   return selected.map((candidate) => ({
     ...candidate,
-    parsed: parseConfigFile(candidate.absolutePath, candidate.format),
+    parsed:
+      candidate.textContent !== undefined
+        ? parseConfigContent(candidate.textContent, candidate.format)
+        : parseConfigFile(candidate.absolutePath, candidate.format),
   }));
 }
 
@@ -434,6 +442,10 @@ function readTextFileUtf8(path: string): string {
   } catch {
     return "";
   }
+}
+
+function readCandidateText(candidate: ScanDiscoveryCandidate): string {
+  return candidate.textContent ?? readTextFileUtf8(candidate.absolutePath);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -697,7 +709,7 @@ export function discoverLocalTextAnalysisTargetsFromContext(
       reportPath: item.reportPath,
       absolutePath: item.absolutePath,
       format: item.format,
-      textContent: readTextFileUtf8(item.absolutePath),
+      textContent: readCandidateText(item),
     })),
   );
 }
@@ -725,7 +737,7 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
       filePath: item.reportPath,
       format: item.format,
       parsed: item.parsed.data,
-      textContent: readTextFileUtf8(item.absolutePath),
+      textContent: readCandidateText(item),
     });
   }
 
