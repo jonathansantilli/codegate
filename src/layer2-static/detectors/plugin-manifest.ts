@@ -571,6 +571,12 @@ function isDigestPinnedImage(value: string): boolean {
   return /@sha256:[0-9a-f]{64}$/iu.test(value.trim());
 }
 
+function hasHostSuffix(hostname: string, baseDomain: string): boolean {
+  const host = hostname.trim().toLowerCase();
+  const base = baseDomain.trim().toLowerCase();
+  return host === base || host.endsWith(`.${base}`);
+}
+
 function isLikelyGitSource(value: string, parsedUrl: URL | null): boolean {
   const trimmed = value.trim().toLowerCase();
   if (trimmed.startsWith("git+")) {
@@ -583,9 +589,9 @@ function isLikelyGitSource(value: string, parsedUrl: URL | null): boolean {
     return false;
   }
   return (
-    parsedUrl.hostname.endsWith("github.com") ||
-    parsedUrl.hostname.endsWith("gitlab.com") ||
-    parsedUrl.hostname.endsWith("bitbucket.org")
+    hasHostSuffix(parsedUrl.hostname, "github.com") ||
+    hasHostSuffix(parsedUrl.hostname, "gitlab.com") ||
+    hasHostSuffix(parsedUrl.hostname, "bitbucket.org")
   );
 }
 
