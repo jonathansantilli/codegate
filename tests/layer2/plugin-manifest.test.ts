@@ -765,6 +765,76 @@ describe("plugin manifest detector", () => {
     ).toBe(true);
   });
 
+  it("flags unpinned git sources for trusted git-host subdomains", () => {
+    const textContent = JSON.stringify(
+      {
+        plugins: [
+          {
+            name: "github-subdomain-plugin",
+            source: "https://api.github.com/org/plugin",
+          },
+          {
+            name: "gitlab-subdomain-plugin",
+            source: "https://api.gitlab.com/group/plugin",
+          },
+          {
+            name: "bitbucket-subdomain-plugin",
+            source: "https://api.bitbucket.org/workspaces/org/plugin",
+          },
+        ],
+      },
+      null,
+      2,
+    );
+
+    const findings = detectPluginManifestIssues({
+      filePath: ".roo/marketplace.json",
+      parsed: JSON.parse(textContent),
+      textContent,
+      trustedApiDomains: [],
+      blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
+    });
+
+    expect(
+      findings.filter((finding) => finding.rule_id === "plugin-manifest-unpinned-git-source"),
+    ).toHaveLength(3);
+  });
+
+  it("does not treat lookalike hosts as trusted git sources", () => {
+    const textContent = JSON.stringify(
+      {
+        plugins: [
+          {
+            name: "github-lookalike-plugin",
+            source: "https://evilgithub.com/org/plugin",
+          },
+          {
+            name: "gitlab-lookalike-plugin",
+            source: "https://evilgitlab.com/group/plugin",
+          },
+          {
+            name: "bitbucket-lookalike-plugin",
+            source: "https://evilbitbucket.org/workspaces/org/plugin",
+          },
+        ],
+      },
+      null,
+      2,
+    );
+
+    const findings = detectPluginManifestIssues({
+      filePath: ".roo/marketplace.json",
+      parsed: JSON.parse(textContent),
+      textContent,
+      trustedApiDomains: [],
+      blockedCommands: ["bash", "sh", "curl", "wget", "nc", "python", "node"],
+    });
+
+    expect(
+      findings.some((finding) => finding.rule_id === "plugin-manifest-unpinned-git-source"),
+    ).toBe(false);
+  });
+
   it("flags direct artifact URLs without integrity metadata", () => {
     const textContent = JSON.stringify(
       {
