@@ -1,0 +1,102 @@
+{
+  "tool": "kiro",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": "AGENTS.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".kiro/config.json",
+      "scope": "project",
+      "format": "json",
+      "risk_surface": ["mcp_config", "command_exec"]
+    },
+    {
+      "path": ".kiro/config.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["mcp_config", "command_exec"]
+    },
+    {
+      "path": ".kiro/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcp_servers.*.command": "stdio command (snake_case alias)",
+        "mcp_servers.*.url": "remote endpoint (snake_case alias)"
+      }
+    },
+    {
+      "path": ".kiro/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcp_servers.*.command": "stdio command (snake_case alias)",
+        "mcp_servers.*.url": "remote endpoint (snake_case alias)"
+      }
+    },
+    {
+      "path": ".kiro/hooks.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".kiro/hooks.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".kiro/product.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    },
+    {
+      "path": ".kiro/product.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".kiro/steering/**/*.md",
+      "scope": "project",
+      "type": "steering_rule",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".kiro/steering/**/*.md",
+      "scope": "user",
+      "type": "steering_rule",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".kiro/commands/**/*.md",
+      "scope": "project",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".kiro/commands/**/*.md",
+      "scope": "user",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection"]
+    }
+  ]
+}

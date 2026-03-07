@@ -1,0 +1,53 @@
+{
+  "name": "codegate",
+  "version": "0.1.0",
+  "description": "Pre-flight security scanner for AI coding tool configurations.",
+  "type": "module",
+  "bin": {
+    "codegate": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run",
+    "test:perf": "vitest run tests/perf/scan-performance.test.ts",
+    "test:reliability": "vitest run tests/reliability/signal-handling.test.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "engines": {
+    "node": "^20.19.0 || ^22.13.0 || >=24.0.0"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "dependencies": {
+    "ajv": "^8.18.0",
+    "commander": "^14.0.3",
+    "dotenv": "^17.3.1",
+    "ink": "^6.8.0",
+    "js-yaml": "^4.1.1",
+    "jsonc-parser": "^3.3.1",
+    "react": "^19.2.4",
+    "smol-toml": "^1.6.0",
+    "which": "^6.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^25.3.3",
+    "@types/react": "^19.2.14",
+    "@types/which": "^3.0.4",
+    "eslint": "^10.0.2",
+    "globals": "^17.3.0",
+    "ink-testing-library": "^4.0.0",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vitest": "^4.0.18"
+  }
+}

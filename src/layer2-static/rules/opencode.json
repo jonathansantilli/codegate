@@ -1,0 +1,15 @@
+[
+  {
+    "id": "opencode-command-array",
+    "severity": "critical",
+    "category": "COMMAND_EXEC",
+    "description": "OpenCode command array can execute local commands",
+    "tool": "opencode",
+    "file_pattern": "opencode.json",
+    "query_type": "json_path",
+    "query": "$.mcp.*.command",
+    "condition": "exists",
+    "owasp": ["ASI02", "ASI05"],
+    "cwe": "CWE-78"
+  }
+]

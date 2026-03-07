@@ -1,0 +1,224 @@
+{
+  "tool": "cline",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".clinerules",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".clinerules/**/*.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor", "command_exec"]
+    },
+    {
+      "path": ".clinerules/**/*.txt",
+      "scope": "project",
+      "format": "text",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "Documents/Cline/Rules/**/*.md",
+      "scope": "user",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "Documents/Cline/Rules/**/*.txt",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".cline/settings.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "consent_bypass", "command_exec"]
+    },
+    {
+      "path": ".cline/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "consent_bypass", "command_exec"]
+    },
+    {
+      "path": ".cline/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcpServers.*.alwaysAllow": "auto-approval toggle"
+      }
+    },
+    {
+      "path": ".cline/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcpServers.*.alwaysAllow": "auto-approval toggle"
+      }
+    },
+    {
+      "path": ".cline/data/settings/cline_mcp_settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcpServers.*.alwaysAllow": "auto-approval toggle"
+      }
+    },
+    {
+      "path": ".cline/data/cache/remote_config_*.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "remote_resource", "consent_bypass"]
+    },
+    {
+      "path": "Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcpServers.*.alwaysAllow": "auto-approval toggle"
+      }
+    },
+    {
+      "path": "Library/Application Support/Code/User/globalStorage/saoudrizwan.claude-dev/cache/remote_config_*.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "remote_resource", "consent_bypass"]
+    },
+    {
+      "path": ".cline/hooks.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".cline/hooks.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".clinerules/hooks/*",
+      "scope": "project",
+      "format": "text",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": "Documents/Cline/Hooks/*",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".cline/workflows.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "prompt_injection"]
+    },
+    {
+      "path": ".cline/workflows.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "prompt_injection"]
+    },
+    {
+      "path": ".cline/marketplace.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    },
+    {
+      "path": ".cline/marketplace.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".cline/skills/**/*.md",
+      "scope": "project",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".clinerules/skills/**/*.md",
+      "scope": "project",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".cline/skills/**/*.md",
+      "scope": "user",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".cline/workflows/*.md",
+      "scope": "project",
+      "type": "workflow",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".clinerules/workflows/**/*.md",
+      "scope": "project",
+      "type": "workflow",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".cline/workflows/*.md",
+      "scope": "user",
+      "type": "workflow",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": "Documents/Cline/Workflows/**/*.md",
+      "scope": "user",
+      "type": "workflow",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".cline/commands/**/*.md",
+      "scope": "project",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".cline/commands/**/*.md",
+      "scope": "user",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    }
+  ],
+  "extension_mechanisms": [
+    {
+      "type": "cline_marketplace",
+      "install_pattern": "cline install <extension>",
+      "risk": "extensions can register tools and command workflows",
+      "fetchable": true
+    }
+  ]
+}

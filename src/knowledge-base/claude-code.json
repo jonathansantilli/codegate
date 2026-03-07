@@ -1,0 +1,152 @@
+{
+  "tool": "claude-code",
+  "version_range": ">=1.0.0",
+  "config_paths": [
+    {
+      "path": ".claude/settings.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["env_override", "hooks", "consent_bypass", "mcp_config"],
+      "fields_of_interest": {
+        "env": "environment variable overrides",
+        "hooks": "shell command hooks",
+        "enableAllProjectMcpServers": "MCP auto-approval flag",
+        "enabledMcpjsonServers": "per-server auto-approval list"
+      }
+    },
+    {
+      "path": ".claude/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["env_override", "hooks", "consent_bypass", "mcp_config"],
+      "fields_of_interest": {
+        "env": "environment variable overrides",
+        "hooks": "shell command hooks",
+        "enableAllProjectMcpServers": "MCP auto-approval flag",
+        "enabledMcpjsonServers": "per-server auto-approval list"
+      }
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["env_override", "hooks", "consent_bypass", "mcp_config"],
+      "fields_of_interest": {
+        "env": "environment variable overrides",
+        "hooks": "shell command hooks",
+        "enableAllProjectMcpServers": "MCP auto-approval flag",
+        "enabledMcpjsonServers": "per-server auto-approval list"
+      }
+    },
+    {
+      "path": ".claude/settings.local.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["env_override", "hooks", "consent_bypass", "mcp_config"],
+      "fields_of_interest": {
+        "env": "environment variable overrides",
+        "hooks": "shell command hooks",
+        "enableAllProjectMcpServers": "MCP auto-approval flag",
+        "enabledMcpjsonServers": "per-server auto-approval list"
+      }
+    },
+    {
+      "path": "CLAUDE.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".claude/CLAUDE.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".claude/CLAUDE.md",
+      "scope": "user",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".claude/plugins.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    },
+    {
+      "path": ".claude/plugins.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    },
+    {
+      "path": ".mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcp_servers.*.command": "stdio command (snake_case alias)",
+        "mcp_servers.*.args": "stdio command arguments (snake_case alias)",
+        "mcp_servers.*.url": "remote endpoint (snake_case alias)",
+        "mcp_servers.*.env": "runtime environment variables (snake_case alias)",
+        "context_servers.*.command": "stdio command (context server alias)",
+        "context_servers.*.args": "stdio command arguments (context server alias)",
+        "context_servers.*.url": "remote endpoint (context server alias)",
+        "context_servers.*.env": "runtime environment variables (context server alias)"
+      }
+    },
+    {
+      "path": ".mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcp_servers.*.command": "stdio command (snake_case alias)",
+        "mcp_servers.*.args": "stdio command arguments (snake_case alias)",
+        "mcp_servers.*.url": "remote endpoint (snake_case alias)",
+        "mcp_servers.*.env": "runtime environment variables (snake_case alias)",
+        "context_servers.*.command": "stdio command (context server alias)",
+        "context_servers.*.args": "stdio command arguments (context server alias)",
+        "context_servers.*.url": "remote endpoint (context server alias)",
+        "context_servers.*.env": "runtime environment variables (context server alias)"
+      }
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".claude/commands/**/*.md",
+      "scope": "project",
+      "type": "custom_command",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".claude/commands/**/*.md",
+      "scope": "user",
+      "type": "custom_command",
+      "risk_surface": ["prompt_injection"]
+    }
+  ],
+  "extension_mechanisms": [
+    {
+      "type": "claude_sdk_plugin",
+      "install_pattern": "claude plugin install <package>",
+      "risk": "plugin packages can add tools and execution-capable workflows",
+      "fetchable": true
+    },
+    {
+      "type": "mcp_npm_package",
+      "install_pattern": "npx -y <package>",
+      "risk": "arbitrary code execution at install/runtime",
+      "fetchable": true
+    }
+  ]
+}

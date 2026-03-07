@@ -1,0 +1,116 @@
+{
+  "tool": "roo-code",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".roo/settings.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "consent_bypass", "command_exec"]
+    },
+    {
+      "path": ".roo/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "consent_bypass", "command_exec"]
+    },
+    {
+      "path": ".roo/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcpServers.*.alwaysAllow": "per-server auto-approval",
+        "mcpServers.*.disabledTools": "restricted tool list"
+      }
+    },
+    {
+      "path": ".roo/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables",
+        "mcpServers.*.alwaysAllow": "per-server auto-approval",
+        "mcpServers.*.disabledTools": "restricted tool list"
+      }
+    },
+    {
+      "path": ".roorules",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "AGENTS.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".roo/marketplace.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    },
+    {
+      "path": ".roo/marketplace.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource", "command_exec"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".roo/rules/**/*.md",
+      "scope": "project",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".roo/rules/**/*.md",
+      "scope": "user",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".roo/skills/**/*.md",
+      "scope": "project",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".roo/skills/**/*.md",
+      "scope": "user",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".roo/commands/**/*.md",
+      "scope": "project",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".roo/commands/**/*.md",
+      "scope": "user",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    }
+  ],
+  "extension_mechanisms": [
+    {
+      "type": "roo_marketplace_package",
+      "install_pattern": "roo marketplace install <package>",
+      "risk": "marketplace packages can introduce arbitrary command execution surfaces",
+      "fetchable": true
+    }
+  ]
+}

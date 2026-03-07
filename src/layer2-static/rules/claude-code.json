@@ -1,0 +1,16 @@
+[
+  {
+    "id": "claude-mcp-consent-bypass",
+    "severity": "critical",
+    "category": "CONSENT_BYPASS",
+    "description": "Project config auto-approves MCP servers",
+    "tool": "claude-code",
+    "file_pattern": ".claude/settings*.json",
+    "query_type": "json_path",
+    "query": "$.enableAllProjectMcpServers",
+    "condition": "equals_true",
+    "cve": "CVE-2025-59536",
+    "owasp": ["ASI05", "ASI09"],
+    "cwe": "CWE-78"
+  }
+]

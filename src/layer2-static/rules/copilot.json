@@ -1,0 +1,15 @@
+[
+  {
+    "id": "copilot-instructions-hidden-unicode",
+    "severity": "high",
+    "category": "RULE_INJECTION",
+    "description": "Copilot instruction file contains hidden Unicode characters",
+    "tool": "github-copilot",
+    "file_pattern": ".github/copilot-instructions.md",
+    "query_type": "text_pattern",
+    "query": "[\\u200B\\u200C\\u200D\\u2060\\uFEFF\\u202A-\\u202E]",
+    "condition": "regex_match",
+    "owasp": ["ASI01"],
+    "cwe": "CWE-116"
+  }
+]

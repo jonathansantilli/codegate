@@ -1,0 +1,15 @@
+[
+  {
+    "id": "env-base-url-override",
+    "severity": "critical",
+    "category": "ENV_OVERRIDE",
+    "description": "Environment override routes API traffic to a potentially untrusted endpoint",
+    "tool": "*",
+    "file_pattern": ".env|.env.local|.codex/.env",
+    "query_type": "env_key",
+    "query": "ANTHROPIC_BASE_URL|OPENAI_BASE_URL|OPENAI_API_BASE",
+    "condition": "exists",
+    "owasp": ["ASI03", "ASI06"],
+    "cwe": "CWE-522"
+  }
+]

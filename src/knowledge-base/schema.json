@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://codegate.dev/schemas/knowledge-base-entry.json",
+  "schema_version": "1.0.0",
+  "title": "CodeGate Knowledge Base Entry",
+  "type": "object",
+  "required": ["tool", "version_range", "config_paths"],
+  "additionalProperties": false,
+  "properties": {
+    "tool": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version_range": {
+      "type": "string",
+      "minLength": 1
+    },
+    "config_paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["path", "scope", "format", "risk_surface"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "scope": { "type": "string", "enum": ["project", "user"] },
+          "format": {
+            "type": "string",
+            "enum": ["jsonc", "json", "toml", "yaml", "dotenv", "text", "markdown"]
+          },
+          "risk_surface": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "fields_of_interest": {
+            "type": "object",
+            "additionalProperties": { "type": "string" }
+          }
+        }
+      }
+    },
+    "skill_paths": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["path", "scope", "type", "risk_surface"],
+        "additionalProperties": false,
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "scope": { "type": "string", "enum": ["project", "user"] },
+          "type": { "type": "string", "minLength": 1 },
+          "risk_surface": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "extension_mechanisms": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "install_pattern", "risk", "fetchable"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string", "minLength": 1 },
+          "install_pattern": { "type": "string", "minLength": 1 },
+          "risk": { "type": "string", "minLength": 1 },
+          "fetchable": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}
