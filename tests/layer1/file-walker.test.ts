@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { walkProjectTree } from "../../src/layer1-discovery/file-walker";
+import { normalizeSlashes } from "../helpers/path";
 
 const tempDirs: string[] = [];
 
@@ -29,9 +30,10 @@ describe("task 09 file walker", () => {
     writeFileSync(join(root, "README.md"), "ok");
 
     const result = walkProjectTree(root);
-    expect(result.files.some((file) => file.endsWith("README.md"))).toBe(true);
-    expect(result.files.some((file) => file.includes("node_modules"))).toBe(false);
-    expect(result.files.some((file) => file.includes(".git/hooks/pre-commit"))).toBe(true);
+    const files = result.files.map(normalizeSlashes);
+    expect(files.some((file) => file.endsWith("README.md"))).toBe(true);
+    expect(files.some((file) => file.includes("node_modules"))).toBe(false);
+    expect(files.some((file) => file.includes(".git/hooks/pre-commit"))).toBe(true);
   });
 
   it("detects symlink escape outside project root", () => {

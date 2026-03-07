@@ -3,6 +3,7 @@ import { createCli, type CliDeps } from "../../src/cli";
 import type { CodeGateConfig } from "../../src/config";
 import type { Finding } from "../../src/types/finding";
 import type { CodeGateReport } from "../../src/types/report";
+import { normalizeLines } from "../helpers/path";
 
 const BASE_CONFIG: CodeGateConfig = {
   severity_threshold: "high",
@@ -178,17 +179,18 @@ describe("task 23 remediation flags", () => {
     });
 
     await cli.parseAsync(["node", "codegate", "scan", ".", "--remediate"]);
+    const normalized = normalizeLines(printed);
     expect(runRemediation).toHaveBeenCalledTimes(1);
-    expect(printed.some((line) => line.includes("Remediation summary"))).toBe(true);
-    expect(printed.some((line) => line.includes("Planned changes: 2"))).toBe(true);
-    expect(printed.some((line) => line.includes("Applied changes: 2"))).toBe(true);
+    expect(normalized.some((line) => line.includes("Remediation summary"))).toBe(true);
+    expect(normalized.some((line) => line.includes("Planned changes: 2"))).toBe(true);
+    expect(normalized.some((line) => line.includes("Applied changes: 2"))).toBe(true);
     expect(
-      printed.some((line) => line.includes(".codegate-backup/2026-03-01T12-00-00-aaaaaa")),
+      normalized.some((line) => line.includes(".codegate-backup/2026-03-01T12-00-00-aaaaaa")),
     ).toBe(true);
-    expect(printed.some((line) => line.includes("codegate undo"))).toBe(true);
-    expect(printed.some((line) => line.includes("remove_field"))).toBe(true);
+    expect(normalized.some((line) => line.includes("codegate undo"))).toBe(true);
+    expect(normalized.some((line) => line.includes("remove_field"))).toBe(true);
     expect(
-      printed.some((line) => line.includes("ENV_OVERRIDE-.mcp.json-env.OPENAI_BASE_URL")),
+      normalized.some((line) => line.includes("ENV_OVERRIDE-.mcp.json-env.OPENAI_BASE_URL")),
     ).toBe(true);
   });
 

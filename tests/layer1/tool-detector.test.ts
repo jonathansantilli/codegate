@@ -1,3 +1,4 @@
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   detectTools,
@@ -55,12 +56,11 @@ describe("task 10 tool detector", () => {
   });
 
   it("detects GitHub Copilot extension installation", () => {
+    const extensionsDir = join("/Users/tester", ".vscode", "extensions");
     const detections = detectTools(
       makeDeps({
         listDirectory: (path) =>
-          path === "/Users/tester/.vscode/extensions"
-            ? ["github.copilot-1.2.3", "some.other-ext-0.1.0"]
-            : [],
+          path === extensionsDir ? ["github.copilot-1.2.3", "some.other-ext-0.1.0"] : [],
       }),
     );
     const copilot = byName(detections, "github-copilot");

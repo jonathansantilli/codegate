@@ -1,3 +1,4 @@
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   noEligibleDeepResourceNotes,
@@ -7,6 +8,7 @@ import {
 } from "../../src/commands/scan-command/helpers";
 import type { ScanCommandOptions } from "../../src/commands/scan-command";
 import type { CodeGateReport } from "../../src/types/report";
+import { normalizeLines } from "../helpers/path";
 
 function emptyReport(): CodeGateReport {
   return {
@@ -65,8 +67,9 @@ describe("scan command helpers", () => {
   });
 
   it("formats remediation summary lines with backup and action details", () => {
+    const scanTarget = "/tmp/codegate-demo";
     const result = remediationSummaryLines({
-      scanTarget: "/tmp/codegate-demo",
+      scanTarget,
       options: { remediate: true } satisfies ScanCommandOptions,
       before: {
         ...emptyReport(),
@@ -95,13 +98,18 @@ describe("scan command helpers", () => {
         ],
       },
     });
+    const normalized = normalizeLines(result);
 
-    expect(result).toContain("Remediation summary:");
-    expect(result).toContain("Mode: remediate");
-    expect(result).toContain("Findings before remediation: 3");
-    expect(result).toContain("Findings after remediation: 1");
-    expect(result).toContain("Backup session: /tmp/codegate-demo/.codegate-backup/session-123");
-    expect(result).toContain("- remove_field -> /tmp/codegate-demo/.mcp.json (F-1)");
+    expect(normalized).toContain("Remediation summary:");
+    expect(normalized).toContain("Mode: remediate");
+    expect(normalized).toContain("Findings before remediation: 3");
+    expect(normalized).toContain("Findings after remediation: 1");
+    expect(normalized).toContain(
+      `Backup session: ${resolve(scanTarget, ".codegate-backup", "session-123").replaceAll("\\", "/")}`,
+    );
+    expect(normalized).toContain(
+      `- remove_field -> ${resolve(scanTarget, ".mcp.json").replaceAll("\\", "/")} (F-1)`,
+    );
   });
 
   it("returns the stock no-resource deep scan notes", () => {

@@ -1,7 +1,9 @@
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { render } from "ink-testing-library";
 import { CodeGateTuiApp } from "../../src/tui/app";
 import type { CodeGateReport } from "../../src/types/report";
+import { normalizeSlashes } from "../helpers/path";
 
 const REPORT: CodeGateReport = {
   version: "0.1.0",
@@ -56,12 +58,14 @@ const SAFE_REPORT: CodeGateReport = {
 describe("task 18 tui shell rendering", () => {
   it("renders dashboard view with scan summary", () => {
     const app = render(<CodeGateTuiApp view="dashboard" report={REPORT} />);
-    expect(app.lastFrame()).toContain("CodeGate v0.1.0");
-    expect(app.lastFrame()).toContain("Installed tools");
-    expect(app.lastFrame()).toContain("Findings");
-    expect(app.lastFrame()).toContain("Evidence:");
-    expect(app.lastFrame()).toContain("/tmp/project/.mcp.json");
-    expect(app.lastFrame()).toContain('3 |     "bad": {');
+    const frame = app.lastFrame();
+    const normalizedFrame = normalizeSlashes(frame);
+    expect(frame).toContain("CodeGate v0.1.0");
+    expect(frame).toContain("Installed tools");
+    expect(frame).toContain("Findings");
+    expect(frame).toContain("Evidence:");
+    expect(normalizedFrame).toContain(normalizeSlashes(resolve("/tmp/project", ".mcp.json")));
+    expect(frame).toContain('3 |     "bad": {');
   });
 
   it("renders progress view while scanning", () => {
