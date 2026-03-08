@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/jonathansantilli/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/jonathansantilli/codegate/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/jonathansantilli/codegate/actions/workflows/codeql.yml/badge.svg)](https://github.com/jonathansantilli/codegate/actions/workflows/codeql.yml)
-[![npm version](https://img.shields.io/npm/v/codegate)](https://www.npmjs.com/package/codegate)
+[![npm version](https://img.shields.io/npm/v/codegate-ai)](https://www.npmjs.com/package/codegate-ai)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
 ![CodeGate logo](docs/assets/codegate-logo.png)
@@ -60,13 +60,13 @@ Use CodeGate to inspect first, then decide whether to trust and run.
 Run without global install:
 
 ```bash
-npx codegate scan .
+npx codegate-ai scan .
 ```
 
 Install globally:
 
 ```bash
-npm install -g codegate
+npm install -g codegate-ai
 codegate scan .
 ```
 

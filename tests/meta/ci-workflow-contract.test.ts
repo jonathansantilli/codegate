@@ -37,6 +37,8 @@ describe("task 04 ci workflow contract", () => {
     const workflow = read(".github/workflows/release-dry-run.yml");
     expect(workflow).toContain("workflow_dispatch");
     expect(workflow).toContain("npx semantic-release --dry-run");
+    expect(workflow).not.toContain("NPM_TOKEN");
+    expect(workflow).not.toContain("registry-url:");
   });
 
   it("configures dependabot with grouped npm and GitHub Actions updates", () => {

@@ -71,7 +71,7 @@ describe("update commands", () => {
 
     await cli.parseAsync(["node", "codegate", "update-kb"]);
     expect(output).toContain("update-kb");
-    expect(output).toContain("npm update -g codegate");
+    expect(output).toContain("npm update -g codegate-ai");
     expect(exitCode).toBe(0);
   });
 
@@ -92,7 +92,7 @@ describe("update commands", () => {
 
     await cli.parseAsync(["node", "codegate", "update-rules"]);
     expect(output).toContain("update-rules");
-    expect(output).toContain("npm update -g codegate");
+    expect(output).toContain("npm update -g codegate-ai");
     expect(exitCode).toBe(0);
   });
 });

@@ -1,5 +1,5 @@
 {
-  "name": "codegate",
+  "name": "codegate-ai",
   "version": "0.1.0",
   "description": "Pre-flight security scanner for AI coding tool configurations.",
   "license": "MIT",
@@ -23,7 +23,7 @@
     "security"
   ],
   "bin": {
-    "codegate": "./dist/cli.js"
+    "codegate": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",

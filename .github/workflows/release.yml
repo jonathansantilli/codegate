@@ -32,7 +32,6 @@ jobs:
         with:
           node-version: 24.x
           cache: npm
-          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: npm ci
@@ -58,5 +57,4 @@ jobs:
       - name: Semantic release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx semantic-release

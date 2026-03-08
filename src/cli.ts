@@ -545,8 +545,8 @@ function addInitCommand(program: Command, deps: CliDeps): void {
 function addUpdateCommands(program: Command, deps: CliDeps): void {
   const guidance = [
     "Updates are bundled with CodeGate releases in v1/v2.",
-    "Run: npm update -g codegate",
-    "Or run latest directly: npx codegate@latest scan .",
+    "Run: npm update -g codegate-ai",
+    "Or run latest directly: npx codegate-ai@latest scan .",
   ];
 
   program
