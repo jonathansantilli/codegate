@@ -25,6 +25,12 @@ describe("task 20 release contract", () => {
     const releaseConfig = read(".releaserc.json");
 
     expect(releaseConfig).toContain('"@semantic-release/commit-analyzer"');
+    expect(releaseConfig).toContain('"@semantic-release/exec"');
+    expect(releaseConfig).toContain(
+      '"prepareCmd": "npm version ${nextRelease.version} --no-git-tag-version"',
+    );
+    expect(releaseConfig).toContain('"publishCmd": "npm publish --provenance --access public"');
+    expect(releaseConfig).not.toContain('"@semantic-release/npm"');
     expect(releaseConfig).toContain('"type": "feat"');
     expect(releaseConfig).toContain('"release": "minor"');
     expect(releaseConfig).toContain('"type": "docs"');
