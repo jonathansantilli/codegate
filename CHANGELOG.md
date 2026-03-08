@@ -86,3 +86,5 @@ All notable changes to this project will be documented in this file.
 ### Notes
 
 - This is the first public pre-release baseline for open-source iteration.
+
+- Release pipeline probe: 2026-03-08T16:52:38Z
