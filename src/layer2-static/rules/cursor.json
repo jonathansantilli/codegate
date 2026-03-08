@@ -1,0 +1,15 @@
+[
+  {
+    "id": "cursor-rule-hidden-unicode",
+    "severity": "high",
+    "category": "RULE_INJECTION",
+    "description": "Rule file contains hidden Unicode characters",
+    "tool": "cursor",
+    "file_pattern": ".cursorrules|.cursor/rules/*.mdc",
+    "query_type": "text_pattern",
+    "query": "[\\u200B\\u200C\\u200D\\u2060\\uFEFF\\u202A-\\u202E]",
+    "condition": "regex_match",
+    "owasp": ["ASI01"],
+    "cwe": "CWE-116"
+  }
+]

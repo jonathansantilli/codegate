@@ -1,0 +1,12 @@
+dist/
+node_modules/
+coverage/
+docs/plans/
+docs/showcase/
+showcase/
+scripts/showcase/
+.codegate/
+.codegate-backup/
+~/
+test-fixtures/malformed/corrupt-encoding/opencode.json
+test-fixtures/malformed/invalid-json/.claude/settings.json

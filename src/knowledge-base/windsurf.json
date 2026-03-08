@@ -1,0 +1,80 @@
+{
+  "tool": "windsurf",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".windsurfrules",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".windsurf/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config", "remote_resource"]
+    },
+    {
+      "path": ".windsurf/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config", "remote_resource"]
+    },
+    {
+      "path": ".windsurf/hooks.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".windsurf/hooks.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".windsurf/plugins.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".windsurf/plugins.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".vscode/settings.json",
+      "scope": "project",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".windsurf/workflows/*.md",
+      "scope": "project",
+      "type": "workflow",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".windsurf/workflows/*.md",
+      "scope": "user",
+      "type": "workflow",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".windsurf/memories/*.md",
+      "scope": "project",
+      "type": "memory",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".windsurf/memories/*.md",
+      "scope": "user",
+      "type": "memory",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    }
+  ]
+}

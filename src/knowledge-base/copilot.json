@@ -1,0 +1,132 @@
+{
+  "tool": "github-copilot",
+  "version_range": ">=1.0.0",
+  "config_paths": [
+    {
+      "path": ".github/copilot-instructions.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".instructions.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "*.instructions.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".github/instructions/*.instructions.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".github/prompts/*.prompt.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".github/chatmodes/*.chatmode.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".vscode/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"]
+    },
+    {
+      "path": "Library/Application Support/Code/User/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"]
+    },
+    {
+      "path": "AppData/Roaming/Code/User/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"]
+    },
+    {
+      "path": "Library/Application Support/Code - Insiders/User/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"]
+    },
+    {
+      "path": "AppData/Roaming/Code - Insiders/User/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"]
+    },
+    {
+      "path": ".vscode/extensions.json",
+      "scope": "project",
+      "format": "json",
+      "risk_surface": ["ide_settings", "plugin_config"]
+    },
+    {
+      "path": "Library/Application Support/Code/User/extensions.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings", "plugin_config"]
+    },
+    {
+      "path": "AppData/Roaming/Code/User/extensions.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings", "plugin_config"]
+    },
+    {
+      "path": "Library/Application Support/Code - Insiders/User/extensions.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings", "plugin_config"]
+    },
+    {
+      "path": "AppData/Roaming/Code - Insiders/User/extensions.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings", "plugin_config"]
+    },
+    {
+      "path": ".vscode/settings.json",
+      "scope": "project",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    },
+    {
+      "path": "Library/Application Support/Code/User/settings.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    },
+    {
+      "path": "AppData/Roaming/Code/User/settings.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    },
+    {
+      "path": "Library/Application Support/Code - Insiders/User/settings.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    },
+    {
+      "path": "AppData/Roaming/Code - Insiders/User/settings.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    }
+  ]
+}

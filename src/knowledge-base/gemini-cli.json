@@ -1,0 +1,112 @@
+{
+  "tool": "gemini-cli",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".gemini/settings.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "hooks", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.httpUrl": "remote HTTP endpoint",
+        "mcpServers.*.headers": "custom request headers",
+        "mcpServers.*.env": "runtime environment variables",
+        "hooks": "hook command configuration"
+      }
+    },
+    {
+      "path": ".gemini/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "hooks", "consent_bypass"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.httpUrl": "remote HTTP endpoint",
+        "mcpServers.*.headers": "custom request headers",
+        "mcpServers.*.env": "runtime environment variables",
+        "hooks": "hook command configuration"
+      }
+    },
+    {
+      "path": "GEMINI.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".gemini/hooks.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".gemini/hooks.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["hooks", "command_exec"]
+    },
+    {
+      "path": ".gemini/extensions.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".gemini/extensions.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".gemini/commands/*.toml",
+      "scope": "project",
+      "type": "custom_command",
+      "risk_surface": ["command_exec", "prompt_injection"]
+    },
+    {
+      "path": ".gemini/commands/*.toml",
+      "scope": "user",
+      "type": "custom_command",
+      "risk_surface": ["command_exec", "prompt_injection"]
+    },
+    {
+      "path": ".gemini/skills/**/*.md",
+      "scope": "project",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".gemini/skills/**/*.md",
+      "scope": "user",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".agents/skills/**/*.md",
+      "scope": "project",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".agents/skills/**/*.md",
+      "scope": "user",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    }
+  ],
+  "extension_mechanisms": [
+    {
+      "type": "gemini_extension",
+      "install_pattern": "gemini extension install <id>",
+      "risk": "extension packages can execute commands and alter agent behaviour",
+      "fetchable": true
+    }
+  ]
+}

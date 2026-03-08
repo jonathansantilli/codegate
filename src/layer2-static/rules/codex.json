@@ -1,0 +1,16 @@
+[
+  {
+    "id": "codex-mcp-command-exec",
+    "severity": "critical",
+    "category": "COMMAND_EXEC",
+    "description": "MCP server command execution in Codex config",
+    "tool": "codex-cli",
+    "file_pattern": ".codex/config.toml",
+    "query_type": "toml_path",
+    "query": "mcp.*.command",
+    "condition": "exists",
+    "cve": "CVE-2025-61260",
+    "owasp": ["ASI02", "ASI05"],
+    "cwe": "CWE-78"
+  }
+]

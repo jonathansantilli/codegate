@@ -1,0 +1,162 @@
+{
+  "tool": "codex-cli",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".codex/config.toml",
+      "scope": "project",
+      "format": "toml",
+      "risk_surface": ["command_exec", "mcp_config", "consent_bypass"],
+      "fields_of_interest": {
+        "mcp_servers.*.command": "stdio command",
+        "mcp_servers.*.args": "stdio command arguments",
+        "mcp_servers.*.url": "remote endpoint",
+        "mcp_servers.*.env": "runtime environment variables",
+        "approval_policy": "interactive approval mode",
+        "sandbox_mode": "sandbox policy"
+      }
+    },
+    {
+      "path": ".codex/config.toml",
+      "scope": "user",
+      "format": "toml",
+      "risk_surface": ["command_exec", "mcp_config", "consent_bypass"],
+      "fields_of_interest": {
+        "mcp_servers.*.command": "stdio command",
+        "mcp_servers.*.args": "stdio command arguments",
+        "mcp_servers.*.url": "remote endpoint",
+        "mcp_servers.*.env": "runtime environment variables",
+        "approval_policy": "interactive approval mode",
+        "sandbox_mode": "sandbox policy"
+      }
+    },
+    {
+      "path": ".config/codex/config.toml",
+      "scope": "user",
+      "format": "toml",
+      "risk_surface": ["command_exec", "mcp_config", "consent_bypass"],
+      "fields_of_interest": {
+        "mcp_servers.*.command": "stdio command",
+        "mcp_servers.*.args": "stdio command arguments",
+        "mcp_servers.*.url": "remote endpoint",
+        "mcp_servers.*.env": "runtime environment variables",
+        "approval_policy": "interactive approval mode",
+        "sandbox_mode": "sandbox policy"
+      }
+    },
+    {
+      "path": "Library/Application Support/codex/config.toml",
+      "scope": "user",
+      "format": "toml",
+      "risk_surface": ["command_exec", "mcp_config", "consent_bypass"],
+      "fields_of_interest": {
+        "mcp_servers.*.command": "stdio command",
+        "mcp_servers.*.args": "stdio command arguments",
+        "mcp_servers.*.url": "remote endpoint",
+        "mcp_servers.*.env": "runtime environment variables",
+        "approval_policy": "interactive approval mode",
+        "sandbox_mode": "sandbox policy"
+      }
+    },
+    {
+      "path": "AppData/Roaming/codex/config.toml",
+      "scope": "user",
+      "format": "toml",
+      "risk_surface": ["command_exec", "mcp_config", "consent_bypass"],
+      "fields_of_interest": {
+        "mcp_servers.*.command": "stdio command",
+        "mcp_servers.*.args": "stdio command arguments",
+        "mcp_servers.*.url": "remote endpoint",
+        "mcp_servers.*.env": "runtime environment variables",
+        "approval_policy": "interactive approval mode",
+        "sandbox_mode": "sandbox policy"
+      }
+    },
+    {
+      "path": ".codex/.env",
+      "scope": "project",
+      "format": "dotenv",
+      "risk_surface": ["env_override"]
+    },
+    {
+      "path": ".codex/.env",
+      "scope": "user",
+      "format": "dotenv",
+      "risk_surface": ["env_override"]
+    },
+    {
+      "path": ".config/codex/.env",
+      "scope": "user",
+      "format": "dotenv",
+      "risk_surface": ["env_override"]
+    },
+    {
+      "path": "Library/Application Support/codex/.env",
+      "scope": "user",
+      "format": "dotenv",
+      "risk_surface": ["env_override"]
+    },
+    {
+      "path": "AppData/Roaming/codex/.env",
+      "scope": "user",
+      "format": "dotenv",
+      "risk_surface": ["env_override"]
+    },
+    {
+      "path": "codex.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config", "consent_bypass"]
+    },
+    {
+      "path": "AGENTS.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".codex/AGENTS.md",
+      "scope": "user",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "CODEX.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".codex/CODEX.md",
+      "scope": "user",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".codex/commands/**/*.md",
+      "scope": "project",
+      "type": "custom_command",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".codex/commands/**/*.md",
+      "scope": "user",
+      "type": "custom_command",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".codex/skills/**/*.md",
+      "scope": "project",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".codex/skills/**/*.md",
+      "scope": "user",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    }
+  ]
+}

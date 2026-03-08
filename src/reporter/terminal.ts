@@ -1,0 +1,121 @@
+import type { CodeGateReport } from "../types/report.js";
+import { toAbsoluteDisplayPath } from "../path-display.js";
+
+export interface TerminalRenderOptions {
+  verbose?: boolean;
+}
+
+function appendLabeledList(lines: string[], label: string, values: string[]): void {
+  if (values.length === 0) {
+    return;
+  }
+
+  lines.push(`  ${label}:`);
+  for (const value of values) {
+    lines.push(`    - ${value}`);
+  }
+}
+
+function appendLabeledText(lines: string[], label: string, value: string): void {
+  if (value.length === 0) {
+    return;
+  }
+
+  lines.push(`  ${label}: ${value}`);
+}
+
+function appendEvidence(lines: string[], evidence: string): void {
+  const evidenceLines = evidence.split("\n");
+  if (evidenceLines.length === 1) {
+    lines.push(`  Evidence: ${evidenceLines[0]}`);
+    return;
+  }
+
+  lines.push("  Evidence:");
+  for (const evidenceLine of evidenceLines) {
+    lines.push(`    ${evidenceLine}`);
+  }
+}
+
+function formatLocation(location: {
+  field?: string;
+  line?: number;
+  column?: number;
+}): string | null {
+  const parts: string[] = [];
+  if (location.field) {
+    parts.push(location.field);
+  }
+  if (typeof location.line === "number") {
+    const column = typeof location.column === "number" ? `:${location.column}` : "";
+    parts.push(`line ${location.line}${column}`);
+  }
+  return parts.length > 0 ? parts.join(" @ ") : null;
+}
+
+export function renderTerminalReport(
+  report: CodeGateReport,
+  options: TerminalRenderOptions = {},
+): string {
+  const verbose = options.verbose === true;
+  const lines: string[] = [];
+  lines.push(`CodeGate v${report.version}`);
+  lines.push(`Target: ${report.scan_target}`);
+  lines.push(`Findings: ${report.summary.total}`);
+  lines.push(`CRITICAL: ${report.summary.by_severity.CRITICAL ?? 0}`);
+  lines.push(`HIGH: ${report.summary.by_severity.HIGH ?? 0}`);
+  lines.push(`MEDIUM: ${report.summary.by_severity.MEDIUM ?? 0}`);
+  lines.push(`LOW: ${report.summary.by_severity.LOW ?? 0}`);
+  lines.push(`INFO: ${report.summary.by_severity.INFO ?? 0}`);
+  lines.push("");
+
+  if (report.findings.length === 0) {
+    lines.push("No findings.");
+    return lines.join("\n");
+  }
+
+  for (const finding of report.findings) {
+    lines.push(
+      `[${finding.severity}] ${toAbsoluteDisplayPath(report.scan_target, finding.file_path)}`,
+    );
+    lines.push(`  ${finding.description}`);
+    if (finding.incident_title) {
+      appendLabeledText(lines, "Incident", finding.incident_title);
+    }
+    if (finding.evidence && finding.evidence.length > 0) {
+      appendEvidence(lines, finding.evidence);
+    }
+    appendLabeledList(lines, "Observed", finding.observed ?? []);
+    if (finding.inference) {
+      appendLabeledText(lines, "Inference", finding.inference);
+    }
+    appendLabeledList(lines, "Not verified", finding.not_verified ?? []);
+    if (verbose) {
+      lines.push(`  Rule: ${finding.rule_id}`);
+      lines.push(`  Finding ID: ${finding.finding_id}`);
+      lines.push(
+        `  Category: ${finding.category} | Layer: ${finding.layer} | Confidence: ${finding.confidence}`,
+      );
+      const formattedLocation = formatLocation(finding.location);
+      if (formattedLocation) {
+        lines.push(`  Location: ${formattedLocation}`);
+      }
+      if (finding.cve) {
+        lines.push(`  CVE: ${finding.cve}`);
+      }
+      lines.push(`  CWE: ${finding.cwe}`);
+      if (finding.owasp.length > 0) {
+        lines.push(`  OWASP: ${finding.owasp.join(", ")}`);
+      }
+      if (finding.remediation_actions.length > 0) {
+        lines.push(`  Remediation: ${finding.remediation_actions.join(", ")}`);
+      }
+    }
+    if (finding.layer === "L3" && finding.source_config) {
+      const fieldSuffix = finding.source_config.field ? ` (${finding.source_config.field})` : "";
+      lines.push(`  source config: ${finding.source_config.file_path}${fieldSuffix}`);
+    }
+  }
+
+  return lines.join("\n");
+}
