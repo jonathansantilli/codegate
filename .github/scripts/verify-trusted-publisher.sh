@@ -40,5 +40,24 @@ if [[ "${HTTP_STATUS}" != "201" ]]; then
   exit 1
 fi
 
+NPM_EXCHANGE_TOKEN="$(
+  node -e "const fs=require('node:fs');const payload=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));if(!payload.token){process.exit(2);}process.stdout.write(payload.token);" "${RESPONSE_FILE}"
+)"
+
+if [[ -z "${NPM_EXCHANGE_TOKEN}" ]]; then
+  echo "::error::Trusted publishing exchange succeeded but no npm token was returned."
+  rm -f "${RESPONSE_FILE}"
+  exit 1
+fi
+
+if [[ -n "${GITHUB_ENV:-}" ]]; then
+  {
+    echo "NODE_AUTH_TOKEN=${NPM_EXCHANGE_TOKEN}"
+    echo "NPM_TOKEN=${NPM_EXCHANGE_TOKEN}"
+  } >>"${GITHUB_ENV}"
+fi
+
+npm config set "//registry.npmjs.org/:_authToken" "${NPM_EXCHANGE_TOKEN}"
+
 rm -f "${RESPONSE_FILE}"
-echo "npm trusted publishing preflight succeeded for '${NPM_PACKAGE_NAME}'."
+echo "npm trusted publishing preflight succeeded for '${NPM_PACKAGE_NAME}' and injected a short-lived publish token."
