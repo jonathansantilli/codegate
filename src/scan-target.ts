@@ -1,6 +1,11 @@
 import { existsSync, statSync } from "node:fs";
 import { resolve } from "node:path";
-import { isLikelyGitRepoUrl, isLikelyHttpUrl } from "./scan-target/helpers.js";
+import {
+  extractSkillFromRepoPath,
+  isLikelyGitRepoUrl,
+  isLikelyHttpUrl,
+  parseGitHubTreeSource,
+} from "./scan-target/helpers.js";
 import { cloneGitRepo, downloadRemoteFile, stageLocalFile } from "./scan-target/staging.js";
 import type { ResolvedScanTarget, ResolveScanTargetInput } from "./scan-target/types.js";
 
@@ -37,7 +42,24 @@ export async function resolveScanTarget(
 
   const url = new URL(input.rawTarget);
   if (isLikelyGitRepoUrl(url)) {
-    return cloneGitRepo(input.rawTarget);
+    return cloneGitRepo(input.rawTarget, {
+      preferredSkill: input.preferredSkill,
+      inferredSkill: extractSkillFromRepoPath(url.pathname) ?? undefined,
+      interactive: input.interactive === true,
+      requestSkillSelection: input.requestSkillSelection,
+      displayTarget: input.rawTarget,
+    });
+  }
+
+  const githubTree = parseGitHubTreeSource(input.rawTarget);
+  if (githubTree) {
+    return cloneGitRepo(githubTree.repoUrl, {
+      preferredSkill: input.preferredSkill,
+      inferredSkill: extractSkillFromRepoPath(githubTree.treePath) ?? undefined,
+      interactive: input.interactive === true,
+      requestSkillSelection: input.requestSkillSelection,
+      displayTarget: input.rawTarget,
+    });
   }
 
   return downloadRemoteFile(input.rawTarget);

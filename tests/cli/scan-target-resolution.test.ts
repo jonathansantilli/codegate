@@ -103,10 +103,13 @@ describe("scan target resolution", () => {
       "https://example.com/security-review/SKILL.md",
     ]);
 
-    expect(deps.resolveScanTarget).toHaveBeenCalledWith({
-      rawTarget: "https://example.com/security-review/SKILL.md",
-      cwd: process.cwd(),
-    });
+    expect(deps.resolveScanTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rawTarget: "https://example.com/security-review/SKILL.md",
+        cwd: process.cwd(),
+        preferredSkill: undefined,
+      }),
+    );
     expect(resolveConfig).toHaveBeenCalledWith(
       expect.objectContaining({
         scanTarget: "/tmp/staged-skill",
@@ -170,6 +173,41 @@ describe("scan target resolution", () => {
       "/tmp/staged-repo",
       expect.any(Object),
       discoveryContext,
+    );
+  });
+
+  it("passes --skill value to scan target resolver", async () => {
+    const deps = buildDeps({}) as CliDeps & {
+      resolveScanTarget?: (input: {
+        rawTarget: string;
+        cwd: string;
+        preferredSkill?: string;
+      }) => Promise<{
+        scanTarget: string;
+        displayTarget: string;
+      }>;
+    };
+
+    deps.resolveScanTarget = vi.fn(async () => ({
+      scanTarget: "/tmp/staged-repo",
+      displayTarget: "https://github.com/example/multi-skills",
+    }));
+
+    const cli = createCli("0.1.0", deps);
+    await cli.parseAsync([
+      "node",
+      "codegate",
+      "scan",
+      "https://github.com/example/multi-skills",
+      "--skill",
+      "security-review",
+    ]);
+
+    expect(deps.resolveScanTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rawTarget: "https://github.com/example/multi-skills",
+        preferredSkill: "security-review",
+      }),
     );
   });
 

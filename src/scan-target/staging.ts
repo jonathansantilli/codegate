@@ -1,4 +1,4 @@
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, statSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -6,6 +6,7 @@ import {
   cleanupTempDir,
   collectExplicitCandidates,
   copyDirectoryRecursive,
+  extractSkillFromRepoPath,
   inferRemoteCandidateFormat,
   inferLocalFileStagePath,
   inferRemoteFileStagePath,
@@ -15,6 +16,14 @@ import {
   shouldStageContainingFolder,
 } from "./helpers.js";
 import type { ExplicitScanCandidate, ResolvedScanTarget } from "./types.js";
+
+interface CloneGitRepoOptions {
+  preferredSkill?: string;
+  inferredSkill?: string;
+  interactive?: boolean;
+  requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
+  displayTarget?: string;
+}
 
 function cloneRepository(source: string, destination: string): void {
   const result = spawnSync(
@@ -61,22 +70,148 @@ export function stageLocalFile(absolutePath: string): ResolvedScanTarget {
   };
 }
 
-export function cloneGitRepo(rawTarget: string): ResolvedScanTarget {
+function listAvailableSkills(repoDir: string): string[] {
+  const skillsRoot = join(repoDir, "skills");
+  if (!existsSync(skillsRoot)) {
+    return [];
+  }
+  try {
+    if (!statSync(skillsRoot).isDirectory()) {
+      return [];
+    }
+  } catch {
+    return [];
+  }
+
+  const skills = readdirSync(skillsRoot, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .filter((name) => existsSync(join(skillsRoot, name, "SKILL.md")))
+    .sort((left, right) => left.localeCompare(right));
+
+  return skills;
+}
+
+function copyRootScanSurface(repoDir: string, stageRoot: string): void {
+  for (const entry of readdirSync(repoDir, { withFileTypes: true })) {
+    if (entry.name === ".git" || entry.name === "skills") {
+      continue;
+    }
+
+    const sourcePath = join(repoDir, entry.name);
+    const destinationPath = join(stageRoot, entry.name);
+
+    if (entry.isFile()) {
+      mkdirSync(stageRoot, { recursive: true });
+      copyFileSync(sourcePath, destinationPath);
+      continue;
+    }
+
+    if (entry.isDirectory() && (entry.name.startsWith(".") || entry.name === "hooks")) {
+      copyDirectoryRecursive(sourcePath, destinationPath);
+    }
+  }
+}
+
+function normalizeSkillName(value: string | undefined): string | null {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return null;
+  }
+  return trimmed.replace(/^skills\//iu, "").replace(/^\/+/u, "");
+}
+
+function pickSkill(
+  availableSkills: string[],
+  preferredSkill: string | undefined,
+  inferredSkill: string | undefined,
+): string | null {
+  const normalizedPreferred = normalizeSkillName(preferredSkill);
+  if (normalizedPreferred) {
+    return normalizedPreferred;
+  }
+  const normalizedInferred = normalizeSkillName(inferredSkill);
+  if (normalizedInferred) {
+    return normalizedInferred;
+  }
+  if (availableSkills.length === 1) {
+    return availableSkills[0] ?? null;
+  }
+  return null;
+}
+
+async function stageSkillAwareRepository(
+  tempRoot: string,
+  repoDir: string,
+  displayTarget: string,
+  options: CloneGitRepoOptions = {},
+): Promise<ResolvedScanTarget> {
+  const availableSkills = listAvailableSkills(repoDir);
+  if (availableSkills.length === 0) {
+    return {
+      scanTarget: repoDir,
+      displayTarget,
+      cleanup: () => cleanupTempDir(tempRoot),
+    };
+  }
+
+  let selectedSkill = pickSkill(availableSkills, options.preferredSkill, options.inferredSkill);
+  if (
+    !selectedSkill &&
+    options.interactive === true &&
+    options.requestSkillSelection &&
+    availableSkills.length > 1
+  ) {
+    const choice = await options.requestSkillSelection(availableSkills);
+    selectedSkill = normalizeSkillName(choice ?? undefined);
+  }
+
+  if (!selectedSkill) {
+    throw new Error(
+      `Multiple skills detected (${availableSkills.join(", ")}). Re-run with --skill <name>.`,
+    );
+  }
+
+  if (!availableSkills.includes(selectedSkill)) {
+    throw new Error(
+      `Requested skill "${selectedSkill}" was not found. Available skills: ${availableSkills.join(", ")}.`,
+    );
+  }
+
+  const stageRoot = join(tempRoot, "staged");
+  copyRootScanSurface(repoDir, stageRoot);
+  copyDirectoryRecursive(
+    join(repoDir, "skills", selectedSkill),
+    join(stageRoot, "skills", selectedSkill),
+  );
+
+  return {
+    scanTarget: stageRoot,
+    displayTarget,
+    explicitCandidates: collectExplicitCandidates(stageRoot),
+    cleanup: () => cleanupTempDir(tempRoot),
+  };
+}
+
+export async function cloneGitRepo(
+  rawTarget: string,
+  options: CloneGitRepoOptions = {},
+): Promise<ResolvedScanTarget> {
   const tempRoot = mkdtempSync(join(tmpdir(), "codegate-scan-repo-"));
   const repoDir = join(tempRoot, "repo");
 
   try {
     cloneRepository(rawTarget, repoDir);
+    return await stageSkillAwareRepository(
+      tempRoot,
+      repoDir,
+      options.displayTarget ?? rawTarget,
+      options,
+    );
   } catch (error) {
     cleanupTempDir(tempRoot);
     throw error;
   }
-
-  return {
-    scanTarget: repoDir,
-    displayTarget: rawTarget,
-    cleanup: () => cleanupTempDir(tempRoot),
-  };
 }
 
 export function stageRepoSubdirectory(
@@ -89,6 +224,22 @@ export function stageRepoSubdirectory(
 
   try {
     cloneRepository(repoUrl, repoDir);
+
+    const inferredSkill = extractSkillFromRepoPath(filePath);
+    if (inferredSkill) {
+      const stageRoot = join(tempRoot, "staged");
+      copyRootScanSurface(repoDir, stageRoot);
+      copyDirectoryRecursive(
+        join(repoDir, "skills", inferredSkill),
+        join(stageRoot, "skills", inferredSkill),
+      );
+      return {
+        scanTarget: stageRoot,
+        displayTarget,
+        explicitCandidates: collectExplicitCandidates(stageRoot),
+        cleanup: () => cleanupTempDir(tempRoot),
+      };
+    }
 
     const absoluteFile = join(repoDir, filePath);
     if (!existsSync(absoluteFile)) {

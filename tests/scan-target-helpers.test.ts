@@ -4,9 +4,11 @@ import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   collectExplicitCandidates,
+  extractSkillFromRepoPath,
   inferTextLikeFormat,
   inferToolFromReportPath,
   isLikelyGitRepoUrl,
+  parseGitHubTreeSource,
   parseGitHubFileSource,
   preserveTailSegments,
   shouldStageContainingFolder,
@@ -56,6 +58,18 @@ describe("scan target helpers", () => {
       repoUrl: "https://github.com/example/project.git",
       filePath: "skills/security-review/SKILL.md",
     });
+  });
+
+  it("parses GitHub tree URLs and extracts targeted skill names", () => {
+    expect(
+      parseGitHubTreeSource("https://github.com/example/project/tree/main/skills/security-review"),
+    ).toEqual({
+      repoUrl: "https://github.com/example/project.git",
+      treePath: "skills/security-review",
+    });
+
+    expect(extractSkillFromRepoPath("skills/security-review")).toBe("security-review");
+    expect(extractSkillFromRepoPath("docs/reference")).toBeNull();
   });
 
   it("recognizes artifact entrypoints that should pull the containing folder", () => {

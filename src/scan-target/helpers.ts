@@ -26,6 +26,11 @@ export interface GitHubFileSource {
   filePath: string;
 }
 
+export interface GitHubTreeSource {
+  repoUrl: string;
+  treePath: string;
+}
+
 export function cleanupTempDir(path: string): void {
   rmSync(path, { recursive: true, force: true });
 }
@@ -317,4 +322,44 @@ export function parseGitHubFileSource(rawTarget: string): GitHubFileSource | nul
   }
 
   return null;
+}
+
+export function parseGitHubTreeSource(rawTarget: string): GitHubTreeSource | null {
+  let url: URL;
+  try {
+    url = new URL(rawTarget);
+  } catch {
+    return null;
+  }
+
+  if (url.hostname.toLowerCase() !== "github.com") {
+    return null;
+  }
+
+  const segments = url.pathname.split("/").filter((segment) => segment.length > 0);
+  if (segments.length < 4) {
+    return null;
+  }
+
+  const [owner, repo, marker, , ...treePathSegments] = segments;
+  if (marker !== "tree") {
+    return null;
+  }
+
+  return {
+    repoUrl: `https://github.com/${owner}/${repo}.git`,
+    treePath: treePathSegments.join("/"),
+  };
+}
+
+export function extractSkillFromRepoPath(path: string): string | null {
+  const normalized = path.replaceAll("\\", "/").replace(/^\/+/u, "");
+  const segments = normalized.split("/").filter((segment) => segment.length > 0);
+  if (segments.length < 2) {
+    return null;
+  }
+  if (segments[0]?.toLowerCase() !== "skills") {
+    return null;
+  }
+  return segments[1] ?? null;
 }
