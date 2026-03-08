@@ -58,4 +58,12 @@ describe("task 04 ci workflow contract", () => {
     expect(workflow).toContain("actions");
     expect(workflow).toContain("security-extended");
   });
+
+  it("pins semantic PR title action to an immutable commit SHA", () => {
+    const workflow = read(".github/workflows/semantic-pr-title.yml");
+    expect(workflow).toContain(
+      "amannn/action-semantic-pull-request@48f256284bd46cdaab1048c3721360e808335d50",
+    );
+    expect(workflow).not.toContain("amannn/action-semantic-pull-request@v6");
+  });
 });
