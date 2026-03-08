@@ -9,6 +9,7 @@ function readPackageJson(): {
   engines?: Record<string, string>;
   "lint-staged"?: Record<string, string[] | string>;
   devDependencies?: Record<string, string>;
+  bin?: Record<string, string>;
 } {
   const content = readFileSync(resolve(root, "package.json"), "utf8");
   return JSON.parse(content) as {
@@ -16,6 +17,7 @@ function readPackageJson(): {
     engines?: Record<string, string>;
     "lint-staged"?: Record<string, string[] | string>;
     devDependencies?: Record<string, string>;
+    bin?: Record<string, string>;
   };
 }
 
@@ -48,5 +50,11 @@ describe("task 02 tooling contract", () => {
     expect(packageJson["lint-staged"]).toBeTruthy();
     expect(existsSync(resolve(root, ".husky/pre-commit"))).toBe(true);
     expect(readFileSync(resolve(root, ".husky/pre-commit"), "utf8")).toContain("lint-staged");
+  });
+
+  it("exposes both codegate and codegate-ai CLI bin aliases", () => {
+    const bin = readPackageJson().bin ?? {};
+    expect(bin).toHaveProperty("codegate", "dist/cli.js");
+    expect(bin).toHaveProperty("codegate-ai", "dist/cli.js");
   });
 });

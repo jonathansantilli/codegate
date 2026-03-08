@@ -23,7 +23,8 @@
     "security"
   ],
   "bin": {
-    "codegate": "dist/cli.js"
+    "codegate": "dist/cli.js",
+    "codegate-ai": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && node scripts/copy-assets.mjs",
