@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { homedir } from "node:os";
 import { dirname, resolve } from "node:path";
@@ -136,6 +136,29 @@ export interface CliDeps {
 
 function isNoTuiEnabled(options: { noTui?: boolean; tui?: boolean }): boolean {
   return options.noTui === true || options.tui === false;
+}
+
+export function isDirectCliInvocation(
+  importMetaUrl: string,
+  argv1: string | undefined,
+  deps: { realpath?: (path: string) => string } = {},
+): boolean {
+  if (!argv1) {
+    return false;
+  }
+
+  const argvUrl = pathToFileURL(argv1).href;
+  if (argvUrl === importMetaUrl) {
+    return true;
+  }
+
+  const resolveRealpath = deps.realpath ?? ((path: string) => realpathSync(path));
+  try {
+    const resolvedArgvUrl = pathToFileURL(resolveRealpath(argv1)).href;
+    return resolvedArgvUrl === importMetaUrl;
+  } catch {
+    return false;
+  }
 }
 
 function mapAcquisitionFailure(
@@ -618,7 +641,6 @@ export async function runCli(
   }
 }
 
-const invokedPath = process.argv[1] ? pathToFileURL(process.argv[1]).href : null;
-if (invokedPath && import.meta.url === invokedPath) {
+if (isDirectCliInvocation(import.meta.url, process.argv[1])) {
   await runCli();
 }
