@@ -1,3 +1,9 @@
+## [0.1.6](https://github.com/jonathansantilli/codegate/compare/v0.1.5...v0.1.6) (2026-03-08)
+
+### Bug Fixes
+
+- run CLI when invoked through symlinked bin ([a177029](https://github.com/jonathansantilli/codegate/commit/a17702935766aa3c2d1d2278ca52aeb5bd815526))
+
 ## [0.1.5](https://github.com/jonathansantilli/codegate/compare/v0.1.4...v0.1.5) (2026-03-08)
 
 ## [0.1.4](https://github.com/jonathansantilli/codegate/compare/v0.1.3...v0.1.4) (2026-03-08)
