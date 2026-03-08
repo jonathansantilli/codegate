@@ -35,6 +35,7 @@ describe("task 03 open-source governance contract", () => {
 
   it("exposes public package metadata and project health badges", () => {
     const packageJson = JSON.parse(read("package.json")) as Record<string, unknown>;
+    expect(packageJson.name).toBe("codegate-ai");
     expect(packageJson.license).toBeTypeOf("string");
     expect(packageJson.repository).toBeTruthy();
     expect(packageJson.homepage).toBeTruthy();
@@ -44,7 +45,7 @@ describe("task 03 open-source governance contract", () => {
     const readme = read("README.md");
     expect(readme).toContain("actions/workflows/ci.yml/badge.svg");
     expect(readme).toContain("actions/workflows/codeql.yml/badge.svg");
-    expect(readme).toContain("npmjs.com/package/codegate");
+    expect(readme).toContain("npmjs.com/package/codegate-ai");
     expect(readme).toContain("License");
   });
 });

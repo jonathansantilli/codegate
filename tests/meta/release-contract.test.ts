@@ -15,6 +15,8 @@ describe("task 20 release contract", () => {
     expect(workflow).toContain("- main");
     expect(workflow).toContain("id-token: write");
     expect(workflow).toContain("npx semantic-release");
+    expect(workflow).not.toContain("registry-url:");
+    expect(workflow).not.toContain("NPM_TOKEN");
     expect(workflow).not.toContain("NODE_AUTH_TOKEN");
     expect(workflow).not.toContain("tags:");
   });
