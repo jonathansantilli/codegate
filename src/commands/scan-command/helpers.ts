@@ -12,6 +12,42 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isHttpLikeTarget(target: string): boolean {
+  return /^https?:\/\//iu.test(target);
+}
+
+function isUserScopeFindingPath(path: string): boolean {
+  return path === "~" || path.startsWith("~/");
+}
+
+export function summarizeRequestedTargetFindings(
+  report: CodeGateReport,
+  displayTarget?: string,
+): string | null {
+  if (!displayTarget || !isHttpLikeTarget(displayTarget)) {
+    return null;
+  }
+
+  const targetFindings = report.findings.filter(
+    (finding) => !isUserScopeFindingPath(finding.file_path),
+  ).length;
+  const userScopeFindings = report.findings.length - targetFindings;
+
+  if (targetFindings === 0) {
+    if (userScopeFindings === 0) {
+      return "Requested URL target result: no findings were detected in the URL content.";
+    }
+
+    return `Requested URL target result: no findings were detected in the URL content. ${userScopeFindings} finding(s) came from enabled user-scope paths (~/*).`;
+  }
+
+  if (userScopeFindings === 0) {
+    return `Requested URL target result: ${targetFindings} finding(s) were detected in the URL content.`;
+  }
+
+  return `Requested URL target result: ${targetFindings} finding(s) were detected in the URL content. ${userScopeFindings} additional finding(s) came from enabled user-scope paths (~/*).`;
+}
+
 export function metadataSummary(metadata: unknown): string {
   let raw: string;
   if (typeof metadata === "string") {

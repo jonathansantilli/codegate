@@ -37,6 +37,7 @@ import {
   parseMetaAgentOutput,
   remediationSummaryLines,
   renderByFormat,
+  summarizeRequestedTargetFindings,
   withMetaAgentFinding,
 } from "./scan-command/helpers.js";
 
@@ -586,13 +587,18 @@ export async function executeScanCommand(
       !input.options.output &&
       deps.isTTY() &&
       deps.renderTui !== undefined;
+    const targetSummaryNote =
+      input.config.output_format === "terminal"
+        ? summarizeRequestedTargetFindings(report, input.displayTarget)
+        : null;
+    const scanNotes = targetSummaryNote ? [...deepScanNotes, targetSummaryNote] : deepScanNotes;
 
     if (shouldUseTui) {
-      deps.renderTui?.({ view: "dashboard", report, notices: deepScanNotes });
+      deps.renderTui?.({ view: "dashboard", report, notices: scanNotes });
       deps.renderTui?.({ view: "summary", report });
     } else {
-      if (deepScanNotes.length > 0) {
-        for (const note of deepScanNotes) {
+      if (scanNotes.length > 0) {
+        for (const note of scanNotes) {
           deps.stdout(note);
         }
       }
