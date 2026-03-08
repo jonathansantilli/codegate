@@ -1,3 +1,9 @@
+# [0.2.0](https://github.com/jonathansantilli/codegate/compare/v0.1.9...v0.2.0) (2026-03-08)
+
+### Features
+
+- **scan:** add skill-aware GitHub URL targeting ([2039ee0](https://github.com/jonathansantilli/codegate/commit/2039ee0224af84d659ffff0dc1d4861b1326b099))
+
 ## [0.1.9](https://github.com/jonathansantilli/codegate/compare/v0.1.8...v0.1.9) (2026-03-08)
 
 ## [0.1.8](https://github.com/jonathansantilli/codegate/compare/v0.1.7...v0.1.8) (2026-03-08)
