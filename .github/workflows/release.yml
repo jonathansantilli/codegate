@@ -59,6 +59,9 @@ jobs:
       - name: Verify package contents
         run: npm pack --dry-run
 
+      - name: Verify npm trusted publishing preflight
+        run: bash .github/scripts/verify-trusted-publisher.sh
+
       - name: Semantic release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

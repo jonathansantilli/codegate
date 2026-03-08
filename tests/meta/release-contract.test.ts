@@ -19,6 +19,8 @@ describe("task 20 release contract", () => {
     expect(workflow).not.toContain("NPM_TOKEN");
     expect(workflow).not.toContain("NODE_AUTH_TOKEN");
     expect(workflow).not.toContain("tags:");
+    expect(workflow).toContain("Verify npm trusted publishing preflight");
+    expect(workflow).toContain("bash .github/scripts/verify-trusted-publisher.sh");
   });
 
   it("defines semantic version rules for commit types, including docs patch releases", () => {
