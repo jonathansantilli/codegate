@@ -172,4 +172,65 @@ describe("scan target resolution", () => {
       discoveryContext,
     );
   });
+
+  it("prints a URL target summary when findings only come from user-scope files", async () => {
+    const stdout: string[] = [];
+    const deps = buildDeps({
+      resolveConfig: () => ({
+        ...DEFAULT_CONFIG,
+        output_format: "terminal",
+        scan_user_scope: true,
+        tui: { enabled: false, colour_scheme: "default", compact_mode: false },
+      }),
+      runScan: async () =>
+        makeReport([
+          {
+            rule_id: "rule-file-remote-shell",
+            finding_id: "RULE-1",
+            severity: "CRITICAL",
+            category: "RULE_INJECTION",
+            layer: "L2",
+            file_path: "~/.codex/skills/demo/SKILL.md",
+            location: { field: "remote_shell", line: 12, column: 3 },
+            description: "Rule file instructs fetching remote content and piping it into a shell",
+            affected_tools: ["codex-cli"],
+            cve: null,
+            owasp: ["ASI01"],
+            cwe: "CWE-116",
+            confidence: "HIGH",
+            fixable: true,
+            remediation_actions: ["remove_block"],
+            suppressed: false,
+          },
+        ]),
+      stdout: (message) => {
+        stdout.push(message);
+      },
+    }) as CliDeps & {
+      resolveScanTarget?: (input: { rawTarget: string; cwd: string }) => Promise<{
+        scanTarget: string;
+        displayTarget: string;
+      }>;
+    };
+
+    deps.resolveScanTarget = vi.fn(async () => ({
+      scanTarget: "/tmp/staged-repo",
+      displayTarget:
+        "https://github.com/affaan-m/everything-claude-code/tree/main/skills/agentic-engineering",
+    }));
+
+    const cli = createCli("0.1.0", deps);
+    await cli.parseAsync([
+      "node",
+      "codegate",
+      "scan",
+      "https://github.com/affaan-m/everything-claude-code/tree/main/skills/agentic-engineering",
+    ]);
+
+    expect(
+      stdout.some((line) =>
+        line.includes("Requested URL target result: no findings were detected in the URL content"),
+      ),
+    ).toBe(true);
+  });
 });

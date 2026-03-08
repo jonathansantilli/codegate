@@ -27,7 +27,7 @@ export function DashboardView(props: DashboardViewProps) {
         </Text>
         {props.notices && props.notices.length > 0 ? (
           <Box marginTop={1} flexDirection="column">
-            <Text color={defaultTheme.title}>Deep scan:</Text>
+            <Text color={defaultTheme.title}>Notes:</Text>
             {props.notices.map((notice, index) => (
               <Text key={`notice-${index}`} color={defaultTheme.muted}>
                 {notice}

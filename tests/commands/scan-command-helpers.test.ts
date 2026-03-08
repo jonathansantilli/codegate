@@ -5,6 +5,7 @@ import {
   parseLocalTextFindings,
   parseMetaAgentOutput,
   remediationSummaryLines,
+  summarizeRequestedTargetFindings,
 } from "../../src/commands/scan-command/helpers";
 import type { ScanCommandOptions } from "../../src/commands/scan-command";
 import type { CodeGateReport } from "../../src/types/report";
@@ -118,5 +119,49 @@ describe("scan command helpers", () => {
       "Deep scan analyzes only remote MCP URLs (http/sse) and package-backed commands (npx/uvx/pipx).",
       "Local stdio commands (for example `bash`) are still detected by Layer 2 but are never executed by deep scan.",
     ]);
+  });
+
+  it("summarizes URL target findings when only user-scope files triggered findings", () => {
+    const report: CodeGateReport = {
+      ...emptyReport(),
+      findings: [
+        {
+          rule_id: "rule-file-remote-shell",
+          finding_id: "RULE-1",
+          severity: "CRITICAL",
+          category: "RULE_INJECTION",
+          layer: "L2",
+          file_path: "~/.codex/skills/demo/SKILL.md",
+          location: { field: "remote_shell", line: 12, column: 3 },
+          description: "Remote shell pattern",
+          affected_tools: ["codex-cli"],
+          cve: null,
+          owasp: ["ASI01"],
+          cwe: "CWE-116",
+          confidence: "HIGH",
+          fixable: true,
+          remediation_actions: ["remove_block"],
+          suppressed: false,
+        },
+      ],
+      summary: {
+        ...emptyReport().summary,
+        total: 1,
+        by_severity: { CRITICAL: 1, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 },
+        fixable: 1,
+        exit_code: 2,
+      },
+    };
+
+    expect(
+      summarizeRequestedTargetFindings(
+        report,
+        "https://github.com/affaan-m/everything-claude-code/tree/main/skills/agentic-engineering",
+      ),
+    ).toContain("Requested URL target result: no findings were detected in the URL content");
+  });
+
+  it("returns null for non-URL targets", () => {
+    expect(summarizeRequestedTargetFindings(emptyReport(), "/tmp/project")).toBeNull();
   });
 });

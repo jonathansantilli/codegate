@@ -138,6 +138,10 @@ function isNoTuiEnabled(options: { noTui?: boolean; tui?: boolean }): boolean {
   return options.noTui === true || options.tui === false;
 }
 
+function renderExampleHelp(lines: string[]): string {
+  return ["", "Examples:", ...lines.map((line) => `  ${line}`)].join("\n");
+}
+
 export function isDirectCliInvocation(
   importMetaUrl: string,
   argv1: string | undefined,
@@ -294,10 +298,8 @@ const defaultCliDeps: CliDeps = {
 
 function addScanCommand(program: Command, version: string, deps: CliDeps): void {
   program
-    .command("scan [dir]")
-    .description(
-      "Scan a directory, file, or safely staged artifact target for AI tool config risks",
-    )
+    .command("scan [target]")
+    .description("Scan a local path or URL target for AI tool config risks")
     .option("--deep", "enable Layer 3 dynamic analysis")
     .option("--remediate", "enter remediation mode after scan")
     .option("--fix-safe", "auto-fix unambiguous critical findings")
@@ -315,8 +317,18 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
     .option("--force", "skip interactive confirmations")
     .option("--include-user-scope", "include user/home AI tool config paths in scan")
     .option("--reset-state", "clear persisted scan-state history and exit")
-    .action(async (dir: string | undefined, options: ScanCommandOptions & { tui?: boolean }) => {
-      const rawTarget = dir ?? ".";
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate scan .",
+        "codegate scan ./skills/security-review/SKILL.md",
+        "codegate scan https://github.com/owner/repo",
+        "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
+        "codegate scan https://example.com/security-review/SKILL.md --format json",
+      ]),
+    )
+    .action(async (target: string | undefined, options: ScanCommandOptions & { tui?: boolean }) => {
+      const rawTarget = target ?? ".";
       const noTui = isNoTuiEnabled(options);
       const promptCallbacksEnabled = noTui !== true;
       const cliConfig: CliConfigOverrides = {
@@ -442,6 +454,14 @@ function addRunCommand(program: Command, version: string, deps: CliDeps): void {
     .option("--no-tui", "disable TUI and interactive prompts")
     .option("--config <path>", "use a specific global config file")
     .option("--force", "skip interactive confirmations")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate run claude",
+        "codegate run codex --force",
+        "codegate run cursor",
+      ]),
+    )
     .action(
       async (
         tool: string,
@@ -516,6 +536,7 @@ function addUndoCommand(program: Command, deps: CliDeps): void {
   program
     .command("undo [dir]")
     .description("Restore the most recent remediation backup session")
+    .addHelpText("after", renderExampleHelp(["codegate undo", "codegate undo ./project"]))
     .action((dir: string | undefined) => {
       const projectRoot = resolve(deps.cwd(), dir ?? ".");
       try {
@@ -540,6 +561,14 @@ function addInitCommand(program: Command, deps: CliDeps): void {
     .description("Create ~/.codegate/config.json with defaults")
     .option("--path <path>", "write to a custom config path")
     .option("--force", "overwrite existing config file")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate init",
+        "codegate init --path ./.codegate/config.json",
+        "codegate init --force",
+      ]),
+    )
     .action((options: { path?: string; force?: boolean }) => {
       try {
         const home = deps.homeDir?.() ?? homedir();
@@ -575,6 +604,7 @@ function addUpdateCommands(program: Command, deps: CliDeps): void {
   program
     .command("update-kb")
     .description("Check for newer knowledge-base content")
+    .addHelpText("after", renderExampleHelp(["codegate update-kb"]))
     .action(() => {
       deps.stdout("update-kb:");
       for (const line of guidance) {
@@ -586,6 +616,7 @@ function addUpdateCommands(program: Command, deps: CliDeps): void {
   program
     .command("update-rules")
     .description("Check for newer rules content")
+    .addHelpText("after", renderExampleHelp(["codegate update-rules"]))
     .action(() => {
       deps.stdout("update-rules:");
       for (const line of guidance) {
@@ -613,7 +644,16 @@ export function createCli(
     .name(APP_NAME)
     .description("Pre-flight security scanner for AI coding tool configurations.")
     .version(versionDisplay)
-    .helpOption("-h, --help", "display help for command");
+    .helpOption("-h, --help", "display help for command")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate scan .",
+        "codegate scan https://github.com/owner/repo",
+        "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
+        "codegate run claude",
+      ]),
+    );
 
   addScanCommand(program, version, deps);
   addRunCommand(program, version, deps);
