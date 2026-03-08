@@ -1,0 +1,88 @@
+{
+  "tool": "zed",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".zed/settings.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "consent_bypass"],
+      "fields_of_interest": {
+        "context_servers.*.command": "stdio command",
+        "context_servers.*.args": "stdio command arguments",
+        "context_servers.*.url": "remote endpoint",
+        "context_servers.*.env": "runtime environment variables"
+      }
+    },
+    {
+      "path": ".zed/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "consent_bypass"],
+      "fields_of_interest": {
+        "context_servers.*.command": "stdio command",
+        "context_servers.*.args": "stdio command arguments",
+        "context_servers.*.url": "remote endpoint",
+        "context_servers.*.env": "runtime environment variables"
+      }
+    },
+    {
+      "path": ".zed/context-servers.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".zed/context-servers.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".zed/extensions.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource"]
+    },
+    {
+      "path": ".zed/extensions.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "remote_resource"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".zed/rules/**/*.md",
+      "scope": "project",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".zed/rules/**/*.md",
+      "scope": "user",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".zed/commands/**/*.md",
+      "scope": "project",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".zed/commands/**/*.md",
+      "scope": "user",
+      "type": "slash_command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    }
+  ],
+  "extension_mechanisms": [
+    {
+      "type": "zed_extension",
+      "install_pattern": "zed extension install <id>",
+      "risk": "extensions can register slash commands and MCP/context servers",
+      "fetchable": true
+    }
+  ]
+}

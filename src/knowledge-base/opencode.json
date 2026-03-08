@@ -1,0 +1,128 @@
+{
+  "tool": "opencode",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": "opencode.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "lsp_config", "formatter_config", "mcp_config"]
+    },
+    {
+      "path": ".opencode/opencode.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "lsp_config", "formatter_config", "mcp_config"]
+    },
+    {
+      "path": ".opencode/opencode.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "lsp_config", "formatter_config", "mcp_config"]
+    },
+    {
+      "path": ".config/opencode/opencode.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "lsp_config", "formatter_config", "mcp_config"]
+    },
+    {
+      "path": "Library/Application Support/OpenCode/opencode.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "lsp_config", "formatter_config", "mcp_config"]
+    },
+    {
+      "path": "AppData/Roaming/OpenCode/opencode.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "lsp_config", "formatter_config", "mcp_config"]
+    },
+    {
+      "path": "AGENTS.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".opencode/plugins.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".opencode/plugins.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".config/opencode/plugins.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": "Library/Application Support/OpenCode/plugins.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    },
+    {
+      "path": "AppData/Roaming/OpenCode/plugins.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["plugin_config", "command_exec", "remote_resource"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".opencode/rules/**/*.md",
+      "scope": "project",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".opencode/rules/**/*.md",
+      "scope": "user",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".opencode/agents/*.md",
+      "scope": "project",
+      "type": "agent_definition",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".opencode/agents/*.md",
+      "scope": "user",
+      "type": "agent_definition",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".opencode/skills/**/*.md",
+      "scope": "project",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".opencode/skills/**/*.md",
+      "scope": "user",
+      "type": "skill",
+      "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".opencode/commands/**/*.md",
+      "scope": "project",
+      "type": "command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    },
+    {
+      "path": ".opencode/commands/**/*.md",
+      "scope": "user",
+      "type": "command",
+      "risk_surface": ["prompt_injection", "command_exec"]
+    }
+  ]
+}

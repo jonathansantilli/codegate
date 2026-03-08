@@ -1,0 +1,208 @@
+{
+  "tool": "jetbrains-junie",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".junie/settings.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "ide_settings", "consent_bypass"]
+    },
+    {
+      "path": ".junie/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "ide_settings", "consent_bypass"]
+    },
+    {
+      "path": "Library/Application Support/JetBrains/Junie/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "ide_settings", "consent_bypass"]
+    },
+    {
+      "path": ".config/JetBrains/Junie/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "ide_settings", "consent_bypass"]
+    },
+    {
+      "path": "AppData/Roaming/JetBrains/Junie/settings.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "ide_settings", "consent_bypass"]
+    },
+    {
+      "path": ".junie/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables"
+      }
+    },
+    {
+      "path": ".junie/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables"
+      }
+    },
+    {
+      "path": "Library/Application Support/JetBrains/Junie/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables"
+      }
+    },
+    {
+      "path": ".config/JetBrains/Junie/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables"
+      }
+    },
+    {
+      "path": "AppData/Roaming/JetBrains/Junie/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["mcp_config", "command_exec", "remote_resource"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.args": "stdio command arguments",
+        "mcpServers.*.url": "remote endpoint",
+        "mcpServers.*.env": "runtime environment variables"
+      }
+    },
+    {
+      "path": ".idea/ai-assistant.xml",
+      "scope": "project",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    },
+    {
+      "path": ".idea/workspace.xml",
+      "scope": "project",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    },
+    {
+      "path": "Library/Application Support/JetBrains/**/options/aiAssistant.xml",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    },
+    {
+      "path": ".config/JetBrains/**/options/aiAssistant.xml",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    },
+    {
+      "path": "AppData/Roaming/JetBrains/**/options/aiAssistant.xml",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    },
+    {
+      "path": "Library/Application Support/JetBrains/AI Assistant/ai-assistant.xml",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    },
+    {
+      "path": ".config/JetBrains/AI Assistant/ai-assistant.xml",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    },
+    {
+      "path": "AppData/Roaming/JetBrains/AI Assistant/ai-assistant.xml",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["ide_settings", "command_exec"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".aiassistant/rules/**/*.md",
+      "scope": "project",
+      "type": "project_rule",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".aiassistant/rules/**/*.md",
+      "scope": "user",
+      "type": "project_rule",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".junie/guidelines/*.md",
+      "scope": "project",
+      "type": "guideline",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".junie/guidelines/*.md",
+      "scope": "user",
+      "type": "guideline",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "Library/Application Support/JetBrains/Junie/guidelines/**/*.md",
+      "scope": "user",
+      "type": "guideline",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".config/JetBrains/Junie/guidelines/**/*.md",
+      "scope": "user",
+      "type": "guideline",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "AppData/Roaming/JetBrains/Junie/guidelines/**/*.md",
+      "scope": "user",
+      "type": "guideline",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "Library/Application Support/JetBrains/AI Assistant/rules/**/*.md",
+      "scope": "user",
+      "type": "project_rule",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".config/JetBrains/AI Assistant/rules/**/*.md",
+      "scope": "user",
+      "type": "project_rule",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    }
+  ],
+  "extension_mechanisms": [
+    {
+      "type": "jetbrains_plugin",
+      "install_pattern": "JetBrains Marketplace plugin install",
+      "risk": "plugins can alter assistant behaviour and tool invocation",
+      "fetchable": false
+    }
+  ]
+}

@@ -1,0 +1,134 @@
+{
+  "tool": "cursor",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".cursor/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.url": "remote endpoint"
+      }
+    },
+    {
+      "path": ".cursor/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.url": "remote endpoint"
+      }
+    },
+    {
+      "path": "Library/Application Support/Cursor/User/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.url": "remote endpoint",
+        "mcp_servers.*.command": "stdio command (snake_case alias)",
+        "mcp_servers.*.url": "remote endpoint (snake_case alias)",
+        "context_servers.*.command": "stdio command (context server alias)",
+        "context_servers.*.url": "remote endpoint (context server alias)"
+      }
+    },
+    {
+      "path": "AppData/Roaming/Cursor/User/mcp.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.url": "remote endpoint",
+        "mcp_servers.*.command": "stdio command (snake_case alias)",
+        "mcp_servers.*.url": "remote endpoint (snake_case alias)",
+        "context_servers.*.command": "stdio command (context server alias)",
+        "context_servers.*.url": "remote endpoint (context server alias)"
+      }
+    },
+    {
+      "path": "mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.url": "remote endpoint"
+      }
+    },
+    {
+      "path": ".vscode/mcp.json",
+      "scope": "project",
+      "format": "jsonc",
+      "risk_surface": ["command_exec", "mcp_config"],
+      "fields_of_interest": {
+        "mcpServers.*.command": "stdio command",
+        "mcpServers.*.url": "remote endpoint",
+        "mcp_servers.*.command": "stdio command (snake_case alias)",
+        "mcp_servers.*.url": "remote endpoint (snake_case alias)",
+        "context_servers.*.command": "stdio command (context server alias)",
+        "context_servers.*.url": "remote endpoint (context server alias)"
+      }
+    },
+    {
+      "path": ".cursorrules",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": "AGENTS.md",
+      "scope": "project",
+      "format": "markdown",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".vscode/settings.json",
+      "scope": "project",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    },
+    {
+      "path": "Library/Application Support/Cursor/User/extensions.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings", "plugin_config"]
+    },
+    {
+      "path": "AppData/Roaming/Cursor/User/extensions.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings", "plugin_config"]
+    },
+    {
+      "path": "Library/Application Support/Cursor/User/settings.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    },
+    {
+      "path": "AppData/Roaming/Cursor/User/settings.json",
+      "scope": "user",
+      "format": "json",
+      "risk_surface": ["ide_settings"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".cursor/rules/**/*.mdc",
+      "scope": "project",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    },
+    {
+      "path": ".cursor/rules/**/*.mdc",
+      "scope": "user",
+      "type": "rule_file",
+      "risk_surface": ["prompt_injection", "unicode_backdoor"]
+    }
+  ]
+}
