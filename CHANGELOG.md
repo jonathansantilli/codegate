@@ -1,3 +1,9 @@
+## [0.1.7](https://github.com/jonathansantilli/codegate/compare/v0.1.6...v0.1.7) (2026-03-08)
+
+### Bug Fixes
+
+- add codegate-ai bin alias for npx invocation ([3dc27ab](https://github.com/jonathansantilli/codegate/commit/3dc27abd859d54798a142ded1f117012f12bb59e))
+
 ## [0.1.6](https://github.com/jonathansantilli/codegate/compare/v0.1.5...v0.1.6) (2026-03-08)
 
 ### Bug Fixes
