@@ -60,6 +60,7 @@ import {
   promptDeepScanConsent,
   promptMetaAgentCommandConsent,
   promptRemediationConsent,
+  promptSkillSelection,
 } from "./cli-prompts.js";
 import { resetScanState } from "./layer2-static/state/scan-state.js";
 
@@ -86,6 +87,9 @@ export interface CliDeps {
   resolveScanTarget?: (input: {
     rawTarget: string;
     cwd: string;
+    preferredSkill?: string;
+    interactive?: boolean;
+    requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
   }) => Promise<ResolvedScanTarget> | ResolvedScanTarget;
   stdout: (message: string) => void;
   stderr: (message: string) => void;
@@ -123,6 +127,7 @@ export interface CliDeps {
   ) => Promise<MetaAgentCommandRunResult> | MetaAgentCommandRunResult;
   requestRemediationConsent?: (context: RemediationConsentContext) => Promise<boolean> | boolean;
   requestRunWarningConsent?: (context: RunWarningConsentContext) => Promise<boolean> | boolean;
+  requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
   executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
   runWrapper?: (input: {
     target: string;
@@ -316,6 +321,7 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
     .option("--config <path>", "use a specific global config file")
     .option("--force", "skip interactive confirmations")
     .option("--include-user-scope", "include user/home AI tool config paths in scan")
+    .option("--skill <name>", "select one skill directory when scanning a skills index repo URL")
     .option("--reset-state", "clear persisted scan-state history and exit")
     .addHelpText(
       "after",
@@ -323,6 +329,7 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
         "codegate scan .",
         "codegate scan ./skills/security-review/SKILL.md",
         "codegate scan https://github.com/owner/repo",
+        "codegate scan https://github.com/owner/repo --skill security-review",
         "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
         "codegate scan https://example.com/security-review/SKILL.md --format json",
       ]),
@@ -331,6 +338,7 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
       const rawTarget = target ?? ".";
       const noTui = isNoTuiEnabled(options);
       const promptCallbacksEnabled = noTui !== true;
+      const interactivePromptsEnabled = deps.isTTY() && noTui !== true;
       const cliConfig: CliConfigOverrides = {
         format: options.format,
         configPath: options.config,
@@ -341,10 +349,22 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
       try {
         const resolveTarget =
           deps.resolveScanTarget ??
-          ((input: { rawTarget: string; cwd: string }) => resolveScanTarget(input));
+          ((input: {
+            rawTarget: string;
+            cwd: string;
+            preferredSkill?: string;
+            interactive?: boolean;
+            requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
+          }) => resolveScanTarget(input));
         resolvedTarget = await resolveTarget({
           rawTarget,
           cwd: deps.cwd(),
+          preferredSkill: options.skill,
+          interactive: interactivePromptsEnabled,
+          requestSkillSelection: promptCallbacksEnabled
+            ? (deps.requestSkillSelection ??
+              (interactivePromptsEnabled ? promptSkillSelection : undefined))
+            : undefined,
         });
         const scanTarget = resolvedTarget.scanTarget;
         const baseConfig = deps.resolveConfig({
@@ -367,7 +387,6 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
           return;
         }
 
-        const interactivePromptsEnabled = deps.isTTY() && noTui !== true;
         await executeScanCommand(
           {
             version,

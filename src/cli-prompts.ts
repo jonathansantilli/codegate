@@ -115,3 +115,35 @@ export async function promptRemediationConsent(
     rl.close();
   }
 }
+
+export async function promptSkillSelection(options: string[]): Promise<string | null> {
+  if (options.length === 0) {
+    return null;
+  }
+
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+  const optionLines = options.map((option, index) => `  ${index + 1}. ${option}`);
+
+  const prompt = [
+    "Multiple skills detected in repository.",
+    ...optionLines,
+    `Choose [1-${options.length}] (q to cancel): `,
+  ].join("\n");
+
+  try {
+    const answer = (await rl.question(prompt)).trim().toLowerCase();
+    if (answer === "q" || answer === "quit" || answer === "cancel") {
+      return null;
+    }
+    const numeric = Number.parseInt(answer, 10);
+    if (Number.isNaN(numeric) || numeric < 1 || numeric > options.length) {
+      return null;
+    }
+    return options[numeric - 1] ?? null;
+  } finally {
+    rl.close();
+  }
+}

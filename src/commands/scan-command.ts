@@ -55,6 +55,7 @@ export interface ScanCommandOptions {
   force?: boolean;
   resetState?: boolean;
   includeUserScope?: boolean;
+  skill?: string;
 }
 
 export interface ScanRunnerInput {

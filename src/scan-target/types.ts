@@ -18,4 +18,7 @@ export interface ResolvedScanTarget {
 export interface ResolveScanTargetInput {
   rawTarget: string;
   cwd: string;
+  preferredSkill?: string;
+  interactive?: boolean;
+  requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
 }
