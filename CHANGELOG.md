@@ -1,3 +1,5 @@
+## [0.2.1](https://github.com/jonathansantilli/codegate/compare/v0.2.0...v0.2.1) (2026-03-10)
+
 # [0.2.0](https://github.com/jonathansantilli/codegate/compare/v0.1.9...v0.2.0) (2026-03-08)
 
 ### Features
