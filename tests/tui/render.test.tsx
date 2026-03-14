@@ -81,4 +81,46 @@ describe("task 18 tui shell rendering", () => {
     expect(app.lastFrame()).toContain("Summary");
     expect(app.lastFrame()).toContain("SAFE");
   });
+
+  it("separates requested URL target findings from local host findings in dashboard view", () => {
+    const report: CodeGateReport = {
+      ...REPORT,
+      scan_target: "https://github.com/vercel-labs/agent-browser",
+      findings: [
+        {
+          ...REPORT.findings[0],
+          finding_id: "LOCAL-1",
+          file_path: "~/.codex/skills/demo/SKILL.md",
+          description: "Local host finding",
+          evidence: "line 1\n1 | local evidence",
+        },
+        {
+          ...REPORT.findings[0],
+          finding_id: "TARGET-1",
+          severity: "HIGH",
+          file_path: ".claude-plugin/marketplace.json",
+          description: "Requested target finding",
+          evidence: 'line 13\n13 | "source": "./"',
+        },
+      ],
+      summary: {
+        total: 2,
+        by_severity: { CRITICAL: 1, HIGH: 1, MEDIUM: 0, LOW: 0, INFO: 0 },
+        fixable: 2,
+        suppressed: 0,
+        exit_code: 2,
+      },
+    };
+
+    const app = render(<CodeGateTuiApp view="dashboard" report={report} />);
+    const frame = app.lastFrame();
+    expect(frame).toContain("Requested URL target findings (1):");
+    expect(frame).toContain("Additional local host findings (1):");
+
+    const targetIndex = frame.indexOf("[HIGH] .claude-plugin/marketplace.json");
+    const localIndex = frame.indexOf("[CRITICAL] ~/.codex/skills/demo/SKILL.md");
+    expect(targetIndex).toBeGreaterThanOrEqual(0);
+    expect(localIndex).toBeGreaterThanOrEqual(0);
+    expect(targetIndex).toBeLessThan(localIndex);
+  });
 });

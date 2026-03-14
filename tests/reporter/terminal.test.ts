@@ -165,4 +165,69 @@ describe("task 15 terminal reporter", () => {
     expect(output).toContain("Not verified:");
     expect(output).toContain("CodeGate did not fetch or inspect any referenced remote content.");
   });
+
+  it("renders requested URL target findings first and separates local host findings", () => {
+    const report: CodeGateReport = {
+      version: "0.1.0",
+      scan_target: "https://github.com/vercel-labs/agent-browser",
+      timestamp: "2026-03-14T00:00:00.000Z",
+      kb_version: "2026-03-14",
+      tools_detected: ["claude-code", "codex-cli"],
+      findings: [
+        {
+          rule_id: "rule-file-remote-shell",
+          finding_id: "LOCAL-1",
+          severity: "CRITICAL",
+          category: "RULE_INJECTION",
+          layer: "L2",
+          file_path: "~/.codex/skills/demo/SKILL.md",
+          location: { field: "remote_shell", line: 40, column: 1 },
+          description: "Rule file instructs curl | sh",
+          affected_tools: ["codex-cli"],
+          cve: null,
+          owasp: ["ASI01"],
+          cwe: "CWE-116",
+          confidence: "HIGH",
+          fixable: true,
+          remediation_actions: ["remove_block"],
+          suppressed: false,
+        },
+        {
+          rule_id: "plugin-manifest-local-source",
+          finding_id: "TARGET-1",
+          severity: "HIGH",
+          category: "RULE_INJECTION",
+          layer: "L2",
+          file_path: ".claude-plugin/marketplace.json",
+          location: { field: "plugins[0].source", line: 13, column: 7 },
+          description: "Plugin source points to local path: ./",
+          affected_tools: ["claude-code"],
+          cve: null,
+          owasp: ["ASI01"],
+          cwe: "CWE-116",
+          confidence: "HIGH",
+          fixable: true,
+          remediation_actions: ["remove_field"],
+          suppressed: false,
+        },
+      ],
+      summary: {
+        total: 2,
+        by_severity: { CRITICAL: 1, HIGH: 1, MEDIUM: 0, LOW: 0, INFO: 0 },
+        fixable: 2,
+        suppressed: 0,
+        exit_code: 2,
+      },
+    };
+
+    const output = renderTerminalReport(report);
+    expect(output).toContain("Requested URL target findings (1):");
+    expect(output).toContain("Additional local host findings (1):");
+
+    const targetIndex = output.indexOf("[HIGH] .claude-plugin/marketplace.json");
+    const localIndex = output.indexOf("[CRITICAL] ~/.codex/skills/demo/SKILL.md");
+    expect(targetIndex).toBeGreaterThanOrEqual(0);
+    expect(localIndex).toBeGreaterThanOrEqual(0);
+    expect(targetIndex).toBeLessThan(localIndex);
+  });
 });

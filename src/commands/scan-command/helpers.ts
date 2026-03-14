@@ -6,46 +6,38 @@ import { renderJsonReport } from "../../reporter/json.js";
 import { renderMarkdownReport } from "../../reporter/markdown.js";
 import { renderSarifReport } from "../../reporter/sarif.js";
 import { renderTerminalReport } from "../../reporter/terminal.js";
+import { partitionRequestedTargetFindings } from "../../report/requested-target-findings.js";
 import type { CodeGateReport } from "../../types/report.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function isHttpLikeTarget(target: string): boolean {
-  return /^https?:\/\//iu.test(target);
-}
-
-function isUserScopeFindingPath(path: string): boolean {
-  return path === "~" || path.startsWith("~/");
-}
-
 export function summarizeRequestedTargetFindings(
   report: CodeGateReport,
   displayTarget?: string,
 ): string | null {
-  if (!displayTarget || !isHttpLikeTarget(displayTarget)) {
+  const groups = partitionRequestedTargetFindings(report, displayTarget);
+  if (!groups) {
     return null;
   }
 
-  const targetFindings = report.findings.filter(
-    (finding) => !isUserScopeFindingPath(finding.file_path),
-  ).length;
-  const userScopeFindings = report.findings.length - targetFindings;
+  const targetFindings = groups.targetFindings.length;
+  const localFindings = groups.localFindings.length;
 
   if (targetFindings === 0) {
-    if (userScopeFindings === 0) {
+    if (localFindings === 0) {
       return "Requested URL target result: no findings were detected in the URL content.";
     }
 
-    return `Requested URL target result: no findings were detected in the URL content. ${userScopeFindings} finding(s) came from enabled user-scope paths (~/*).`;
+    return `Requested URL target result: no findings were detected in the URL content. ${localFindings} finding(s) came from local host paths (~/* or absolute host paths).`;
   }
 
-  if (userScopeFindings === 0) {
+  if (localFindings === 0) {
     return `Requested URL target result: ${targetFindings} finding(s) were detected in the URL content.`;
   }
 
-  return `Requested URL target result: ${targetFindings} finding(s) were detected in the URL content. ${userScopeFindings} additional finding(s) came from enabled user-scope paths (~/*).`;
+  return `Requested URL target result: ${targetFindings} finding(s) were detected in the URL content. ${localFindings} additional finding(s) came from local host paths (~/* or absolute host paths).`;
 }
 
 export function metadataSummary(metadata: unknown): string {

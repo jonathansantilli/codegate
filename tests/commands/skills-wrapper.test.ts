@@ -179,6 +179,18 @@ describe("skills wrapper parser", () => {
     );
   });
 
+  it("throws when --cg-config is missing a value and next token is another option", () => {
+    expect(() => parseSkillsInvocation(["add", "owner/repo", "--cg-config", "--cg-force"])).toThrow(
+      "--cg-config requires a value",
+    );
+  });
+
+  it("throws when --cg-format is missing a value and next token is another option", () => {
+    expect(() =>
+      parseSkillsInvocation(["add", "owner/repo", "--cg-format", "--cg-no-tui"]),
+    ).toThrow("--cg-format requires a value");
+  });
+
   it("rejects unsupported wrapper option --cg-deep", () => {
     expect(() => parseSkillsInvocation(["add", "owner/repo", "--cg-deep"])).toThrow(
       "Unknown CodeGate wrapper option",
@@ -190,6 +202,19 @@ describe("skills wrapper parser", () => {
       "add",
       "--some-future-flag",
       "value",
+      "owner/repo",
+      "--skill",
+      "find-skills",
+    ]);
+
+    expect(parsed.sourceTarget).toBe("owner/repo");
+  });
+
+  it("prefers actual add source over option values that look like URLs", () => {
+    const parsed = parseSkillsInvocation([
+      "add",
+      "--registry",
+      "https://registry.example.internal",
       "owner/repo",
       "--skill",
       "find-skills",
@@ -628,6 +653,39 @@ describe("skills wrapper execution", () => {
           "add",
           "--some-future-flag",
           "value",
+          "vercel-labs/skills",
+          "--skill",
+          "find-skills",
+          "--cg-force",
+        ],
+      },
+      makeDeps({
+        resolveScanTarget,
+        pathExists: () => false,
+      }),
+    );
+
+    expect(resolveScanTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rawTarget: "https://github.com/vercel-labs/skills",
+      }),
+    );
+  });
+
+  it("uses actual add source when option value before it looks like a URL", async () => {
+    const resolveScanTarget = vi.fn(async () => ({
+      scanTarget: "/tmp/staged",
+      displayTarget: "https://github.com/vercel-labs/skills",
+      cleanup: () => {},
+    }));
+
+    await executeSkillsWrapper(
+      {
+        version: "0.1.0",
+        skillsArgs: [
+          "add",
+          "--registry",
+          "https://registry.example.internal",
           "vercel-labs/skills",
           "--skill",
           "find-skills",
