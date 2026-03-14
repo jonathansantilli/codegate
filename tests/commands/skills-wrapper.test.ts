@@ -179,6 +179,18 @@ describe("skills wrapper parser", () => {
     );
   });
 
+  it("throws when --cg-config is missing a value and next token is another option", () => {
+    expect(() => parseSkillsInvocation(["add", "owner/repo", "--cg-config", "--cg-force"])).toThrow(
+      "--cg-config requires a value",
+    );
+  });
+
+  it("throws when --cg-format is missing a value and next token is another option", () => {
+    expect(() =>
+      parseSkillsInvocation(["add", "owner/repo", "--cg-format", "--cg-no-tui"]),
+    ).toThrow("--cg-format requires a value");
+  });
+
   it("rejects unsupported wrapper option --cg-deep", () => {
     expect(() => parseSkillsInvocation(["add", "owner/repo", "--cg-deep"])).toThrow(
       "Unknown CodeGate wrapper option",

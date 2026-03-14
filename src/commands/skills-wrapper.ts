@@ -90,7 +90,12 @@ function parseWrapperOptionValue(args: string[], index: number, flag: string): [
   }
 
   const nextValue = args[index + 1];
-  if (!nextValue || nextValue.trim().length === 0) {
+  if (
+    !nextValue ||
+    nextValue.trim().length === 0 ||
+    nextValue === "--" ||
+    nextValue.startsWith("-")
+  ) {
     throw new Error(`${flag} requires a value`);
   }
 
