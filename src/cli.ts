@@ -48,6 +48,11 @@ import {
 import { undoLatestSession } from "./commands/undo.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
+  executeSkillsWrapper,
+  launchSkillsPassthrough,
+  type SkillsWrapperLaunchResult,
+} from "./commands/skills-wrapper.js";
+import {
   type DeepAgentOption,
   type MetaAgentCommandConsentContext,
   type MetaAgentCommandRunResult,
@@ -129,6 +134,8 @@ export interface CliDeps {
   requestRunWarningConsent?: (context: RunWarningConsentContext) => Promise<boolean> | boolean;
   requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
   executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
+  launchSkills?: (args: string[], cwd: string) => SkillsWrapperLaunchResult;
+  runSkillsWrapper?: (input: { version: string; skillsArgs: string[] }) => Promise<void>;
   runWrapper?: (input: {
     target: string;
     cwd: string;
@@ -299,6 +306,7 @@ const defaultCliDeps: CliDeps = {
 
     return fetchResourceMetadata(resource.request);
   },
+  launchSkills: (args, cwd) => launchSkillsPassthrough(args, cwd),
 };
 
 function addScanCommand(program: Command, version: string, deps: CliDeps): void {
@@ -551,6 +559,55 @@ function addRunCommand(program: Command, version: string, deps: CliDeps): void {
     );
 }
 
+function addSkillsCommand(program: Command, version: string, deps: CliDeps): void {
+  program
+    .command("skills [skillsArgs...]")
+    .description("Wrap npx skills with CodeGate preflight scanning for installs")
+    .allowUnknownOption(true)
+    .allowExcessArguments(true)
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate skills add vercel-labs/skills --skill find-skills",
+        "codegate skills add https://github.com/owner/repo --skill security-review",
+        "codegate skills find security",
+        "codegate skills add owner/repo --skill demo --cg-force",
+      ]),
+    )
+    .action(async (skillsArgs: string[] | undefined) => {
+      try {
+        const runSkillsWrapper =
+          deps.runSkillsWrapper ??
+          ((input: { version: string; skillsArgs: string[] }) =>
+            executeSkillsWrapper(input, {
+              cwd: deps.cwd,
+              isTTY: deps.isTTY,
+              pathExists: deps.pathExists,
+              resolveConfig: deps.resolveConfig,
+              runScan: deps.runScan,
+              resolveScanTarget: deps.resolveScanTarget,
+              requestSkillSelection: deps.requestSkillSelection,
+              requestWarningProceed: deps.requestRunWarningConsent,
+              launchSkills:
+                deps.launchSkills ?? ((args, cwd) => launchSkillsPassthrough(args, cwd)),
+              stdout: deps.stdout,
+              stderr: deps.stderr,
+              setExitCode: deps.setExitCode,
+              renderTui: deps.renderTui,
+            }));
+
+        await runSkillsWrapper({
+          version,
+          skillsArgs: skillsArgs ?? [],
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`Skills wrapper failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
 function addUndoCommand(program: Command, deps: CliDeps): void {
   program
     .command("undo [dir]")
@@ -670,11 +727,13 @@ export function createCli(
         "codegate scan .",
         "codegate scan https://github.com/owner/repo",
         "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
+        "codegate skills add owner/repo --skill security-review",
         "codegate run claude",
       ]),
     );
 
   addScanCommand(program, version, deps);
+  addSkillsCommand(program, version, deps);
   addRunCommand(program, version, deps);
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
