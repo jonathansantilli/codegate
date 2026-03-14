@@ -40,6 +40,7 @@ import {
   summarizeRequestedTargetFindings,
   withMetaAgentFinding,
 } from "./scan-command/helpers.js";
+import { reorderRequestedTargetFindings } from "../report/requested-target-findings.js";
 
 export interface ScanCommandOptions {
   deep?: boolean;
@@ -497,6 +498,7 @@ export async function executeScanCommand(
     }
 
     report = applyConfigPolicy(report, input.config);
+    report = reorderRequestedTargetFindings(report, input.displayTarget);
     const remediationRequested =
       input.options.remediate ||
       input.options.fixSafe ||

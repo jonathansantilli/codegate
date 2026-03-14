@@ -1,5 +1,6 @@
 import type { CodeGateReport } from "../types/report.js";
 import { toAbsoluteDisplayPath } from "../path-display.js";
+import { partitionRequestedTargetFindings } from "../report/requested-target-findings.js";
 
 export interface TerminalRenderOptions {
   verbose?: boolean;
@@ -53,11 +54,59 @@ function formatLocation(location: {
   return parts.length > 0 ? parts.join(" @ ") : null;
 }
 
+function appendFinding(
+  lines: string[],
+  report: CodeGateReport,
+  options: TerminalRenderOptions,
+  finding: CodeGateReport["findings"][number],
+): void {
+  const verbose = options.verbose === true;
+  lines.push(
+    `[${finding.severity}] ${toAbsoluteDisplayPath(report.scan_target, finding.file_path)}`,
+  );
+  lines.push(`  ${finding.description}`);
+  if (finding.incident_title) {
+    appendLabeledText(lines, "Incident", finding.incident_title);
+  }
+  if (finding.evidence && finding.evidence.length > 0) {
+    appendEvidence(lines, finding.evidence);
+  }
+  appendLabeledList(lines, "Observed", finding.observed ?? []);
+  if (finding.inference) {
+    appendLabeledText(lines, "Inference", finding.inference);
+  }
+  appendLabeledList(lines, "Not verified", finding.not_verified ?? []);
+  if (verbose) {
+    lines.push(`  Rule: ${finding.rule_id}`);
+    lines.push(`  Finding ID: ${finding.finding_id}`);
+    lines.push(
+      `  Category: ${finding.category} | Layer: ${finding.layer} | Confidence: ${finding.confidence}`,
+    );
+    const formattedLocation = formatLocation(finding.location);
+    if (formattedLocation) {
+      lines.push(`  Location: ${formattedLocation}`);
+    }
+    if (finding.cve) {
+      lines.push(`  CVE: ${finding.cve}`);
+    }
+    lines.push(`  CWE: ${finding.cwe}`);
+    if (finding.owasp.length > 0) {
+      lines.push(`  OWASP: ${finding.owasp.join(", ")}`);
+    }
+    if (finding.remediation_actions.length > 0) {
+      lines.push(`  Remediation: ${finding.remediation_actions.join(", ")}`);
+    }
+  }
+  if (finding.layer === "L3" && finding.source_config) {
+    const fieldSuffix = finding.source_config.field ? ` (${finding.source_config.field})` : "";
+    lines.push(`  source config: ${finding.source_config.file_path}${fieldSuffix}`);
+  }
+}
+
 export function renderTerminalReport(
   report: CodeGateReport,
   options: TerminalRenderOptions = {},
 ): string {
-  const verbose = options.verbose === true;
   const lines: string[] = [];
   lines.push(`CodeGate v${report.version}`);
   lines.push(`Target: ${report.scan_target}`);
@@ -74,47 +123,30 @@ export function renderTerminalReport(
     return lines.join("\n");
   }
 
+  const groups = partitionRequestedTargetFindings(report);
+  if (groups) {
+    lines.push(`Requested URL target findings (${groups.targetFindings.length}):`);
+    if (groups.targetFindings.length === 0) {
+      lines.push("  none");
+    } else {
+      for (const finding of groups.targetFindings) {
+        appendFinding(lines, report, options, finding);
+      }
+    }
+
+    if (groups.localFindings.length > 0) {
+      lines.push("");
+      lines.push(`Additional local host findings (${groups.localFindings.length}):`);
+      for (const finding of groups.localFindings) {
+        appendFinding(lines, report, options, finding);
+      }
+    }
+
+    return lines.join("\n");
+  }
+
   for (const finding of report.findings) {
-    lines.push(
-      `[${finding.severity}] ${toAbsoluteDisplayPath(report.scan_target, finding.file_path)}`,
-    );
-    lines.push(`  ${finding.description}`);
-    if (finding.incident_title) {
-      appendLabeledText(lines, "Incident", finding.incident_title);
-    }
-    if (finding.evidence && finding.evidence.length > 0) {
-      appendEvidence(lines, finding.evidence);
-    }
-    appendLabeledList(lines, "Observed", finding.observed ?? []);
-    if (finding.inference) {
-      appendLabeledText(lines, "Inference", finding.inference);
-    }
-    appendLabeledList(lines, "Not verified", finding.not_verified ?? []);
-    if (verbose) {
-      lines.push(`  Rule: ${finding.rule_id}`);
-      lines.push(`  Finding ID: ${finding.finding_id}`);
-      lines.push(
-        `  Category: ${finding.category} | Layer: ${finding.layer} | Confidence: ${finding.confidence}`,
-      );
-      const formattedLocation = formatLocation(finding.location);
-      if (formattedLocation) {
-        lines.push(`  Location: ${formattedLocation}`);
-      }
-      if (finding.cve) {
-        lines.push(`  CVE: ${finding.cve}`);
-      }
-      lines.push(`  CWE: ${finding.cwe}`);
-      if (finding.owasp.length > 0) {
-        lines.push(`  OWASP: ${finding.owasp.join(", ")}`);
-      }
-      if (finding.remediation_actions.length > 0) {
-        lines.push(`  Remediation: ${finding.remediation_actions.join(", ")}`);
-      }
-    }
-    if (finding.layer === "L3" && finding.source_config) {
-      const fieldSuffix = finding.source_config.field ? ` (${finding.source_config.field})` : "";
-      lines.push(`  source config: ${finding.source_config.file_path}${fieldSuffix}`);
-    }
+    appendFinding(lines, report, options, finding);
   }
 
   return lines.join("\n");
