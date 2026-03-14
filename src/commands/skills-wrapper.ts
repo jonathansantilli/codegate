@@ -11,6 +11,7 @@ import {
   type ResolveConfigOptions,
 } from "../config.js";
 import { renderByFormat, summarizeRequestedTargetFindings } from "./scan-command/helpers.js";
+import { reorderRequestedTargetFindings } from "../report/requested-target-findings.js";
 import { resolveScanTarget, type ResolvedScanTarget } from "../scan-target.js";
 import type { ScanRunnerInput } from "./scan-command.js";
 import type { CodeGateReport } from "../types/report.js";
@@ -480,6 +481,7 @@ export async function executeSkillsWrapper(
     }
 
     report = applyConfigPolicy(report, config);
+    report = reorderRequestedTargetFindings(report, resolvedTarget.displayTarget);
 
     const shouldUseTui =
       config.tui.enabled && isTTY && deps.renderTui !== undefined && noTui !== true;
