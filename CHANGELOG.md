@@ -1,3 +1,9 @@
+# [0.3.0](https://github.com/jonathansantilli/codegate/compare/v0.2.3...v0.3.0) (2026-03-14)
+
+### Features
+
+- add skills wrapper preflight hardening ([#19](https://github.com/jonathansantilli/codegate/issues/19)) ([a61a255](https://github.com/jonathansantilli/codegate/commit/a61a2554fa6067af2537850bb8ed948e8b040a81))
+
 ## [0.2.3](https://github.com/jonathansantilli/codegate/compare/v0.2.2...v0.2.3) (2026-03-10)
 
 ## [0.2.2](https://github.com/jonathansantilli/codegate/compare/v0.2.1...v0.2.2) (2026-03-10)
