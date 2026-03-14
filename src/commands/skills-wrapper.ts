@@ -168,6 +168,17 @@ function firstLikelySourceAfterAdd(
       return null;
     }
     if (looksLikeSourceToken(token, context)) {
+      // Heuristic: if a source-looking token is immediately after an option flag and followed by
+      // another source-looking token, treat the first one as an option value and continue.
+      const previous = index > addIndex + 1 ? (args[index - 1] ?? "") : "";
+      const next = args[index + 1] ?? "";
+      if (
+        previous.startsWith("-") &&
+        !previous.startsWith("--skill") &&
+        looksLikeSourceToken(next, context)
+      ) {
+        continue;
+      }
       return token;
     }
   }

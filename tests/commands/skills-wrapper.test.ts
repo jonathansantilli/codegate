@@ -210,6 +210,19 @@ describe("skills wrapper parser", () => {
     expect(parsed.sourceTarget).toBe("owner/repo");
   });
 
+  it("prefers actual add source over option values that look like URLs", () => {
+    const parsed = parseSkillsInvocation([
+      "add",
+      "--registry",
+      "https://registry.example.internal",
+      "owner/repo",
+      "--skill",
+      "find-skills",
+    ]);
+
+    expect(parsed.sourceTarget).toBe("owner/repo");
+  });
+
   it("detects add even when global options with values appear before subcommand", () => {
     const parsed = parseSkillsInvocation([
       "--registry",
@@ -640,6 +653,39 @@ describe("skills wrapper execution", () => {
           "add",
           "--some-future-flag",
           "value",
+          "vercel-labs/skills",
+          "--skill",
+          "find-skills",
+          "--cg-force",
+        ],
+      },
+      makeDeps({
+        resolveScanTarget,
+        pathExists: () => false,
+      }),
+    );
+
+    expect(resolveScanTarget).toHaveBeenCalledWith(
+      expect.objectContaining({
+        rawTarget: "https://github.com/vercel-labs/skills",
+      }),
+    );
+  });
+
+  it("uses actual add source when option value before it looks like a URL", async () => {
+    const resolveScanTarget = vi.fn(async () => ({
+      scanTarget: "/tmp/staged",
+      displayTarget: "https://github.com/vercel-labs/skills",
+      cleanup: () => {},
+    }));
+
+    await executeSkillsWrapper(
+      {
+        version: "0.1.0",
+        skillsArgs: [
+          "add",
+          "--registry",
+          "https://registry.example.internal",
           "vercel-labs/skills",
           "--skill",
           "find-skills",
