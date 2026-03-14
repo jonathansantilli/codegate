@@ -1,3 +1,9 @@
+# [0.4.0](https://github.com/jonathansantilli/codegate/compare/v0.3.1...v0.4.0) (2026-03-14)
+
+### Features
+
+- separate URL target and local host findings in scan output ([#20](https://github.com/jonathansantilli/codegate/issues/20)) ([e3a2633](https://github.com/jonathansantilli/codegate/commit/e3a26336075cee9050c2802574b44e36c1023096))
+
 ## [0.3.1](https://github.com/jonathansantilli/codegate/compare/v0.3.0...v0.3.1) (2026-03-14)
 
 # [0.3.0](https://github.com/jonathansantilli/codegate/compare/v0.2.3...v0.3.0) (2026-03-14)
