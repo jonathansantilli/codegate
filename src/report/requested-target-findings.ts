@@ -4,6 +4,9 @@ import type { CodeGateReport } from "../types/report.js";
 
 const HTTP_LIKE_TARGET_PATTERN = /^https?:\/\//iu;
 const WINDOWS_ABSOLUTE_PATH_PATTERN = /^[a-z]:[\\/]/iu;
+const WINDOWS_USER_SCOPE_PATH_PATTERN = /^~[\\/]/u;
+const UNC_PATH_PATTERN = /^[\\/]{2}[^\\/]/u;
+const FILE_URI_PATH_PATTERN = /^file:\/\//iu;
 
 export interface RequestedTargetFindingGroups {
   targetFindings: Finding[];
@@ -15,7 +18,7 @@ function isHttpLikeTarget(target: string): boolean {
 }
 
 function isUserScopeFindingPath(path: string): boolean {
-  return path === "~" || path.startsWith("~/");
+  return path === "~" || path.startsWith("~/") || WINDOWS_USER_SCOPE_PATH_PATTERN.test(path);
 }
 
 function isWindowsAbsolutePath(path: string): boolean {
@@ -23,7 +26,13 @@ function isWindowsAbsolutePath(path: string): boolean {
 }
 
 function isLocalHostFindingPath(path: string): boolean {
-  return isUserScopeFindingPath(path) || isAbsolute(path) || isWindowsAbsolutePath(path);
+  return (
+    isUserScopeFindingPath(path) ||
+    isAbsolute(path) ||
+    isWindowsAbsolutePath(path) ||
+    UNC_PATH_PATTERN.test(path) ||
+    FILE_URI_PATH_PATTERN.test(path)
+  );
 }
 
 export function partitionRequestedTargetFindings(

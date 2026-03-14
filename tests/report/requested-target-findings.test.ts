@@ -137,4 +137,89 @@ describe("requested target finding partitioning", () => {
     const ordered = reorderRequestedTargetFindings(report);
     expect(ordered.findings.map((item) => item.finding_id)).toEqual(["TARGET-1", "LOCAL-1"]);
   });
+
+  it("treats Windows and file URI local paths as local host findings", () => {
+    const report = baseReport([
+      {
+        rule_id: "plugin-manifest-local-source",
+        finding_id: "TARGET-1",
+        severity: "HIGH",
+        category: "RULE_INJECTION",
+        layer: "L2",
+        file_path: ".claude-plugin/marketplace.json",
+        location: { line: 13 },
+        description: "Plugin source points to local path: ./",
+        affected_tools: ["claude-code"],
+        cve: null,
+        owasp: ["ASI01"],
+        cwe: "CWE-116",
+        confidence: "HIGH",
+        fixable: true,
+        remediation_actions: ["remove_field"],
+        suppressed: false,
+      },
+      {
+        rule_id: "rule-file-remote-shell",
+        finding_id: "LOCAL-WIN-HOME",
+        severity: "HIGH",
+        category: "RULE_INJECTION",
+        layer: "L2",
+        file_path: "~\\codex\\skills\\demo\\SKILL.md",
+        location: { line: 22 },
+        description: "Windows home-style local path",
+        affected_tools: ["codex-cli"],
+        cve: null,
+        owasp: ["ASI01"],
+        cwe: "CWE-116",
+        confidence: "HIGH",
+        fixable: true,
+        remediation_actions: ["remove_block"],
+        suppressed: false,
+      },
+      {
+        rule_id: "rule-file-remote-shell",
+        finding_id: "LOCAL-UNC",
+        severity: "HIGH",
+        category: "RULE_INJECTION",
+        layer: "L2",
+        file_path: "\\\\server\\share\\skills\\demo\\SKILL.md",
+        location: { line: 23 },
+        description: "UNC local path",
+        affected_tools: ["codex-cli"],
+        cve: null,
+        owasp: ["ASI01"],
+        cwe: "CWE-116",
+        confidence: "HIGH",
+        fixable: true,
+        remediation_actions: ["remove_block"],
+        suppressed: false,
+      },
+      {
+        rule_id: "rule-file-remote-shell",
+        finding_id: "LOCAL-FILE-URI",
+        severity: "HIGH",
+        category: "RULE_INJECTION",
+        layer: "L2",
+        file_path: "file:///Users/demo/.codex/skills/demo/SKILL.md",
+        location: { line: 24 },
+        description: "File URI local path",
+        affected_tools: ["codex-cli"],
+        cve: null,
+        owasp: ["ASI01"],
+        cwe: "CWE-116",
+        confidence: "HIGH",
+        fixable: true,
+        remediation_actions: ["remove_block"],
+        suppressed: false,
+      },
+    ]);
+
+    const groups = partitionRequestedTargetFindings(report);
+    expect(groups?.targetFindings.map((item) => item.finding_id)).toEqual(["TARGET-1"]);
+    expect(groups?.localFindings.map((item) => item.finding_id)).toEqual([
+      "LOCAL-WIN-HOME",
+      "LOCAL-UNC",
+      "LOCAL-FILE-URI",
+    ]);
+  });
 });
