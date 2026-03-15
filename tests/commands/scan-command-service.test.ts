@@ -7,7 +7,7 @@ import type { CodeGateReport } from "../../src/types/report";
 const BASE_CONFIG: CodeGateConfig = {
   severity_threshold: "high",
   auto_proceed_below_threshold: true,
-  output_format: "json",
+  output_format: "terminal",
   scan_state_path: "/tmp/codegate-scan-state.json",
   scan_user_scope: true,
   tui: { enabled: false, colour_scheme: "default", compact_mode: false },

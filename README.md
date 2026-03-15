@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/jonathansantilli/codegate/actions/workflows/ci.yml/badge.svg)](https://github.com/jonathansantilli/codegate/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/jonathansantilli/codegate/actions/workflows/codeql.yml/badge.svg)](https://github.com/jonathansantilli/codegate/actions/workflows/codeql.yml)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg?url=https://deepwiki.com/jonathansantilli/codegate)](https://deepwiki.com/jonathansantilli/codegate)
 [![npm version](https://img.shields.io/npm/v/codegate-ai)](https://www.npmjs.com/package/codegate-ai)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 
@@ -69,6 +70,21 @@ Install globally:
 npm install -g codegate-ai
 codegate scan .
 ```
+
+Recommended first run:
+
+```bash
+codegate init
+```
+
+Why run `init`:
+
+- Creates `~/.codegate/config.json` so your behavior is explicit and easy to tune.
+- Makes it straightforward to set preferences like `scan_user_scope`, output format, thresholds, and tool discovery options.
+
+If you skip `init`, CodeGate still works with built-in defaults. Nothing breaks.
+
+See the [Configuration](#configuration) section for full settings and examples.
 
 ## System Capabilities
 
@@ -187,6 +203,7 @@ Behavior:
 Wrapper flags (consumed by CodeGate, not forwarded):
 
 - `--cg-force`
+- `--cg-deep`
 - `--cg-no-tui`
 - `--cg-include-user-scope`
 - `--cg-format <type>`
@@ -197,8 +214,10 @@ Examples:
 ```bash
 codegate skills add https://github.com/vercel-labs/skills --skill find-skills
 codegate skills add https://github.com/owner/repo --skill security-review --cg-force
+codegate skills add https://github.com/owner/repo --skill security-review --cg-deep
 codegate clawhub install security-auditor
 codegate clawhub install security-auditor --version 1.0.0
+codegate clawhub install security-auditor --cg-deep
 codegate clawhub search security
 ```
 

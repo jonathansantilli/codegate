@@ -10,7 +10,7 @@ import type { CodeGateReport } from "../../src/types/report";
 const BASE_CONFIG: CodeGateConfig = {
   severity_threshold: "high",
   auto_proceed_below_threshold: true,
-  output_format: "json",
+  output_format: "terminal",
   scan_state_path: "/tmp/codegate-scan-state.json",
   tui: { enabled: false, colour_scheme: "default", compact_mode: false },
   tool_discovery: { preferred_agent: "claude", agent_paths: {}, skip_tools: [] },
@@ -160,6 +160,32 @@ describe("scan --deep behavior", () => {
     );
   });
 
+  it("keeps json output machine-readable when deep scan is enabled", async () => {
+    const stdout: string[] = [];
+    const cli = createCli(
+      "0.2.2",
+      buildDeps({
+        resolveConfig: () => ({
+          ...BASE_CONFIG,
+          output_format: "json",
+        }),
+        discoverDeepResources: vi.fn(async () => []),
+        stdout: (message) => {
+          stdout.push(message);
+        },
+      }),
+    );
+
+    await cli.parseAsync(["node", "codegate", "scan", ".", "--deep"]);
+
+    expect(stdout.length).toBeGreaterThan(0);
+    for (const line of stdout) {
+      expect(line.includes("Deep scan skipped")).toBe(false);
+      expect(line.includes("Deep scan analyzes only remote MCP URLs")).toBe(false);
+    }
+    expect(() => JSON.parse(stdout[stdout.length - 1] ?? "")).not.toThrow();
+  });
+
   it("reports when a meta-agent is selected but never executed", async () => {
     const stdout: string[] = [];
     const deepResources: DeepScanResource[] = [
@@ -181,10 +207,6 @@ describe("scan --deep behavior", () => {
         stdout: (message) => {
           stdout.push(message);
         },
-        resolveConfig: () => ({
-          ...BASE_CONFIG,
-          output_format: "json",
-        }),
         discoverDeepResources: vi.fn(async () => deepResources),
         requestDeepScanConsent: vi.fn(async () => true),
         requestDeepAgentSelection: vi.fn(
@@ -584,10 +606,6 @@ describe("scan --deep behavior", () => {
         runScan: async () => ({
           ...makeBaseReport(),
           tools_detected: ["codex-cli"],
-        }),
-        resolveConfig: () => ({
-          ...BASE_CONFIG,
-          output_format: "json",
         }),
         discoverDeepResources: vi.fn(async () => []),
         discoverLocalTextTargets: vi.fn(async () => localTargets),

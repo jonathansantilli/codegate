@@ -106,6 +106,7 @@ describe("skills wrapper parser", () => {
       "https://github.com/vercel-labs/skills",
       "--skill",
       "find-skills",
+      "--cg-deep",
       "--cg-force",
       "--cg-no-tui",
       "--cg-format",
@@ -115,6 +116,7 @@ describe("skills wrapper parser", () => {
     ]);
 
     expect(parsed.wrapper.force).toBe(true);
+    expect(parsed.wrapper.deep).toBe(true);
     expect(parsed.wrapper.noTui).toBe(true);
     expect(parsed.wrapper.format).toBe("json");
     expect(parsed.passthroughArgs).toEqual([
@@ -191,10 +193,11 @@ describe("skills wrapper parser", () => {
     ).toThrow("--cg-format requires a value");
   });
 
-  it("rejects unsupported wrapper option --cg-deep", () => {
-    expect(() => parseSkillsInvocation(["add", "owner/repo", "--cg-deep"])).toThrow(
-      "Unknown CodeGate wrapper option",
-    );
+  it("supports --cg-deep wrapper option", () => {
+    const parsed = parseSkillsInvocation(["add", "owner/repo", "--cg-deep"]);
+
+    expect(parsed.wrapper.deep).toBe(true);
+    expect(parsed.passthroughArgs).toEqual(["add", "owner/repo"]);
   });
 
   it("detects source when future option values appear before source target", () => {
@@ -540,6 +543,67 @@ describe("skills wrapper execution", () => {
     );
 
     expect(resolvedConfig?.scan_user_scope).toBe(true);
+  });
+
+  it("runs deep discovery when --cg-deep is set", async () => {
+    const discoverDeepResources = vi.fn(async () => []);
+
+    await executeSkillsWrapper(
+      {
+        version: "0.1.0",
+        skillsArgs: [
+          "add",
+          "https://github.com/vercel-labs/skills",
+          "--skill",
+          "find-skills",
+          "--cg-deep",
+          "--cg-force",
+        ],
+      },
+      makeDeps({
+        discoverDeepResources,
+      }),
+    );
+
+    expect(discoverDeepResources).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not invoke deep consent callbacks in non-interactive mode", async () => {
+    const discoverDeepResources = vi.fn(async () => [
+      {
+        id: "http:https://mcp.example/tools",
+        request: {
+          id: "http:https://mcp.example/tools",
+          kind: "http",
+          locator: "https://mcp.example/tools",
+        },
+        commandPreview: "GET https://mcp.example/tools",
+      },
+    ]);
+    const requestDeepScanConsent = vi.fn(async () => true);
+    const executeDeepResource = vi.fn();
+
+    await executeSkillsWrapper(
+      {
+        version: "0.1.0",
+        skillsArgs: [
+          "add",
+          "https://github.com/vercel-labs/skills",
+          "--skill",
+          "find-skills",
+          "--cg-deep",
+        ],
+      },
+      makeDeps({
+        isTTY: () => false,
+        discoverDeepResources,
+        requestDeepScanConsent,
+        executeDeepResource,
+      }),
+    );
+
+    expect(requestDeepScanConsent).not.toHaveBeenCalled();
+    expect(executeDeepResource).not.toHaveBeenCalled();
   });
 
   it("runs preflight for add when global options with values appear before subcommand", async () => {

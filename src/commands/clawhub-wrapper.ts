@@ -4,17 +4,15 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
-  applyConfigPolicy,
   OUTPUT_FORMATS,
   type CliConfigOverrides,
   type CodeGateConfig,
   type OutputFormat,
   type ResolveConfigOptions,
 } from "../config.js";
-import { reorderRequestedTargetFindings } from "../report/requested-target-findings.js";
 import { resolveScanTarget, type ResolvedScanTarget } from "../scan-target.js";
 import type { CodeGateReport } from "../types/report.js";
-import type { ScanRunnerInput } from "./scan-command.js";
+import { runScanAnalysis, type ScanAnalysisDeps, type ScanRunnerInput } from "./scan-command.js";
 import { renderByFormat, summarizeRequestedTargetFindings } from "./scan-command/helpers.js";
 
 const CLAWHUB_GLOBAL_OPTIONS_WITH_VALUE = new Set(["--workdir", "--dir", "--site", "--registry"]);
@@ -518,6 +516,7 @@ async function stageClawhubTargetDefault(
 
 export interface ClawhubWrapperRuntimeOptions {
   force: boolean;
+  deep: boolean;
   noTui: boolean;
   includeUserScope: boolean;
   format?: OutputFormat;
@@ -553,6 +552,14 @@ export interface ClawhubWrapperDeps {
   pathExists?: (path: string) => boolean;
   resolveConfig: (options: ResolveConfigOptions) => CodeGateConfig;
   runScan: (input: ScanRunnerInput) => Promise<CodeGateReport>;
+  prepareScanDiscovery?: ScanAnalysisDeps["prepareScanDiscovery"];
+  discoverDeepResources?: ScanAnalysisDeps["discoverDeepResources"];
+  discoverLocalTextTargets?: ScanAnalysisDeps["discoverLocalTextTargets"];
+  requestDeepScanConsent?: ScanAnalysisDeps["requestDeepScanConsent"];
+  requestDeepAgentSelection?: ScanAnalysisDeps["requestDeepAgentSelection"];
+  requestMetaAgentCommandConsent?: ScanAnalysisDeps["requestMetaAgentCommandConsent"];
+  runMetaAgentCommand?: ScanAnalysisDeps["runMetaAgentCommand"];
+  executeDeepResource?: ScanAnalysisDeps["executeDeepResource"];
   resolveScanTarget?: (input: {
     rawTarget: string;
     cwd: string;
@@ -583,6 +590,7 @@ export function parseClawhubInvocation(
 ): ParsedClawhubInvocation {
   const wrapper: ClawhubWrapperRuntimeOptions = {
     force: false,
+    deep: false,
     noTui: false,
     includeUserScope: false,
     format: undefined,
@@ -602,6 +610,10 @@ export function parseClawhubInvocation(
 
     if (token === "--cg-force") {
       wrapper.force = true;
+      continue;
+    }
+    if (token === "--cg-deep") {
+      wrapper.deep = true;
       continue;
     }
     if (token === "--cg-no-tui") {
@@ -770,28 +782,38 @@ export async function executeClawhubWrapper(
       ? { ...baseConfig, scan_user_scope: true }
       : baseConfig;
 
-    let report = await deps.runScan({
-      version: input.version,
-      scanTarget: resolvedTarget.scanTarget,
-      config,
-      flags: {
-        noTui,
-        format: parsed.wrapper.format,
-        force: parsed.wrapper.force,
-        includeUserScope: parsed.wrapper.includeUserScope,
+    const { report, deepScanNotes } = await runScanAnalysis(
+      {
+        version: input.version,
+        scanTarget: resolvedTarget.scanTarget,
+        displayTarget: resolvedTarget.displayTarget,
+        explicitCandidates: resolvedTarget.explicitCandidates,
+        config,
+        options: {
+          noTui,
+          format: parsed.wrapper.format,
+          force: parsed.wrapper.force,
+          includeUserScope: parsed.wrapper.includeUserScope,
+          deep: parsed.wrapper.deep,
+        },
       },
-      discoveryContext: undefined,
-    });
-
-    if (resolvedTarget.displayTarget && resolvedTarget.displayTarget !== report.scan_target) {
-      report = {
-        ...report,
-        scan_target: resolvedTarget.displayTarget,
-      };
-    }
-
-    report = applyConfigPolicy(report, config);
-    report = reorderRequestedTargetFindings(report, resolvedTarget.displayTarget);
+      {
+        isTTY: deps.isTTY,
+        runScan: deps.runScan,
+        prepareScanDiscovery: deps.prepareScanDiscovery,
+        discoverDeepResources: deps.discoverDeepResources,
+        discoverLocalTextTargets: deps.discoverLocalTextTargets,
+        requestDeepScanConsent: interactivePromptsEnabled ? deps.requestDeepScanConsent : undefined,
+        requestDeepAgentSelection: interactivePromptsEnabled
+          ? deps.requestDeepAgentSelection
+          : undefined,
+        requestMetaAgentCommandConsent: interactivePromptsEnabled
+          ? deps.requestMetaAgentCommandConsent
+          : undefined,
+        runMetaAgentCommand: deps.runMetaAgentCommand,
+        executeDeepResource: deps.executeDeepResource,
+      },
+    );
 
     const shouldUseTui =
       config.tui.enabled && isTTY && deps.renderTui !== undefined && noTui !== true;
@@ -799,17 +821,23 @@ export async function executeClawhubWrapper(
       config.output_format === "terminal"
         ? summarizeRequestedTargetFindings(report, resolvedTarget.displayTarget)
         : null;
+    const scanNotes =
+      config.output_format === "terminal"
+        ? targetSummaryNote
+          ? [...deepScanNotes, targetSummaryNote]
+          : deepScanNotes
+        : [];
 
     if (shouldUseTui) {
       deps.renderTui?.({
         view: "dashboard",
         report,
-        notices: targetSummaryNote ? [targetSummaryNote] : undefined,
+        notices: scanNotes.length > 0 ? scanNotes : undefined,
       });
       deps.renderTui?.({ view: "summary", report });
     } else {
-      if (targetSummaryNote) {
-        deps.stdout(targetSummaryNote);
+      for (const note of scanNotes) {
+        deps.stdout(note);
       }
       deps.stdout(renderByFormat(config.output_format, report));
     }
