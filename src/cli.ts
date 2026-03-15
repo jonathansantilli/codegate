@@ -215,6 +215,69 @@ function mapAcquisitionFailure(
   };
 }
 
+async function runMetaAgentCommandWithSandbox(
+  context: MetaAgentCommandConsentContext,
+): Promise<MetaAgentCommandRunResult> {
+  const commandResult = await runSandboxCommand({
+    command: context.command.command,
+    args: context.command.args,
+    cwd: context.command.cwd,
+    timeoutMs: context.command.timeoutMs,
+  });
+  return {
+    command: context.command,
+    code: commandResult.code,
+    stdout: commandResult.stdout,
+    stderr: commandResult.stderr,
+  };
+}
+
+function resolveInteractiveCallback<T>(input: {
+  enabled: boolean;
+  provided?: T;
+  fallback?: T;
+}): T | undefined {
+  if (!input.enabled) {
+    return undefined;
+  }
+  return input.provided ?? input.fallback;
+}
+
+function buildWrapperScanBridgeDeps(deps: CliDeps): {
+  prepareScanDiscovery: CliDeps["prepareScanDiscovery"];
+  discoverDeepResources: CliDeps["discoverDeepResources"];
+  discoverLocalTextTargets: CliDeps["discoverLocalTextTargets"];
+  requestDeepScanConsent: CliDeps["requestDeepScanConsent"];
+  requestDeepAgentSelection: CliDeps["requestDeepAgentSelection"];
+  requestMetaAgentCommandConsent: CliDeps["requestMetaAgentCommandConsent"];
+  runMetaAgentCommand: NonNullable<CliDeps["runMetaAgentCommand"]>;
+  executeDeepResource: CliDeps["executeDeepResource"];
+} {
+  const isTTY = deps.isTTY();
+  return {
+    prepareScanDiscovery: deps.prepareScanDiscovery,
+    discoverDeepResources: deps.discoverDeepResources,
+    discoverLocalTextTargets: deps.discoverLocalTextTargets,
+    requestDeepScanConsent: resolveInteractiveCallback({
+      enabled: true,
+      provided: deps.requestDeepScanConsent,
+      fallback: isTTY ? promptDeepScanConsent : undefined,
+    }),
+    requestDeepAgentSelection: resolveInteractiveCallback({
+      enabled: true,
+      provided: deps.requestDeepAgentSelection,
+      fallback: isTTY ? promptDeepAgentSelection : undefined,
+    }),
+    requestMetaAgentCommandConsent: resolveInteractiveCallback({
+      enabled: true,
+      provided: deps.requestMetaAgentCommandConsent,
+      fallback: isTTY ? promptMetaAgentCommandConsent : undefined,
+    }),
+    runMetaAgentCommand: deps.runMetaAgentCommand ?? runMetaAgentCommandWithSandbox,
+    executeDeepResource: deps.executeDeepResource,
+  };
+}
+
 async function promptRunWarningConsent(context: RunWarningConsentContext): Promise<boolean> {
   const rl = createInterface({
     input: process.stdin,
@@ -422,41 +485,28 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
             prepareScanDiscovery: deps.prepareScanDiscovery,
             discoverDeepResources: deps.discoverDeepResources,
             discoverLocalTextTargets: deps.discoverLocalTextTargets,
-            requestDeepScanConsent: promptCallbacksEnabled
-              ? (deps.requestDeepScanConsent ??
-                (interactivePromptsEnabled ? promptDeepScanConsent : undefined))
-              : undefined,
-            requestDeepAgentSelection: promptCallbacksEnabled
-              ? (deps.requestDeepAgentSelection ??
-                (interactivePromptsEnabled ? promptDeepAgentSelection : undefined))
-              : undefined,
-            requestMetaAgentCommandConsent: promptCallbacksEnabled
-              ? (deps.requestMetaAgentCommandConsent ??
-                (interactivePromptsEnabled ? promptMetaAgentCommandConsent : undefined))
-              : undefined,
+            requestDeepScanConsent: resolveInteractiveCallback({
+              enabled: promptCallbacksEnabled,
+              provided: deps.requestDeepScanConsent,
+              fallback: interactivePromptsEnabled ? promptDeepScanConsent : undefined,
+            }),
+            requestDeepAgentSelection: resolveInteractiveCallback({
+              enabled: promptCallbacksEnabled,
+              provided: deps.requestDeepAgentSelection,
+              fallback: interactivePromptsEnabled ? promptDeepAgentSelection : undefined,
+            }),
+            requestMetaAgentCommandConsent: resolveInteractiveCallback({
+              enabled: promptCallbacksEnabled,
+              provided: deps.requestMetaAgentCommandConsent,
+              fallback: interactivePromptsEnabled ? promptMetaAgentCommandConsent : undefined,
+            }),
             executeDeepResource: deps.executeDeepResource,
-            runMetaAgentCommand:
-              deps.runMetaAgentCommand ??
-              (async (
-                context: MetaAgentCommandConsentContext,
-              ): Promise<MetaAgentCommandRunResult> => {
-                const commandResult = await runSandboxCommand({
-                  command: context.command.command,
-                  args: context.command.args,
-                  cwd: context.command.cwd,
-                  timeoutMs: context.command.timeoutMs,
-                });
-                return {
-                  command: context.command,
-                  code: commandResult.code,
-                  stdout: commandResult.stdout,
-                  stderr: commandResult.stderr,
-                };
-              }),
-            requestRemediationConsent: promptCallbacksEnabled
-              ? (deps.requestRemediationConsent ??
-                (interactivePromptsEnabled ? promptRemediationConsent : undefined))
-              : undefined,
+            runMetaAgentCommand: deps.runMetaAgentCommand ?? runMetaAgentCommandWithSandbox,
+            requestRemediationConsent: resolveInteractiveCallback({
+              enabled: promptCallbacksEnabled,
+              provided: deps.requestRemediationConsent,
+              fallback: interactivePromptsEnabled ? promptRemediationConsent : undefined,
+            }),
             runRemediation: deps.runRemediation,
             stdout: deps.stdout,
             stderr: deps.stderr,
@@ -578,6 +628,7 @@ function addSkillsCommand(program: Command, version: string, deps: CliDeps): voi
       renderExampleHelp([
         "codegate skills add vercel-labs/skills --skill find-skills",
         "codegate skills add https://github.com/owner/repo --skill security-review",
+        "codegate skills add owner/repo --skill demo --cg-deep",
         "codegate skills find security",
         "codegate skills add owner/repo --skill demo --cg-force",
       ]),
@@ -593,6 +644,7 @@ function addSkillsCommand(program: Command, version: string, deps: CliDeps): voi
               pathExists: deps.pathExists,
               resolveConfig: deps.resolveConfig,
               runScan: deps.runScan,
+              ...buildWrapperScanBridgeDeps(deps),
               resolveScanTarget: deps.resolveScanTarget,
               requestSkillSelection: deps.requestSkillSelection,
               requestWarningProceed: deps.requestRunWarningConsent,
@@ -627,6 +679,7 @@ function addClawhubCommand(program: Command, version: string, deps: CliDeps): vo
       renderExampleHelp([
         "codegate clawhub install security-auditor",
         "codegate clawhub install security-auditor --version 1.0.0",
+        "codegate clawhub install security-auditor --cg-deep",
         "codegate clawhub search security",
         "codegate clawhub install security-auditor --cg-force",
       ]),
@@ -642,6 +695,7 @@ function addClawhubCommand(program: Command, version: string, deps: CliDeps): vo
               pathExists: deps.pathExists,
               resolveConfig: deps.resolveConfig,
               runScan: deps.runScan,
+              ...buildWrapperScanBridgeDeps(deps),
               resolveScanTarget: deps.resolveScanTarget,
               requestWarningProceed: deps.requestRunWarningConsent,
               launchClawhub:

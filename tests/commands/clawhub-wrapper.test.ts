@@ -104,6 +104,7 @@ describe("clawhub wrapper parser", () => {
     const parsed = parseClawhubInvocation([
       "install",
       "security-auditor",
+      "--cg-deep",
       "--cg-force",
       "--cg-no-tui",
       "--cg-format",
@@ -112,6 +113,7 @@ describe("clawhub wrapper parser", () => {
       "/tmp/ws",
     ]);
 
+    expect(parsed.wrapper.deep).toBe(true);
     expect(parsed.wrapper.force).toBe(true);
     expect(parsed.wrapper.noTui).toBe(true);
     expect(parsed.wrapper.format).toBe("json");
@@ -323,5 +325,53 @@ describe("clawhub wrapper execution", () => {
         requestedVersion: "1.0.0",
       }),
     );
+  });
+
+  it("runs deep discovery when --cg-deep is set", async () => {
+    const discoverDeepResources = vi.fn(async () => []);
+
+    await executeClawhubWrapper(
+      {
+        version: "0.1.0",
+        clawhubArgs: ["install", "security-auditor", "--cg-deep", "--cg-force"],
+      },
+      makeDeps({
+        discoverDeepResources,
+      }),
+    );
+
+    expect(discoverDeepResources).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not invoke deep consent callbacks in non-interactive mode", async () => {
+    const discoverDeepResources = vi.fn(async () => [
+      {
+        id: "http:https://mcp.example/tools",
+        request: {
+          id: "http:https://mcp.example/tools",
+          kind: "http",
+          locator: "https://mcp.example/tools",
+        },
+        commandPreview: "GET https://mcp.example/tools",
+      },
+    ]);
+    const requestDeepScanConsent = vi.fn(async () => true);
+    const executeDeepResource = vi.fn();
+
+    await executeClawhubWrapper(
+      {
+        version: "0.1.0",
+        clawhubArgs: ["install", "security-auditor", "--cg-deep"],
+      },
+      makeDeps({
+        isTTY: () => false,
+        discoverDeepResources,
+        requestDeepScanConsent,
+        executeDeepResource,
+      }),
+    );
+
+    expect(requestDeepScanConsent).not.toHaveBeenCalled();
+    expect(executeDeepResource).not.toHaveBeenCalled();
   });
 });

@@ -150,6 +150,27 @@ export interface ExecuteScanCommandDeps {
   }) => void;
 }
 
+type ScanAnalysisDepKeys =
+  | "isTTY"
+  | "runScan"
+  | "prepareScanDiscovery"
+  | "discoverDeepResources"
+  | "discoverLocalTextTargets"
+  | "requestDeepScanConsent"
+  | "requestDeepAgentSelection"
+  | "requestMetaAgentCommandConsent"
+  | "runMetaAgentCommand"
+  | "executeDeepResource";
+
+export type ScanAnalysisDeps = Pick<ExecuteScanCommandDeps, ScanAnalysisDepKeys>;
+
+export type ScanAnalysisInput = Omit<ExecuteScanCommandInput, "cwd">;
+
+export interface ScanAnalysisResult {
+  report: CodeGateReport;
+  deepScanNotes: string[];
+}
+
 function toMetaAgentPreference(value: string): DeepAgentOption["id"] | null {
   const normalized = value.trim().toLowerCase();
   if (normalized === "claude" || normalized === "claude-code") {
@@ -220,108 +241,226 @@ function deepAgentOptions(report: CodeGateReport, config: CodeGateConfig): DeepA
   });
 }
 
-export async function executeScanCommand(
-  input: ExecuteScanCommandInput,
-  deps: ExecuteScanCommandDeps,
-): Promise<void> {
-  try {
-    const interactivePromptsEnabled = deps.isTTY() && input.options.noTui !== true;
-    const discoveryContext = deps.prepareScanDiscovery
-      ? await deps.prepareScanDiscovery(input.scanTarget, input.config, {
-          explicitCandidates: input.explicitCandidates,
-        })
-      : undefined;
+export async function runScanAnalysis(
+  input: ScanAnalysisInput,
+  deps: ScanAnalysisDeps,
+): Promise<ScanAnalysisResult> {
+  const interactivePromptsEnabled = deps.isTTY() && input.options.noTui !== true;
+  const discoveryContext = deps.prepareScanDiscovery
+    ? await deps.prepareScanDiscovery(input.scanTarget, input.config, {
+        explicitCandidates: input.explicitCandidates,
+      })
+    : undefined;
 
-    let report = await deps.runScan({
-      version: input.version,
-      scanTarget: input.scanTarget,
-      config: input.config,
-      flags: input.options,
+  let report = await deps.runScan({
+    version: input.version,
+    scanTarget: input.scanTarget,
+    config: input.config,
+    flags: input.options,
+    discoveryContext,
+  });
+  if (input.displayTarget && input.displayTarget !== report.scan_target) {
+    report = {
+      ...report,
+      scan_target: input.displayTarget,
+    };
+  }
+  const deepScanNotes: string[] = [];
+
+  if (input.options.deep) {
+    const discoverResources = deps.discoverDeepResources ?? (async () => []);
+    const discoverLocalTextTargets = deps.discoverLocalTextTargets ?? (async () => []);
+    const resources = await discoverResources(input.scanTarget, input.config, discoveryContext);
+    const localTextTargets = await discoverLocalTextTargets(
+      input.scanTarget,
+      input.config,
       discoveryContext,
-    });
-    if (input.displayTarget && input.displayTarget !== report.scan_target) {
-      report = {
-        ...report,
-        scan_target: input.displayTarget,
-      };
+    );
+    const optionsForAgent = deepAgentOptions(report, input.config);
+    let selectedAgent: DeepAgentOption | null = null;
+
+    if ((resources.length > 0 || localTextTargets.length > 0) && optionsForAgent.length > 0) {
+      if (input.options.force || !interactivePromptsEnabled) {
+        selectedAgent = optionsForAgent[0] ?? null;
+      } else if (deps.requestDeepAgentSelection) {
+        selectedAgent = await deps.requestDeepAgentSelection(optionsForAgent);
+      }
     }
-    const deepScanNotes: string[] = [];
 
-    if (input.options.deep) {
-      const discoverResources = deps.discoverDeepResources ?? (async () => []);
-      const discoverLocalTextTargets = deps.discoverLocalTextTargets ?? (async () => []);
-      const resources = await discoverResources(input.scanTarget, input.config, discoveryContext);
-      const localTextTargets = await discoverLocalTextTargets(
-        input.scanTarget,
-        input.config,
-        discoveryContext,
-      );
-      const optionsForAgent = deepAgentOptions(report, input.config);
-      let selectedAgent: DeepAgentOption | null = null;
+    if (resources.length === 0 && localTextTargets.length === 0) {
+      deepScanNotes.push(...noEligibleDeepResourceNotes());
+    } else {
+      if (selectedAgent) {
+        deepScanNotes.push(
+          `Deep scan meta-agent selected: ${selectedAgent.label} (${selectedAgent.binary})`,
+        );
+      } else if (optionsForAgent.length > 0) {
+        deepScanNotes.push(
+          "Deep scan meta-agent skipped. Running deterministic Layer 3 checks only.",
+        );
+      } else {
+        deepScanNotes.push(
+          "No supported deep-scan agent detected (Claude Code, Codex CLI, or OpenCode). Running deterministic Layer 3 checks only.",
+        );
+      }
 
-      if ((resources.length > 0 || localTextTargets.length > 0) && optionsForAgent.length > 0) {
-        if (input.options.force || !interactivePromptsEnabled) {
-          selectedAgent = optionsForAgent[0] ?? null;
-        } else if (deps.requestDeepAgentSelection) {
-          selectedAgent = await deps.requestDeepAgentSelection(optionsForAgent);
+      if (resources.length > 0) {
+        if (!deps.executeDeepResource) {
+          throw new Error("Deep resource executor not configured");
+        }
+
+        let resourcesWithFetchedMetadata = 0;
+        let executedMetaAgentCommands = 0;
+        const outcomes = await runDeepScanWithConsent(
+          resources,
+          async (resource) => {
+            if (input.options.force) {
+              return true;
+            }
+            if (deps.requestDeepScanConsent) {
+              return await deps.requestDeepScanConsent(resource);
+            }
+            return false;
+          },
+          async (resource) => {
+            const fetched = await deps.executeDeepResource!(resource);
+            if (fetched.status !== "ok" || !selectedAgent) {
+              return fetched;
+            }
+
+            resourcesWithFetchedMetadata += 1;
+
+            const prompt = buildSecurityAnalysisPrompt({
+              resourceId: resource.id,
+              resourceSummary: metadataSummary(fetched.metadata),
+            });
+            const command = buildMetaAgentCommand({
+              tool: selectedAgent.metaTool,
+              prompt,
+              workingDirectory: input.scanTarget,
+              binaryPath: selectedAgent.binary,
+            });
+            const commandContext: MetaAgentCommandConsentContext = {
+              resource,
+              agent: selectedAgent,
+              command,
+            };
+
+            const approvedCommand =
+              input.options.force ||
+              (deps.requestMetaAgentCommandConsent
+                ? await deps.requestMetaAgentCommandConsent(commandContext)
+                : false);
+
+            if (!approvedCommand) {
+              return {
+                ...fetched,
+                metadata: withMetaAgentFinding(fetched.metadata, {
+                  id: `layer3-meta-agent-skipped-${resource.id}`,
+                  severity: "INFO",
+                  description: `Deep scan meta-agent command skipped for ${resource.id}`,
+                }),
+              };
+            }
+
+            if (!deps.runMetaAgentCommand) {
+              throw new Error("Meta-agent command runner not configured");
+            }
+
+            executedMetaAgentCommands += 1;
+            const commandResult = await deps.runMetaAgentCommand(commandContext);
+            if (commandResult.code !== 0) {
+              return {
+                ...fetched,
+                metadata: withMetaAgentFinding(fetched.metadata, {
+                  id: `layer3-meta-agent-command-error-${resource.id}`,
+                  severity: "LOW",
+                  description: `Deep scan meta-agent command failed for ${resource.id}`,
+                  evidence: commandResult.stderr || `exit code: ${commandResult.code}`,
+                }),
+              };
+            }
+
+            const parsedOutput = parseMetaAgentOutput(commandResult.stdout);
+            if (parsedOutput === null) {
+              return {
+                ...fetched,
+                metadata: withMetaAgentFinding(fetched.metadata, {
+                  id: `layer3-meta-agent-parse-error-${resource.id}`,
+                  severity: "LOW",
+                  description: `Deep scan meta-agent output was not valid JSON for ${resource.id}`,
+                  evidence: commandResult.stdout.slice(0, 400),
+                }),
+              };
+            }
+
+            const normalizedOutput = Array.isArray(parsedOutput)
+              ? { findings: parsedOutput }
+              : parsedOutput;
+
+            return {
+              ...fetched,
+              metadata: mergeMetaAgentMetadata(fetched.metadata, normalizedOutput),
+            };
+          },
+        );
+
+        const layer3Findings = layer3OutcomesToFindings(outcomes, {
+          unicodeAnalysis: input.config.unicode_analysis,
+        });
+        report = mergeLayer3Findings(report, layer3Findings);
+
+        if (selectedAgent) {
+          if (resourcesWithFetchedMetadata === 0) {
+            deepScanNotes.push(
+              "Selected meta-agent was not executed because no approved resources returned metadata successfully.",
+            );
+          } else if (executedMetaAgentCommands === 0) {
+            deepScanNotes.push(
+              "Selected meta-agent was not executed because meta-agent command execution was not approved.",
+            );
+          } else {
+            const suffix = executedMetaAgentCommands === 1 ? "" : "s";
+            deepScanNotes.push(
+              `Deep scan meta-agent executed for ${executedMetaAgentCommands} resource${suffix}.`,
+            );
+          }
         }
       }
 
-      if (resources.length === 0 && localTextTargets.length === 0) {
-        deepScanNotes.push(...noEligibleDeepResourceNotes());
-      } else {
-        if (selectedAgent) {
+      if (localTextTargets.length > 0) {
+        if (!selectedAgent) {
           deepScanNotes.push(
-            `Deep scan meta-agent selected: ${selectedAgent.label} (${selectedAgent.binary})`,
+            "Local instruction-file analysis skipped because no meta-agent was selected.",
           );
-        } else if (optionsForAgent.length > 0) {
+        } else if (!supportsToollessLocalTextAnalysis(selectedAgent.metaTool)) {
           deepScanNotes.push(
-            "Deep scan meta-agent skipped. Running deterministic Layer 3 checks only.",
+            "Local instruction-file analysis was skipped because the selected agent does not support tool-less analysis.",
           );
         } else {
-          deepScanNotes.push(
-            "No supported deep-scan agent detected (Claude Code, Codex CLI, or OpenCode). Running deterministic Layer 3 checks only.",
-          );
-        }
-
-        if (resources.length > 0) {
-          if (!deps.executeDeepResource) {
-            throw new Error("Deep resource executor not configured");
+          // Local instruction files are analyzed as inert text only; referenced URLs stay as evidence, not inputs.
+          if (!deps.runMetaAgentCommand) {
+            throw new Error("Meta-agent command runner not configured");
           }
 
-          let resourcesWithFetchedMetadata = 0;
-          let executedMetaAgentCommands = 0;
-          const outcomes = await runDeepScanWithConsent(
-            resources,
-            async (resource) => {
-              if (input.options.force) {
-                return true;
-              }
-              if (deps.requestDeepScanConsent) {
-                return await deps.requestDeepScanConsent(resource);
-              }
-              return false;
-            },
-            async (resource) => {
-              const fetched = await deps.executeDeepResource!(resource);
-              if (fetched.status !== "ok" || !selectedAgent) {
-                return fetched;
-              }
-
-              resourcesWithFetchedMetadata += 1;
-
-              const prompt = buildSecurityAnalysisPrompt({
-                resourceId: resource.id,
-                resourceSummary: metadataSummary(fetched.metadata),
+          const isolatedWorkingDirectory = mkdtempSync(join(tmpdir(), "codegate-local-analysis-"));
+          let executedLocalAnalyses = 0;
+          try {
+            for (const target of localTextTargets) {
+              const prompt = buildLocalTextAnalysisPrompt({
+                filePath: target.reportPath,
+                textContent: buildPromptEvidenceText(target.textContent),
+                referencedUrls: target.referencedUrls,
               });
               const command = buildMetaAgentCommand({
                 tool: selectedAgent.metaTool,
                 prompt,
-                workingDirectory: input.scanTarget,
+                workingDirectory: isolatedWorkingDirectory,
                 binaryPath: selectedAgent.binary,
               });
+              command.timeoutMs = 60_000;
               const commandContext: MetaAgentCommandConsentContext = {
-                resource,
+                localFile: target,
                 agent: selectedAgent,
                 command,
               };
@@ -333,172 +472,77 @@ export async function executeScanCommand(
                   : false);
 
               if (!approvedCommand) {
-                return {
-                  ...fetched,
-                  metadata: withMetaAgentFinding(fetched.metadata, {
-                    id: `layer3-meta-agent-skipped-${resource.id}`,
-                    severity: "INFO",
-                    description: `Deep scan meta-agent command skipped for ${resource.id}`,
-                  }),
-                };
+                continue;
               }
 
-              if (!deps.runMetaAgentCommand) {
-                throw new Error("Meta-agent command runner not configured");
-              }
-
-              executedMetaAgentCommands += 1;
+              executedLocalAnalyses += 1;
               const commandResult = await deps.runMetaAgentCommand(commandContext);
               if (commandResult.code !== 0) {
-                return {
-                  ...fetched,
-                  metadata: withMetaAgentFinding(fetched.metadata, {
-                    id: `layer3-meta-agent-command-error-${resource.id}`,
-                    severity: "LOW",
-                    description: `Deep scan meta-agent command failed for ${resource.id}`,
-                    evidence: commandResult.stderr || `exit code: ${commandResult.code}`,
-                  }),
-                };
+                deepScanNotes.push(
+                  `Local instruction-file analysis failed for ${target.reportPath}: ${
+                    commandResult.stderr || `exit code: ${commandResult.code}`
+                  }`,
+                );
+                continue;
               }
 
               const parsedOutput = parseMetaAgentOutput(commandResult.stdout);
               if (parsedOutput === null) {
-                return {
-                  ...fetched,
-                  metadata: withMetaAgentFinding(fetched.metadata, {
-                    id: `layer3-meta-agent-parse-error-${resource.id}`,
-                    severity: "LOW",
-                    description: `Deep scan meta-agent output was not valid JSON for ${resource.id}`,
-                    evidence: commandResult.stdout.slice(0, 400),
-                  }),
-                };
+                deepScanNotes.push(
+                  `Local instruction-file analysis returned invalid JSON for ${target.reportPath}.`,
+                );
+                continue;
               }
 
               const normalizedOutput = Array.isArray(parsedOutput)
                 ? { findings: parsedOutput }
                 : parsedOutput;
-
-              return {
-                ...fetched,
-                metadata: mergeMetaAgentMetadata(fetched.metadata, normalizedOutput),
-              };
-            },
-          );
-
-          const layer3Findings = layer3OutcomesToFindings(outcomes, {
-            unicodeAnalysis: input.config.unicode_analysis,
-          });
-          report = mergeLayer3Findings(report, layer3Findings);
-
-          if (selectedAgent) {
-            if (resourcesWithFetchedMetadata === 0) {
-              deepScanNotes.push(
-                "Selected meta-agent was not executed because no approved resources returned metadata successfully.",
-              );
-            } else if (executedMetaAgentCommands === 0) {
-              deepScanNotes.push(
-                "Selected meta-agent was not executed because meta-agent command execution was not approved.",
-              );
-            } else {
-              const suffix = executedMetaAgentCommands === 1 ? "" : "s";
-              deepScanNotes.push(
-                `Deep scan meta-agent executed for ${executedMetaAgentCommands} resource${suffix}.`,
-              );
+              const localFindings = parseLocalTextFindings(target.reportPath, normalizedOutput);
+              report = mergeLayer3Findings(report, localFindings);
             }
+          } finally {
+            rmSync(isolatedWorkingDirectory, { recursive: true, force: true });
           }
-        }
 
-        if (localTextTargets.length > 0) {
-          if (!selectedAgent) {
+          if (executedLocalAnalyses > 0) {
+            const suffix = executedLocalAnalyses === 1 ? "" : "s";
             deepScanNotes.push(
-              "Local instruction-file analysis skipped because no meta-agent was selected.",
+              `Local instruction-file analysis executed for ${executedLocalAnalyses} file${suffix}.`,
             );
-          } else if (!supportsToollessLocalTextAnalysis(selectedAgent.metaTool)) {
-            deepScanNotes.push(
-              "Local instruction-file analysis was skipped because the selected agent does not support tool-less analysis.",
-            );
-          } else {
-            // Local instruction files are analyzed as inert text only; referenced URLs stay as evidence, not inputs.
-            if (!deps.runMetaAgentCommand) {
-              throw new Error("Meta-agent command runner not configured");
-            }
-
-            const isolatedWorkingDirectory = mkdtempSync(
-              join(tmpdir(), "codegate-local-analysis-"),
-            );
-            let executedLocalAnalyses = 0;
-            try {
-              for (const target of localTextTargets) {
-                const prompt = buildLocalTextAnalysisPrompt({
-                  filePath: target.reportPath,
-                  textContent: buildPromptEvidenceText(target.textContent),
-                  referencedUrls: target.referencedUrls,
-                });
-                const command = buildMetaAgentCommand({
-                  tool: selectedAgent.metaTool,
-                  prompt,
-                  workingDirectory: isolatedWorkingDirectory,
-                  binaryPath: selectedAgent.binary,
-                });
-                command.timeoutMs = 60_000;
-                const commandContext: MetaAgentCommandConsentContext = {
-                  localFile: target,
-                  agent: selectedAgent,
-                  command,
-                };
-
-                const approvedCommand =
-                  input.options.force ||
-                  (deps.requestMetaAgentCommandConsent
-                    ? await deps.requestMetaAgentCommandConsent(commandContext)
-                    : false);
-
-                if (!approvedCommand) {
-                  continue;
-                }
-
-                executedLocalAnalyses += 1;
-                const commandResult = await deps.runMetaAgentCommand(commandContext);
-                if (commandResult.code !== 0) {
-                  deepScanNotes.push(
-                    `Local instruction-file analysis failed for ${target.reportPath}: ${
-                      commandResult.stderr || `exit code: ${commandResult.code}`
-                    }`,
-                  );
-                  continue;
-                }
-
-                const parsedOutput = parseMetaAgentOutput(commandResult.stdout);
-                if (parsedOutput === null) {
-                  deepScanNotes.push(
-                    `Local instruction-file analysis returned invalid JSON for ${target.reportPath}.`,
-                  );
-                  continue;
-                }
-
-                const normalizedOutput = Array.isArray(parsedOutput)
-                  ? { findings: parsedOutput }
-                  : parsedOutput;
-                const localFindings = parseLocalTextFindings(target.reportPath, normalizedOutput);
-                report = mergeLayer3Findings(report, localFindings);
-              }
-            } finally {
-              rmSync(isolatedWorkingDirectory, { recursive: true, force: true });
-            }
-
-            if (executedLocalAnalyses > 0) {
-              const suffix = executedLocalAnalyses === 1 ? "" : "s";
-              deepScanNotes.push(
-                `Local instruction-file analysis executed for ${executedLocalAnalyses} file${suffix}.`,
-              );
-            }
           }
         }
       }
     }
+  }
 
-    report = applyConfigPolicy(report, input.config);
-    report = reorderRequestedTargetFindings(report, input.displayTarget);
+  report = applyConfigPolicy(report, input.config);
+  report = reorderRequestedTargetFindings(report, input.displayTarget);
+
+  return {
+    report,
+    deepScanNotes,
+  };
+}
+
+export async function executeScanCommand(
+  input: ExecuteScanCommandInput,
+  deps: ExecuteScanCommandDeps,
+): Promise<void> {
+  try {
+    const interactivePromptsEnabled = deps.isTTY() && input.options.noTui !== true;
+    const { report: analyzedReport, deepScanNotes } = await runScanAnalysis(input, {
+      isTTY: deps.isTTY,
+      runScan: deps.runScan,
+      prepareScanDiscovery: deps.prepareScanDiscovery,
+      discoverDeepResources: deps.discoverDeepResources,
+      discoverLocalTextTargets: deps.discoverLocalTextTargets,
+      requestDeepScanConsent: deps.requestDeepScanConsent,
+      requestDeepAgentSelection: deps.requestDeepAgentSelection,
+      requestMetaAgentCommandConsent: deps.requestMetaAgentCommandConsent,
+      runMetaAgentCommand: deps.runMetaAgentCommand,
+      executeDeepResource: deps.executeDeepResource,
+    });
+    let report = analyzedReport;
     const remediationRequested =
       input.options.remediate ||
       input.options.fixSafe ||
@@ -594,7 +638,12 @@ export async function executeScanCommand(
       input.config.output_format === "terminal"
         ? summarizeRequestedTargetFindings(report, input.displayTarget)
         : null;
-    const scanNotes = targetSummaryNote ? [...deepScanNotes, targetSummaryNote] : deepScanNotes;
+    const scanNotes =
+      input.config.output_format === "terminal"
+        ? targetSummaryNote
+          ? [...deepScanNotes, targetSummaryNote]
+          : deepScanNotes
+        : [];
 
     if (shouldUseTui) {
       deps.renderTui?.({ view: "dashboard", report, notices: scanNotes });
