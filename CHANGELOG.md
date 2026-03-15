@@ -1,3 +1,9 @@
+# [0.6.0](https://github.com/jonathansantilli/codegate/compare/v0.5.0...v0.6.0) (2026-03-15)
+
+### Features
+
+- add deep analysis support to skills and clawhub wrappers ([#22](https://github.com/jonathansantilli/codegate/issues/22)) ([bc756e0](https://github.com/jonathansantilli/codegate/commit/bc756e00e4205b1ab9a43b2e2e247f11fbb5b83e))
+
 # [0.5.0](https://github.com/jonathansantilli/codegate/compare/v0.4.0...v0.5.0) (2026-03-15)
 
 ### Features
