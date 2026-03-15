@@ -89,15 +89,17 @@ codegate scan .
 
 ## Core Commands
 
-| Command                 | Purpose                                                                |
-| ----------------------- | ---------------------------------------------------------------------- |
-| `codegate scan [dir]`   | Scan a directory for AI tool config risks. Defaults to `.`.            |
-| `codegate run <tool>`   | Scan current directory, then launch selected AI tool if policy allows. |
-| `codegate undo [dir]`   | Restore the most recent remediation backup session. Defaults to `.`.   |
-| `codegate init`         | Create `~/.codegate/config.json` with defaults.                        |
-| `codegate update-kb`    | Show knowledge-base update guidance.                                   |
-| `codegate update-rules` | Show rules update guidance.                                            |
-| `codegate --help`       | Show CLI usage.                                                        |
+| Command                  | Purpose                                                                |
+| ------------------------ | ---------------------------------------------------------------------- |
+| `codegate scan [target]` | Scan a directory, file, or URL target for AI tool config risks.        |
+| `codegate run <tool>`    | Scan current directory, then launch selected AI tool if policy allows. |
+| `codegate skills [...]`  | Wrap `npx skills` and preflight-scan `skills add` targets.             |
+| `codegate clawhub [...]` | Wrap `npx clawhub` and preflight-scan `clawhub install` targets.       |
+| `codegate undo [dir]`    | Restore the most recent remediation backup session. Defaults to `.`.   |
+| `codegate init`          | Create `~/.codegate/config.json` with defaults.                        |
+| `codegate update-kb`     | Show knowledge-base update guidance.                                   |
+| `codegate update-rules`  | Show rules update guidance.                                            |
+| `codegate --help`        | Show CLI usage.                                                        |
 
 ## `scan` Command Flags
 
@@ -165,6 +167,39 @@ codegate run claude
 codegate run claude --force
 codegate run codex
 codegate run cursor
+```
+
+## Installer Wrappers (`skills` and `clawhub`)
+
+CodeGate also provides scan-first wrappers for skill installers:
+
+- `codegate skills [skillsArgs...]` wraps `npx skills`.
+- `codegate clawhub [clawhubArgs...]` wraps `npx clawhub`.
+
+Behavior:
+
+- For `skills add ...`, CodeGate resolves the requested source target, scans it, and only proceeds if policy allows.
+- For `clawhub install ...`, CodeGate stages the remote skill content via `clawhub inspect`, scans the staged content, and only proceeds if policy allows.
+- Dangerous findings block execution (fail-closed).
+- Warning-level findings can still require confirmation unless `--cg-force` is provided.
+- Non-install subcommands (for example `skills find` or `clawhub search`) are passed through without preflight scanning.
+
+Wrapper flags (consumed by CodeGate, not forwarded):
+
+- `--cg-force`
+- `--cg-no-tui`
+- `--cg-include-user-scope`
+- `--cg-format <type>`
+- `--cg-config <path>`
+
+Examples:
+
+```bash
+codegate skills add https://github.com/vercel-labs/skills --skill find-skills
+codegate skills add https://github.com/owner/repo --skill security-review --cg-force
+codegate clawhub install security-auditor
+codegate clawhub install security-auditor --version 1.0.0
+codegate clawhub search security
 ```
 
 ## Deep Scan (Layer 3)
