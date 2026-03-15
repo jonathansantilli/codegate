@@ -57,6 +57,14 @@ describe("cli help examples", () => {
     expect(help).toContain("codegate run codex --force");
   });
 
+  it("shows clawhub command examples", () => {
+    const help = renderHelp(["clawhub", "--help"]);
+
+    expect(help).toContain("Examples:");
+    expect(help).toContain("codegate clawhub install security-auditor");
+    expect(help).toContain("codegate clawhub search security");
+  });
+
   it("shows undo command examples", () => {
     const help = renderHelp(["undo", "--help"]);
 

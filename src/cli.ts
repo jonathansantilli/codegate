@@ -53,6 +53,11 @@ import {
   type SkillsWrapperLaunchResult,
 } from "./commands/skills-wrapper.js";
 import {
+  executeClawhubWrapper,
+  launchClawhubPassthrough,
+  type ClawhubWrapperLaunchResult,
+} from "./commands/clawhub-wrapper.js";
+import {
   type DeepAgentOption,
   type MetaAgentCommandConsentContext,
   type MetaAgentCommandRunResult,
@@ -135,7 +140,9 @@ export interface CliDeps {
   requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
   executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
   launchSkills?: (args: string[], cwd: string) => SkillsWrapperLaunchResult;
+  launchClawhub?: (args: string[], cwd: string) => ClawhubWrapperLaunchResult;
   runSkillsWrapper?: (input: { version: string; skillsArgs: string[] }) => Promise<void>;
+  runClawhubWrapper?: (input: { version: string; clawhubArgs: string[] }) => Promise<void>;
   runWrapper?: (input: {
     target: string;
     cwd: string;
@@ -307,6 +314,7 @@ const defaultCliDeps: CliDeps = {
     return fetchResourceMetadata(resource.request);
   },
   launchSkills: (args, cwd) => launchSkillsPassthrough(args, cwd),
+  launchClawhub: (args, cwd) => launchClawhubPassthrough(args, cwd),
 };
 
 function addScanCommand(program: Command, version: string, deps: CliDeps): void {
@@ -608,6 +616,54 @@ function addSkillsCommand(program: Command, version: string, deps: CliDeps): voi
     });
 }
 
+function addClawhubCommand(program: Command, version: string, deps: CliDeps): void {
+  program
+    .command("clawhub [clawhubArgs...]")
+    .description("Wrap npx clawhub with CodeGate preflight scanning for installs")
+    .allowUnknownOption(true)
+    .allowExcessArguments(true)
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate clawhub install security-auditor",
+        "codegate clawhub install security-auditor --version 1.0.0",
+        "codegate clawhub search security",
+        "codegate clawhub install security-auditor --cg-force",
+      ]),
+    )
+    .action(async (clawhubArgs: string[] | undefined) => {
+      try {
+        const runClawhubWrapper =
+          deps.runClawhubWrapper ??
+          ((input: { version: string; clawhubArgs: string[] }) =>
+            executeClawhubWrapper(input, {
+              cwd: deps.cwd,
+              isTTY: deps.isTTY,
+              pathExists: deps.pathExists,
+              resolveConfig: deps.resolveConfig,
+              runScan: deps.runScan,
+              resolveScanTarget: deps.resolveScanTarget,
+              requestWarningProceed: deps.requestRunWarningConsent,
+              launchClawhub:
+                deps.launchClawhub ?? ((args, cwd) => launchClawhubPassthrough(args, cwd)),
+              stdout: deps.stdout,
+              stderr: deps.stderr,
+              setExitCode: deps.setExitCode,
+              renderTui: deps.renderTui,
+            }));
+
+        await runClawhubWrapper({
+          version,
+          clawhubArgs: clawhubArgs ?? [],
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`ClawHub wrapper failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
 function addUndoCommand(program: Command, deps: CliDeps): void {
   program
     .command("undo [dir]")
@@ -728,12 +784,14 @@ export function createCli(
         "codegate scan https://github.com/owner/repo",
         "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
         "codegate skills add owner/repo --skill security-review",
+        "codegate clawhub install security-auditor",
         "codegate run claude",
       ]),
     );
 
   addScanCommand(program, version, deps);
   addSkillsCommand(program, version, deps);
+  addClawhubCommand(program, version, deps);
   addRunCommand(program, version, deps);
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
