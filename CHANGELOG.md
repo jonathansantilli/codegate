@@ -1,3 +1,9 @@
+# [0.5.0](https://github.com/jonathansantilli/codegate/compare/v0.4.0...v0.5.0) (2026-03-15)
+
+### Features
+
+- **cli:** add scan-first clawhub install wrapper ([#21](https://github.com/jonathansantilli/codegate/issues/21)) ([0a98771](https://github.com/jonathansantilli/codegate/commit/0a987714f6c267ca843d450d6d3701dc92d0abc6))
+
 # [0.4.0](https://github.com/jonathansantilli/codegate/compare/v0.3.1...v0.4.0) (2026-03-14)
 
 ### Features
