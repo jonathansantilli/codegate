@@ -1,3 +1,4 @@
+import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import type { OutputFormat } from "../../config.js";
 import type { RemediationRunnerResult } from "../../layer4-remediation/remediation-runner.js";
@@ -171,9 +172,55 @@ export function noEligibleDeepResourceNotes(): string[] {
   ];
 }
 
+/**
+ * Deterministically verify that a finding's evidence exists in the claimed file.
+ * Returns true if the evidence can be confirmed, false if it cannot.
+ */
+export function verifyFindingEvidence(
+  scanTarget: string,
+  filePath: string,
+  evidence: string | null | undefined,
+): boolean {
+  if (!evidence || evidence.trim().length === 0) {
+    return false;
+  }
+
+  const absolutePath = resolve(scanTarget, filePath);
+  if (!existsSync(absolutePath)) {
+    return false;
+  }
+
+  try {
+    const fileContent = readFileSync(absolutePath, "utf8");
+    // Normalize whitespace for comparison: collapse runs of whitespace to single spaces.
+    const normalizeWhitespace = (text: string): string => text.replace(/\s+/gu, " ").trim();
+
+    const normalizedContent = normalizeWhitespace(fileContent);
+    const normalizedEvidence = normalizeWhitespace(evidence);
+
+    // Check if the evidence (or a substantial substring of it) appears in the file.
+    if (normalizedContent.includes(normalizedEvidence)) {
+      return true;
+    }
+
+    // Also try line-by-line matching for shorter evidence strings that may be exact line content.
+    const lines = fileContent.split(/\r?\n/u);
+    for (const line of lines) {
+      if (normalizeWhitespace(line).includes(normalizedEvidence)) {
+        return true;
+      }
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export function parseLocalTextFindings(
   filePath: string,
   metadata: unknown,
+  scanTarget?: string,
 ): CodeGateReport["findings"] {
   if (!isRecord(metadata) || !Array.isArray(metadata.findings)) {
     return [];
@@ -181,6 +228,15 @@ export function parseLocalTextFindings(
 
   return metadata.findings
     .filter((item): item is Record<string, unknown> => isRecord(item))
+    .filter((item) => {
+      // When a scan target is provided, verify evidence exists in the actual file.
+      if (!scanTarget) {
+        return true;
+      }
+      const itemFilePath = typeof item.file_path === "string" ? item.file_path : filePath;
+      const itemEvidence = typeof item.evidence === "string" ? item.evidence : null;
+      return verifyFindingEvidence(scanTarget, itemFilePath, itemEvidence);
+    })
     .map((item, index) => ({
       rule_id: typeof item.id === "string" ? item.id : "layer3-local-text-analysis-finding",
       finding_id: typeof item.id === "string" ? item.id : `L3-local-${filePath}-${index}`,

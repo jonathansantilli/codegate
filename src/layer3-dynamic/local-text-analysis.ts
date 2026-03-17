@@ -33,8 +33,6 @@ const LOCAL_TEXT_PATH_PATTERNS = [
   /^\.windsurf.*\.md$/iu,
   /^\.github\/copilot-instructions\.md$/iu,
 ];
-const EXCERPT_SIGNAL_PATTERN =
-  /\b(?:allowed-tools|ignore previous instructions|secret instructions|curl\b|wget\b|bash\b|sh\b|powershell\b|cookies?\s+(?:export|import|get)|session\s+share|profile\s+sync|real chrome|login sessions|session tokens?|tunnel\b|trycloudflare|webhook|upload externally|install\s+-g|@latest|bootstrap\b|restart\b|mcp configuration)\b|\.claude\/(?:hooks|settings\.json|agents\/)|\bclaude\.md\b/iu;
 
 function normalizeReportPath(reportPath: string): string {
   return reportPath.replaceAll("\\", "/");
@@ -70,39 +68,13 @@ export function collectLocalTextAnalysisTargets(
   }));
 }
 
-export function supportsToollessLocalTextAnalysis(tool: MetaAgentTool): boolean {
-  return tool === "claude";
+export function supportsAgentLocalTextAnalysis(tool: MetaAgentTool): boolean {
+  return tool === "claude" || tool === "codex";
 }
 
-export function buildPromptEvidenceText(textContent: string): string {
-  const lines = textContent.split(/\r?\n/u);
-  const excerptLineNumbers = new Set<number>();
-
-  for (let index = 0; index < Math.min(lines.length, 8); index += 1) {
-    excerptLineNumbers.add(index + 1);
-  }
-
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (!EXCERPT_SIGNAL_PATTERN.test(line)) {
-      continue;
-    }
-
-    excerptLineNumbers.add(index + 1);
-  }
-
-  const selected = Array.from(excerptLineNumbers)
-    .sort((left, right) => left - right)
-    .slice(0, 80);
-
-  const excerptBlocks = selected.map(
-    (lineNumber) => `${lineNumber} | ${lines[lineNumber - 1] ?? ""}`,
-  );
-  return [
-    "File stats:",
-    `- total lines: ${lines.length}`,
-    `- total chars: ${textContent.length}`,
-    "Key excerpts:",
-    ...excerptBlocks,
-  ].join("\n");
+/**
+ * @deprecated Use supportsAgentLocalTextAnalysis instead. Kept for backward compatibility.
+ */
+export function supportsToollessLocalTextAnalysis(tool: MetaAgentTool): boolean {
+  return supportsAgentLocalTextAnalysis(tool);
 }

@@ -5,6 +5,7 @@ export interface MetaAgentCommandInput {
   prompt: string;
   workingDirectory: string;
   binaryPath?: string;
+  readOnlyAgent?: boolean;
 }
 
 export interface MetaAgentCommand {
@@ -27,10 +28,26 @@ function normalizePrompt(prompt: string): string {
 
 export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCommand {
   const prompt = normalizePrompt(input.prompt);
+  const readOnly = input.readOnlyAgent === true;
 
   if (input.tool === "claude") {
     const command = input.binaryPath ?? "claude";
-    const args = ["--print", "--max-turns", "1", "--output-format", "json", "--tools=", prompt];
+    const args: string[] = readOnly
+      ? [
+          "--print",
+          "--max-turns",
+          "10",
+          "--output-format",
+          "json",
+          "--permission-mode",
+          "plan",
+          "--allowedTools",
+          "Read,Glob,Grep",
+          "--disallowedTools",
+          "Bash,Write,Edit,WebFetch,WebSearch,Agent,NotebookEdit,mcp__*",
+          prompt,
+        ]
+      : ["--print", "--max-turns", "1", "--output-format", "json", "--tools=", prompt];
     return {
       command,
       args,
@@ -41,7 +58,9 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
 
   if (input.tool === "codex") {
     const command = input.binaryPath ?? "codex";
-    const args = ["--quiet", "--approval-mode", "never", prompt];
+    const args: string[] = readOnly
+      ? ["--quiet", "--approval-mode", "workspace", prompt]
+      : ["--quiet", "--approval-mode", "never", prompt];
     return {
       command,
       args,

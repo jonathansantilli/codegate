@@ -10,8 +10,7 @@ export interface SecurityAnalysisPromptInput {
 }
 
 export interface LocalTextAnalysisPromptInput {
-  filePath: string;
-  textContent: string;
+  filePaths: string[];
   referencedUrls?: string[];
 }
 
@@ -40,15 +39,11 @@ export function buildLocalTextAnalysisPrompt(input: LocalTextAnalysisPromptInput
     input.referencedUrls && input.referencedUrls.length > 0
       ? input.referencedUrls.map((url) => `- ${normalize(url)}`).join("\n")
       : "- none";
-  const truncatedContent =
-    input.textContent.length > 18_000
-      ? `${input.textContent.slice(0, 18_000)}\n...[truncated ${input.textContent.length - 18_000} chars]`
-      : input.textContent;
+  const filePaths = input.filePaths.map((fp) => `- ${normalize(fp)}`).join("\n");
 
   return readTemplate("local-text-analysis.md")
-    .replaceAll("{{FILE_PATH}}", normalize(input.filePath))
-    .replaceAll("{{REFERENCED_URLS}}", referencedUrls)
-    .replaceAll("{{TEXT_CONTENT}}", normalize(truncatedContent));
+    .replaceAll("{{FILE_PATHS}}", filePaths)
+    .replaceAll("{{REFERENCED_URLS}}", referencedUrls);
 }
 
 export function buildToolPoisoningPrompt(input: ToolPoisoningPromptInput): string {
