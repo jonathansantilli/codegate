@@ -1,3 +1,6 @@
+import { writeFileSync } from "node:fs";
+import { join } from "node:path";
+
 export type MetaAgentTool = "claude" | "codex" | "generic";
 
 export interface MetaAgentCommandInput {
@@ -24,6 +27,25 @@ function shellEscape(value: string): string {
 
 function normalizePrompt(prompt: string): string {
   return prompt.replace(INVISIBLE_UNICODE, "").replaceAll("\r", "").trim();
+}
+
+/**
+ * Create a temporary opencode.json config that restricts to read-only tools.
+ * Returns the path to the temp directory containing the config.
+ */
+function createOpenCodeReadOnlyConfig(workingDirectory: string): string {
+  const config = {
+    $schema: "https://opencode.ai/config.json",
+    permission: {
+      "*": "deny",
+      read: "allow",
+      grep: "allow",
+      glob: "allow",
+      list: "allow",
+    },
+  };
+  writeFileSync(join(workingDirectory, "opencode.json"), JSON.stringify(config, null, 2));
+  return workingDirectory;
 }
 
 export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCommand {
@@ -57,7 +79,7 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
   if (input.tool === "codex") {
     const command = input.binaryPath ?? "codex";
     const args: string[] = readOnly
-      ? ["--quiet", "--approval-mode", "workspace", prompt]
+      ? ["--quiet", "--sandbox", "read-only", "-c", "network_access=false", prompt]
       : ["--quiet", "--approval-mode", "never", prompt];
     return {
       command,
@@ -67,6 +89,10 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
     };
   }
 
+  // Generic / OpenCode
+  if (readOnly) {
+    createOpenCodeReadOnlyConfig(input.workingDirectory);
+  }
   const command = "sh";
   const genericToolBinary = input.binaryPath ?? "tool";
   const pipeCommand = `printf %s ${shellEscape(prompt)} | ${shellEscape(genericToolBinary)} --stdin --no-interactive`;

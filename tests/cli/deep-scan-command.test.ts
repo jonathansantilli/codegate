@@ -601,45 +601,6 @@ describe("scan --deep behavior", () => {
     }
   });
 
-  it("reports when local instruction-file analysis is skipped for an unsupported agent", async () => {
-    const stdout: string[] = [];
-    const localTargets: LocalTextAnalysisTarget[] = [
-      {
-        id: "local:AGENTS.md",
-        reportPath: "AGENTS.md",
-        absolutePath: "/tmp/project/AGENTS.md",
-        textContent: "Potentially suspicious text",
-        referencedUrls: [],
-      },
-    ];
-
-    const cli = createCli(
-      "0.2.2",
-      buildDeps({
-        isTTY: () => true,
-        stdout: (message) => {
-          stdout.push(message);
-        },
-        runScan: async () => ({
-          ...makeBaseReport(),
-          tools_detected: ["opencode"],
-        }),
-        discoverDeepResources: vi.fn(async () => []),
-        discoverLocalTextTargets: vi.fn(async () => localTargets),
-        requestDeepAgentSelection: vi.fn(
-          async (options: Array<{ id: string }>) => options[0] ?? null,
-        ),
-      }),
-    );
-
-    await cli.parseAsync(["node", "codegate", "scan", ".", "--deep"]);
-
-    expect(
-      stdout.some((line) =>
-        line.includes(
-          "Local instruction-file analysis was skipped because the selected agent does not support read-only analysis.",
-        ),
-      ),
-    ).toBe(true);
-  });
+  // All three agent types (claude, codex, generic) now support read-only analysis
+  // with proper sandboxing, so the "unsupported agent" code path is no longer reachable.
 });

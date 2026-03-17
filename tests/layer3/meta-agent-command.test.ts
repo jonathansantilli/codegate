@@ -48,7 +48,7 @@ describe("task 27 meta-agent command builder", () => {
     expect(claude.args).not.toContain("--tools=");
   });
 
-  it("applies workspace sandboxing for Codex in readOnlyAgent mode", () => {
+  it("applies read-only sandbox for Codex in readOnlyAgent mode", () => {
     const codex = buildMetaAgentCommand({
       tool: "codex",
       prompt: "Analyse files",
@@ -56,9 +56,10 @@ describe("task 27 meta-agent command builder", () => {
       readOnlyAgent: true,
     });
 
-    expect(codex.args).toContain("--approval-mode");
-    expect(codex.args).toContain("workspace");
-    expect(codex.args).not.toContain("never");
+    expect(codex.args).toContain("--sandbox");
+    expect(codex.args).toContain("read-only");
+    expect(codex.args).toContain("-c");
+    expect(codex.args).toContain("network_access=false");
   });
 
   it("normalizes unsafe prompt input and preserves defensive framing", () => {

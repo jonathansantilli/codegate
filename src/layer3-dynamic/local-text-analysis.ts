@@ -68,8 +68,13 @@ export function collectLocalTextAnalysisTargets(
   }));
 }
 
+/**
+ * Claude Code uses --tools whitelist (strict: only listed tools exist).
+ * Codex uses --sandbox read-only (no writes, no shell, no network).
+ * OpenCode uses opencode.json permissions (deny all, allow read/grep/glob).
+ */
 export function supportsAgentLocalTextAnalysis(tool: MetaAgentTool): boolean {
-  return tool === "claude" || tool === "codex";
+  return tool === "claude" || tool === "codex" || tool === "generic";
 }
 
 /**

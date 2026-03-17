@@ -46,15 +46,15 @@ describe("local text analysis helpers", () => {
     ]);
   });
 
-  it("supports Claude and Codex for agent-based local text analysis", () => {
+  it("supports all agents for read-only local text analysis", () => {
     expect(supportsAgentLocalTextAnalysis("claude")).toBe(true);
     expect(supportsAgentLocalTextAnalysis("codex")).toBe(true);
-    expect(supportsAgentLocalTextAnalysis("generic")).toBe(false);
+    expect(supportsAgentLocalTextAnalysis("generic")).toBe(true);
   });
 
-  it("deprecated supportsToollessLocalTextAnalysis still works", () => {
+  it("deprecated supportsToollessLocalTextAnalysis matches current behavior", () => {
     expect(supportsToollessLocalTextAnalysis("claude")).toBe(true);
     expect(supportsToollessLocalTextAnalysis("codex")).toBe(true);
-    expect(supportsToollessLocalTextAnalysis("generic")).toBe(false);
+    expect(supportsToollessLocalTextAnalysis("generic")).toBe(true);
   });
 });

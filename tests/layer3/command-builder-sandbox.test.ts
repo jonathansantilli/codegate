@@ -97,31 +97,66 @@ describe("meta-agent command builder sandboxing", () => {
       expect(cmd.args).toContain("never");
     });
 
-    it("uses approval-mode workspace in readOnlyAgent mode", () => {
+    it("uses --sandbox read-only with no network in readOnlyAgent mode", () => {
       const cmd = buildMetaAgentCommand({
         tool: "codex",
         prompt: "analyze",
         workingDirectory: "/tmp/scan",
         readOnlyAgent: true,
       });
-      expect(cmd.args).toContain("--approval-mode");
-      expect(cmd.args).toContain("workspace");
-      expect(cmd.args).not.toContain("never");
+      expect(cmd.args).toContain("--sandbox");
+      expect(cmd.args).toContain("read-only");
+      expect(cmd.args).toContain("-c");
+      expect(cmd.args).toContain("network_access=false");
+      expect(cmd.args).not.toContain("--approval-mode");
     });
   });
 
   describe("Generic (OpenCode)", () => {
-    it("uses shell wrapper regardless of readOnlyAgent", () => {
-      const cmd = buildMetaAgentCommand({
-        tool: "generic",
-        prompt: "analyze",
-        workingDirectory: "/tmp/scan",
-        binaryPath: "opencode",
-        readOnlyAgent: true,
-      });
-      expect(cmd.command).toBe("sh");
-      expect(cmd.args[0]).toBe("-lc");
-      expect(cmd.preview).toContain("opencode");
+    it("uses shell wrapper in readOnlyAgent mode", async () => {
+      const fs = await import("node:fs");
+      const os = await import("node:os");
+      const path = await import("node:path");
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codegate-opencode-test-"));
+      try {
+        const cmd = buildMetaAgentCommand({
+          tool: "generic",
+          prompt: "analyze",
+          workingDirectory: tmpDir,
+          binaryPath: "opencode",
+          readOnlyAgent: true,
+        });
+        expect(cmd.command).toBe("sh");
+        expect(cmd.args[0]).toBe("-lc");
+        expect(cmd.preview).toContain("opencode");
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
+    });
+
+    it("creates opencode.json with read-only permissions in readOnlyAgent mode", async () => {
+      const fs = await import("node:fs");
+      const os = await import("node:os");
+      const path = await import("node:path");
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "codegate-opencode-test-"));
+      try {
+        buildMetaAgentCommand({
+          tool: "generic",
+          prompt: "analyze",
+          workingDirectory: tmpDir,
+          binaryPath: "opencode",
+          readOnlyAgent: true,
+        });
+        const configPath = path.join(tmpDir, "opencode.json");
+        expect(fs.existsSync(configPath)).toBe(true);
+        const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+        expect(config.permission["*"]).toBe("deny");
+        expect(config.permission.read).toBe("allow");
+        expect(config.permission.grep).toBe("allow");
+        expect(config.permission.glob).toBe("allow");
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true, force: true });
+      }
     });
   });
 
