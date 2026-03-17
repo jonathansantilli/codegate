@@ -23,28 +23,25 @@ describe("meta-agent command builder sandboxing", () => {
         workingDirectory: "/tmp/scan",
         readOnlyAgent: true,
       });
-      expect(cmd.args).toContain("--allowedTools");
+      expect(cmd.args).toContain("--tools");
       expect(cmd.args).toContain("Read,Glob,Grep");
       expect(cmd.args).not.toContain("--tools=");
+      expect(cmd.args).not.toContain("--allowedTools");
+      expect(cmd.args).not.toContain("--disallowedTools");
     });
 
-    it("disallows dangerous tools in readOnlyAgent mode", () => {
+    it("uses strict whitelist — no blacklist needed in readOnlyAgent mode", () => {
       const cmd = buildMetaAgentCommand({
         tool: "claude",
         prompt: "analyze",
         workingDirectory: "/tmp/scan",
         readOnlyAgent: true,
       });
-      expect(cmd.args).toContain("--disallowedTools");
-      const disallowed = cmd.args[cmd.args.indexOf("--disallowedTools") + 1];
-      expect(disallowed).toContain("Bash");
-      expect(disallowed).toContain("Write");
-      expect(disallowed).toContain("Edit");
-      expect(disallowed).toContain("WebFetch");
-      expect(disallowed).toContain("WebSearch");
-      expect(disallowed).toContain("Agent");
-      expect(disallowed).toContain("NotebookEdit");
-      expect(disallowed).toContain("mcp__*");
+      // --tools is a strict whitelist: only listed tools are available
+      // No need for --disallowedTools since unlisted tools simply don't exist
+      expect(cmd.args).toContain("--tools");
+      expect(cmd.args).not.toContain("--disallowedTools");
+      expect(cmd.args).not.toContain("--allowedTools");
     });
 
     it("allows multiple turns in readOnlyAgent mode", () => {

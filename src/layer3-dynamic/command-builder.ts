@@ -41,10 +41,8 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
           "json",
           "--permission-mode",
           "plan",
-          "--allowedTools",
+          "--tools",
           "Read,Glob,Grep",
-          "--disallowedTools",
-          "Bash,Write,Edit,WebFetch,WebSearch,Agent,NotebookEdit,mcp__*",
           prompt,
         ]
       : ["--print", "--max-turns", "1", "--output-format", "json", "--tools=", prompt];
