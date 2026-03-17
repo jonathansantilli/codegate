@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 
 describe("deep scan makes no outbound HTTP calls", () => {
-  it("compiled CLI does not call acquireToolDescriptions or fetchResourceMetadata", () => {
-    const cliSource = readFileSync("dist/cli.js", "utf8");
+  it("CLI source does not call acquireToolDescriptions or fetchResourceMetadata", () => {
+    const cliSource = readFileSync("src/cli.ts", "utf8");
 
     // The old code called these functions to make HTTP requests to MCP endpoints
     expect(cliSource).not.toContain("acquireToolDescriptions(");
@@ -13,8 +13,8 @@ describe("deep scan makes no outbound HTTP calls", () => {
     expect(invocations).toBeNull();
   });
 
-  it("compiled CLI contains the no-outbound-connection guard", () => {
-    const cliSource = readFileSync("dist/cli.js", "utf8");
+  it("CLI source contains the no-outbound-connection guard", () => {
+    const cliSource = readFileSync("src/cli.ts", "utf8");
     expect(cliSource).toContain("URL recorded for analysis without making outbound connections");
   });
 
