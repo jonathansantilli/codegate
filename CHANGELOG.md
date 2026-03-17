@@ -1,3 +1,9 @@
+# [0.7.0](https://github.com/jonathansantilli/codegate/compare/v0.6.1...v0.7.0) (2026-03-17)
+
+### Features
+
+- harden deep scan security — agent sandboxing, evidence verification, no outbound HTTP ([#26](https://github.com/jonathansantilli/codegate/issues/26)) ([b5a7a42](https://github.com/jonathansantilli/codegate/commit/b5a7a42fe68ec35a1e38a78116188ac294f69f29))
+
 ## [0.6.1](https://github.com/jonathansantilli/codegate/compare/v0.6.0...v0.6.1) (2026-03-16)
 
 # [0.6.0](https://github.com/jonathansantilli/codegate/compare/v0.5.0...v0.6.0) (2026-03-15)
