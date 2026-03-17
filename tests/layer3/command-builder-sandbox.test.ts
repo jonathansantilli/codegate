@@ -147,7 +147,7 @@ describe("meta-agent command builder sandboxing", () => {
           binaryPath: "opencode",
           readOnlyAgent: true,
         });
-        const configPath = path.join(tmpDir, "opencode.json");
+        const configPath = path.join(tmpDir, ".opencode", "config.json");
         expect(fs.existsSync(configPath)).toBe(true);
         const config = JSON.parse(fs.readFileSync(configPath, "utf8"));
         expect(config.permission["*"]).toBe("deny");

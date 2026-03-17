@@ -1,4 +1,4 @@
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 export type MetaAgentTool = "claude" | "codex" | "generic";
@@ -30,10 +30,11 @@ function normalizePrompt(prompt: string): string {
 }
 
 /**
- * Create a temporary opencode.json config that restricts to read-only tools.
- * Returns the path to the temp directory containing the config.
+ * Write an opencode.json config that restricts to read-only tools.
+ * The config is placed in the working directory which is a dedicated
+ * scan target directory created by scan-target/staging.ts.
  */
-function createOpenCodeReadOnlyConfig(workingDirectory: string): string {
+function writeOpenCodeReadOnlyConfig(workingDirectory: string): void {
   const config = {
     $schema: "https://opencode.ai/config.json",
     permission: {
@@ -44,8 +45,9 @@ function createOpenCodeReadOnlyConfig(workingDirectory: string): string {
       list: "allow",
     },
   };
-  writeFileSync(join(workingDirectory, "opencode.json"), JSON.stringify(config, null, 2));
-  return workingDirectory;
+  const configDir = join(workingDirectory, ".opencode");
+  mkdirSync(configDir, { recursive: true, mode: 0o700 });
+  writeFileSync(join(configDir, "config.json"), JSON.stringify(config, null, 2), { mode: 0o600 });
 }
 
 export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCommand {
@@ -91,7 +93,7 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
 
   // Generic / OpenCode
   if (readOnly) {
-    createOpenCodeReadOnlyConfig(input.workingDirectory);
+    writeOpenCodeReadOnlyConfig(input.workingDirectory);
   }
   const command = "sh";
   const genericToolBinary = input.binaryPath ?? "tool";
