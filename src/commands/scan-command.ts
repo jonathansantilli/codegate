@@ -1,6 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { resolve } from "node:path";
 import { applyConfigPolicy, type CodeGateConfig, type OutputFormat } from "../config.js";
 import {
   buildMetaAgentCommand,
@@ -8,10 +6,7 @@ import {
   type MetaAgentTool,
 } from "../layer3-dynamic/command-builder.js";
 import type { LocalTextAnalysisTarget } from "../layer3-dynamic/local-text-analysis.js";
-import {
-  buildPromptEvidenceText,
-  supportsToollessLocalTextAnalysis,
-} from "../layer3-dynamic/local-text-analysis.js";
+import { supportsAgentLocalTextAnalysis } from "../layer3-dynamic/local-text-analysis.js";
 import {
   buildLocalTextAnalysisPrompt,
   buildSecurityAnalysisPrompt,
@@ -433,82 +428,78 @@ export async function runScanAnalysis(
           deepScanNotes.push(
             "Local instruction-file analysis skipped because no meta-agent was selected.",
           );
-        } else if (!supportsToollessLocalTextAnalysis(selectedAgent.metaTool)) {
+        } else if (!supportsAgentLocalTextAnalysis(selectedAgent.metaTool)) {
           deepScanNotes.push(
-            "Local instruction-file analysis was skipped because the selected agent does not support tool-less analysis.",
+            "Local instruction-file analysis was skipped because the selected agent does not support read-only analysis.",
           );
         } else {
-          // Local instruction files are analyzed as inert text only; referenced URLs stay as evidence, not inputs.
+          // The agent reads files directly using read-only tools (Read, Glob, Grep).
+          // It runs in the scan target directory so it can access the files.
+          // No Bash, Write, Edit, or network tools are available — sandboxed to reading only.
           if (!deps.runMetaAgentCommand) {
             throw new Error("Meta-agent command runner not configured");
           }
 
-          const isolatedWorkingDirectory = mkdtempSync(join(tmpdir(), "codegate-local-analysis-"));
-          let executedLocalAnalyses = 0;
-          try {
-            for (const target of localTextTargets) {
-              const prompt = buildLocalTextAnalysisPrompt({
-                filePath: target.reportPath,
-                textContent: buildPromptEvidenceText(target.textContent),
-                referencedUrls: target.referencedUrls,
-              });
-              const command = buildMetaAgentCommand({
-                tool: selectedAgent.metaTool,
-                prompt,
-                workingDirectory: isolatedWorkingDirectory,
-                binaryPath: selectedAgent.binary,
-              });
-              command.timeoutMs = 60_000;
-              const commandContext: MetaAgentCommandConsentContext = {
-                localFile: target,
-                agent: selectedAgent,
-                command,
-              };
+          // Collect all file paths and referenced URLs for a single agent invocation.
+          const allFilePaths = localTextTargets.map((target) => target.reportPath);
+          const allReferencedUrls = Array.from(
+            new Set(localTextTargets.flatMap((target) => target.referencedUrls)),
+          );
 
-              const approvedCommand =
-                input.options.force ||
-                (deps.requestMetaAgentCommandConsent
-                  ? await deps.requestMetaAgentCommandConsent(commandContext)
-                  : false);
+          const prompt = buildLocalTextAnalysisPrompt({
+            filePaths: allFilePaths,
+            referencedUrls: allReferencedUrls,
+          });
+          const command = buildMetaAgentCommand({
+            tool: selectedAgent.metaTool,
+            prompt,
+            workingDirectory: input.scanTarget,
+            binaryPath: selectedAgent.binary,
+            readOnlyAgent: true,
+          });
+          command.timeoutMs = 120_000;
+          const commandContext: MetaAgentCommandConsentContext = {
+            localFile: localTextTargets[0],
+            agent: selectedAgent,
+            command,
+          };
 
-              if (!approvedCommand) {
-                continue;
-              }
+          const approvedCommand =
+            input.options.force ||
+            (deps.requestMetaAgentCommandConsent
+              ? await deps.requestMetaAgentCommandConsent(commandContext)
+              : false);
 
-              executedLocalAnalyses += 1;
-              const commandResult = await deps.runMetaAgentCommand(commandContext);
-              if (commandResult.code !== 0) {
-                deepScanNotes.push(
-                  `Local instruction-file analysis failed for ${target.reportPath}: ${
-                    commandResult.stderr || `exit code: ${commandResult.code}`
-                  }`,
-                );
-                continue;
-              }
-
+          if (approvedCommand) {
+            const commandResult = await deps.runMetaAgentCommand(commandContext);
+            if (commandResult.code !== 0) {
+              deepScanNotes.push(
+                `Local instruction-file analysis failed: ${
+                  commandResult.stderr || `exit code: ${commandResult.code}`
+                }`,
+              );
+            } else {
               const parsedOutput = parseMetaAgentOutput(commandResult.stdout);
               if (parsedOutput === null) {
+                deepScanNotes.push("Local instruction-file analysis returned invalid JSON.");
+              } else {
+                const normalizedOutput = Array.isArray(parsedOutput)
+                  ? { findings: parsedOutput }
+                  : parsedOutput;
+                // Distribute findings across their respective file paths.
+                for (const target of localTextTargets) {
+                  const localFindings = parseLocalTextFindings(
+                    target.reportPath,
+                    normalizedOutput,
+                    input.scanTarget,
+                  );
+                  report = mergeLayer3Findings(report, localFindings);
+                }
                 deepScanNotes.push(
-                  `Local instruction-file analysis returned invalid JSON for ${target.reportPath}.`,
+                  `Local instruction-file analysis executed for ${localTextTargets.length} file${localTextTargets.length === 1 ? "" : "s"} (read-only agent).`,
                 );
-                continue;
               }
-
-              const normalizedOutput = Array.isArray(parsedOutput)
-                ? { findings: parsedOutput }
-                : parsedOutput;
-              const localFindings = parseLocalTextFindings(target.reportPath, normalizedOutput);
-              report = mergeLayer3Findings(report, localFindings);
             }
-          } finally {
-            rmSync(isolatedWorkingDirectory, { recursive: true, force: true });
-          }
-
-          if (executedLocalAnalyses > 0) {
-            const suffix = executedLocalAnalyses === 1 ? "" : "s";
-            deepScanNotes.push(
-              `Local instruction-file analysis executed for ${executedLocalAnalyses} file${suffix}.`,
-            );
           }
         }
       }

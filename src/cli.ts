@@ -17,12 +17,8 @@ import {
   type ResolveConfigOptions,
 } from "./config.js";
 import { APP_NAME } from "./index.js";
-import {
-  fetchResourceMetadata,
-  type ResourceFetchResult,
-} from "./layer3-dynamic/resource-fetcher.js";
+import type { ResourceFetchResult } from "./layer3-dynamic/resource-fetcher.js";
 import type { LocalTextAnalysisTarget } from "./layer3-dynamic/local-text-analysis.js";
-import { acquireToolDescriptions } from "./layer3-dynamic/tool-description-acquisition.js";
 import { runSandboxCommand } from "./layer3-dynamic/sandbox.js";
 import { loadKnowledgeBase } from "./layer1-discovery/knowledge-base.js";
 import { type DeepScanResource } from "./pipeline.js";
@@ -184,37 +180,6 @@ export function isDirectCliInvocation(
   }
 }
 
-function mapAcquisitionFailure(
-  status:
-    | "auth_failure"
-    | "timeout"
-    | "network_error"
-    | "command_error"
-    | "rejected_unsafe_stdio"
-    | "schema_mismatch",
-  error?: string,
-): ResourceFetchResult {
-  if (
-    status === "auth_failure" ||
-    status === "timeout" ||
-    status === "network_error" ||
-    status === "command_error"
-  ) {
-    return {
-      status,
-      attempts: 1,
-      elapsedMs: 0,
-      error,
-    };
-  }
-  return {
-    status: "network_error",
-    attempts: 1,
-    elapsedMs: 0,
-    error: error ?? "tool description acquisition failed",
-  };
-}
-
 async function runMetaAgentCommandWithSandbox(
   context: MetaAgentCommandConsentContext,
 ): Promise<MetaAgentCommandRunResult> {
@@ -351,30 +316,22 @@ const defaultCliDeps: CliDeps = {
         }),
   discoverLocalTextTargets: (_scanTarget, _config, discoveryContext) =>
     discoveryContext ? discoverLocalTextAnalysisTargetsFromContext(discoveryContext) : [],
-  // Keep the default CLI dependency layer as a thin bridge from user-facing commands into the scan engine.
+  // Deep resource execution never makes outbound network calls.
+  // Connecting to URLs found in scanned config files is a security risk:
+  // the endpoint could be malicious (crafted responses, SSRF, IP logging).
+  // Instead, we record the URL as metadata for the agent to analyze.
   executeDeepResource: async (resource) => {
-    if (resource.request.kind === "http" || resource.request.kind === "sse") {
-      const acquisition = await acquireToolDescriptions({
-        serverId: resource.id,
-        transport: resource.request.kind,
-        url: resource.request.locator,
-      });
-
-      if (acquisition.status === "ok") {
-        return {
-          status: "ok",
-          attempts: 1,
-          elapsedMs: 0,
-          metadata: {
-            tools: acquisition.tools,
-          },
-        };
-      }
-
-      return mapAcquisitionFailure(acquisition.status, acquisition.error);
-    }
-
-    return fetchResourceMetadata(resource.request);
+    return {
+      status: "ok" as const,
+      attempts: 0,
+      elapsedMs: 0,
+      metadata: {
+        resource_id: resource.id,
+        resource_kind: resource.request.kind,
+        resource_url: resource.request.locator,
+        note: "URL recorded for analysis without making outbound connections.",
+      },
+    };
   },
   launchSkills: (args, cwd) => launchSkillsPassthrough(args, cwd),
   launchClawhub: (args, cwd) => launchClawhubPassthrough(args, cwd),
