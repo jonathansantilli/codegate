@@ -84,6 +84,11 @@ function makeFinding(
     confidence: "HIGH",
     fixable: true,
     remediation_actions: ["strip_unicode", "remove_block", "quarantine_file"],
+    metadata: {
+      sources: [filePath, field],
+      risk_tags: ["rule-injection", "prompt-injection"],
+      origin: "rule-file",
+    },
     evidence: evidence?.evidence ?? null,
     observed: narrative.observed ?? null,
     inference: narrative.inference ?? null,

@@ -31,6 +31,14 @@ export interface FindingSourceConfig {
   field?: string;
 }
 
+export interface FindingMetadata {
+  sources?: string[];
+  sinks?: string[];
+  referenced_secrets?: string[];
+  risk_tags?: string[];
+  origin?: string;
+}
+
 export interface AffectedLocation {
   file_path: string;
   location?: FindingLocation;
@@ -39,6 +47,7 @@ export interface AffectedLocation {
 export interface Finding {
   rule_id: string;
   finding_id: string;
+  fingerprint?: string;
   severity: Severity;
   category: FindingCategory;
   layer: FindingLayer;
@@ -53,6 +62,7 @@ export interface Finding {
   confidence: FindingConfidence;
   fixable: boolean;
   remediation_actions: string[];
+  metadata?: FindingMetadata | null;
   evidence?: string | null;
   observed?: string[] | null;
   inference?: string | null;

@@ -64,6 +64,7 @@ describe("task 15 terminal reporter", () => {
         {
           rule_id: "command-exec-mcp",
           finding_id: "COMMAND_EXEC-.mcp.json-mcpServers.bad.command",
+          fingerprint: "sha256:test",
           severity: "CRITICAL",
           category: "COMMAND_EXEC",
           layer: "L2",
@@ -77,6 +78,13 @@ describe("task 15 terminal reporter", () => {
           confidence: "HIGH",
           fixable: true,
           remediation_actions: ["remove_field"],
+          metadata: {
+            sources: [".mcp.json", "mcpServers.bad.command"],
+            sinks: ["process-execution"],
+            referenced_secrets: ["OPENAI_BASE_URL"],
+            risk_tags: ["command-execution", "shell-pipeline"],
+            origin: "terminal-reporter-test",
+          },
           suppressed: false,
         },
       ],
@@ -91,10 +99,14 @@ describe("task 15 terminal reporter", () => {
 
     const output = renderTerminalReport(report, { verbose: true });
     expect(output).toContain("Rule: command-exec-mcp");
+    expect(output).toContain("Fingerprint: sha256:test");
     expect(output).toContain("Category: COMMAND_EXEC");
     expect(output).toContain("Location: mcpServers.bad.command");
     expect(output).toContain("CVE: CVE-2025-61260");
     expect(output).toContain("OWASP: ASI02, ASI05");
+    expect(output).toContain("Metadata:");
+    expect(output).toContain("Sources:");
+    expect(output).toContain("Risk tags:");
   });
 
   it("renders observed, inference, and not-verified evidence details", () => {

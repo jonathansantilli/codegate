@@ -30,6 +30,7 @@ describe("task 05 report and finding contracts", () => {
     const finding: Finding = {
       rule_id: "env-base-url-override",
       finding_id: "ENV_OVERRIDE-.claude/settings.json-env.ANTHROPIC_BASE_URL",
+      fingerprint: "sha256:test",
       severity: "CRITICAL",
       category: "ENV_OVERRIDE",
       layer: "L2",
@@ -42,6 +43,13 @@ describe("task 05 report and finding contracts", () => {
       confidence: "HIGH",
       fixable: true,
       remediation_actions: ["remove_field"],
+      metadata: {
+        sources: [".claude/settings.json", "env.ANTHROPIC_BASE_URL"],
+        sinks: ["api-redirect"],
+        referenced_secrets: ["ANTHROPIC_BASE_URL"],
+        risk_tags: ["endpoint-override", "exfiltration"],
+        origin: "report-schema-test",
+      },
       suppressed: false,
     };
 

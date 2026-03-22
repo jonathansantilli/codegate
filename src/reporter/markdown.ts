@@ -1,4 +1,4 @@
-import type { FindingLocation } from "../types/finding.js";
+import type { FindingLocation, FindingMetadata } from "../types/finding.js";
 import type { CodeGateReport } from "../types/report.js";
 
 function escapePipes(value: string): string {
@@ -19,6 +19,31 @@ function formatLocation(location: FindingLocation): string {
   }
 
   return parts.join(", ") || "-";
+}
+
+function formatMetadata(metadata: FindingMetadata | null | undefined): string {
+  if (!metadata) {
+    return "-";
+  }
+
+  const parts: string[] = [];
+  if (metadata.sources && metadata.sources.length > 0) {
+    parts.push(`sources=${metadata.sources.join(", ")}`);
+  }
+  if (metadata.sinks && metadata.sinks.length > 0) {
+    parts.push(`sinks=${metadata.sinks.join(", ")}`);
+  }
+  if (metadata.referenced_secrets && metadata.referenced_secrets.length > 0) {
+    parts.push(`referenced_secrets=${metadata.referenced_secrets.join(", ")}`);
+  }
+  if (metadata.risk_tags && metadata.risk_tags.length > 0) {
+    parts.push(`risk_tags=${metadata.risk_tags.join(", ")}`);
+  }
+  if (metadata.origin) {
+    parts.push(`origin=${metadata.origin}`);
+  }
+
+  return parts.length > 0 ? parts.join("; ") : "-";
 }
 
 export function renderMarkdownReport(report: CodeGateReport): string {
@@ -55,12 +80,12 @@ export function renderMarkdownReport(report: CodeGateReport): string {
     return lines.join("\n");
   }
 
-  lines.push("| Severity | Category | File | Location | Description |");
-  lines.push("| --- | --- | --- | --- | --- |");
+  lines.push("| Severity | Category | File | Location | Description | Fingerprint | Metadata |");
+  lines.push("| --- | --- | --- | --- | --- | --- | --- |");
 
   for (const finding of report.findings) {
     lines.push(
-      `| ${finding.severity} | ${finding.category} | \`${escapePipes(finding.file_path)}\` | ${escapePipes(formatLocation(finding.location))} | ${escapePipes(finding.description)} |`,
+      `| ${finding.severity} | ${finding.category} | \`${escapePipes(finding.file_path)}\` | ${escapePipes(formatLocation(finding.location))} | ${escapePipes(finding.description)} | ${escapePipes(finding.fingerprint ?? "-")} | ${escapePipes(formatMetadata(finding.metadata))} |`,
     );
   }
 

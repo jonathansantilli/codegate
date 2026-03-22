@@ -1,0 +1,62 @@
+[
+  {
+    "id": "filesystem",
+    "rule_id": "advisory-agent-component-filesystem",
+    "severity": "MEDIUM",
+    "category": "CONFIG_PRESENT",
+    "description": "Filesystem agent components can expose broad local file access and should be reviewed before approval.",
+    "signatures": ["@anthropic/mcp-server-filesystem", "mcp-server-filesystem"],
+    "file_patterns": ["**/.mcp.json", "**/mcp.json", "**/settings.json"],
+    "remediation_actions": ["remove_field", "review_component"],
+    "metadata": {
+      "sources": ["mcpServers.*.command", "mcpServers.*.args"],
+      "sinks": ["local_filesystem"],
+      "referenced_secrets": [],
+      "risk_tags": ["sensitive_access"],
+      "origin": "agent-components.json"
+    },
+    "owasp": ["ASI03", "ASI07"],
+    "cwe": "CWE-200",
+    "confidence": "HIGH"
+  },
+  {
+    "id": "github",
+    "rule_id": "advisory-agent-component-github",
+    "severity": "MEDIUM",
+    "category": "CONFIG_PRESENT",
+    "description": "GitHub agent components can ingest untrusted repository content and deserve manual review.",
+    "signatures": ["@modelcontextprotocol/server-github", "server-github"],
+    "file_patterns": ["**/.mcp.json", "**/mcp.json", "**/settings.json"],
+    "remediation_actions": ["remove_field", "review_component"],
+    "metadata": {
+      "sources": ["mcpServers.*.command", "mcpServers.*.args"],
+      "sinks": ["repository_content"],
+      "referenced_secrets": [],
+      "risk_tags": ["untrusted_input"],
+      "origin": "agent-components.json"
+    },
+    "owasp": ["ASI01", "ASI07"],
+    "cwe": "CWE-74",
+    "confidence": "HIGH"
+  },
+  {
+    "id": "slack",
+    "rule_id": "advisory-agent-component-slack",
+    "severity": "HIGH",
+    "category": "CONFIG_PRESENT",
+    "description": "Slack agent components can become exfiltration sinks and should be approved deliberately.",
+    "signatures": ["@modelcontextprotocol/server-slack", "server-slack"],
+    "file_patterns": ["**/.mcp.json", "**/mcp.json", "**/settings.json"],
+    "remediation_actions": ["remove_field", "review_component"],
+    "metadata": {
+      "sources": ["mcpServers.*.command", "mcpServers.*.args"],
+      "sinks": ["message_exfiltration"],
+      "referenced_secrets": [],
+      "risk_tags": ["exfiltration_sink"],
+      "origin": "agent-components.json"
+    },
+    "owasp": ["ASI07", "ASI09"],
+    "cwe": "CWE-200",
+    "confidence": "HIGH"
+  }
+]

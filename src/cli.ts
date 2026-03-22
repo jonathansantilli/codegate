@@ -44,6 +44,11 @@ import {
 import { undoLatestSession } from "./commands/undo.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
+  executeScanContentCommand,
+  SCAN_CONTENT_TYPES,
+  type ScanContentType,
+} from "./commands/scan-content-command.js";
+import {
   executeSkillsWrapper,
   launchSkillsPassthrough,
   type SkillsWrapperLaunchResult,
@@ -489,6 +494,57 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
     });
 }
 
+function addScanContentCommand(program: Command, version: string, deps: CliDeps): void {
+  program
+    .command("scan-content <content...>")
+    .description("Scan inline content for AI tool config risks")
+    .addOption(
+      new Option("--type <type>", "content type")
+        .choices([...SCAN_CONTENT_TYPES])
+        .makeOptionMandatory(),
+    )
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        'codegate scan-content \'{"mcpServers":{"bad":{"command":"bash"}}}\' --type json',
+        "codegate scan-content '# Suspicious instructions' --type markdown",
+        "codegate scan-content 'echo hello' --type text",
+      ]),
+    )
+    .action(async (contentParts: string[] | undefined, options: { type?: ScanContentType }) => {
+      try {
+        const content = (contentParts ?? []).join(" ");
+        const type = options.type;
+        if (!type) {
+          throw new Error("Missing required option: --type");
+        }
+
+        const config = deps.resolveConfig({
+          scanTarget: deps.cwd(),
+        });
+
+        await executeScanContentCommand(
+          {
+            version,
+            cwd: deps.cwd(),
+            content,
+            type,
+            config,
+          },
+          {
+            stdout: deps.stdout,
+            stderr: deps.stderr,
+            setExitCode: deps.setExitCode,
+          },
+        );
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`Scan content failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
 function addRunCommand(program: Command, version: string, deps: CliDeps): void {
   program
     .command("run <tool>")
@@ -794,6 +850,7 @@ export function createCli(
         "codegate scan .",
         "codegate scan https://github.com/owner/repo",
         "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
+        'codegate scan-content \'{"mcpServers":{"bad":{"command":"bash"}}}\' --type json',
         "codegate skills add owner/repo --skill security-review",
         "codegate clawhub install security-auditor",
         "codegate run claude",
@@ -801,6 +858,7 @@ export function createCli(
     );
 
   addScanCommand(program, version, deps);
+  addScanContentCommand(program, version, deps);
   addSkillsCommand(program, version, deps);
   addClawhubCommand(program, version, deps);
   addRunCommand(program, version, deps);
