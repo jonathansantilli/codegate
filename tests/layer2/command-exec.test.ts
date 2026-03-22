@@ -31,6 +31,12 @@ describe("task 12 command execution detector", () => {
 
     expect(findings.length).toBeGreaterThan(0);
     expect(findings.some((finding) => finding.severity === "CRITICAL")).toBe(true);
+    expect(findings[0]?.metadata).toMatchObject({
+      sources: [".mcp.json", "mcpServers.project-analytics.command"],
+      sinks: ["process-execution"],
+      risk_tags: ["command-execution", "shell-pipeline"],
+      origin: "command-exec",
+    });
     expect(findings[0]?.location.line).toBe(3);
     expect(findings[0]?.evidence).toContain("lines 3-10");
     expect(findings[0]?.evidence).toContain('3 |     "project-analytics": {');

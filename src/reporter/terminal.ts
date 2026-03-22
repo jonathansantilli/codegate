@@ -1,4 +1,5 @@
 import type { CodeGateReport } from "../types/report.js";
+import type { FindingMetadata } from "../types/finding.js";
 import { toAbsoluteDisplayPath } from "../path-display.js";
 import { partitionRequestedTargetFindings } from "../report/requested-target-findings.js";
 
@@ -23,6 +24,32 @@ function appendLabeledText(lines: string[], label: string, value: string): void 
   }
 
   lines.push(`  ${label}: ${value}`);
+}
+
+function appendMetadata(lines: string[], metadata: FindingMetadata | null | undefined): void {
+  if (!metadata) {
+    return;
+  }
+
+  const hasContent =
+    (metadata.sources?.length ?? 0) > 0 ||
+    (metadata.sinks?.length ?? 0) > 0 ||
+    (metadata.referenced_secrets?.length ?? 0) > 0 ||
+    (metadata.risk_tags?.length ?? 0) > 0 ||
+    typeof metadata.origin === "string";
+
+  if (!hasContent) {
+    return;
+  }
+
+  lines.push("  Metadata:");
+  appendLabeledList(lines, "Sources", metadata.sources ?? []);
+  appendLabeledList(lines, "Sinks", metadata.sinks ?? []);
+  appendLabeledList(lines, "Referenced secrets", metadata.referenced_secrets ?? []);
+  appendLabeledList(lines, "Risk tags", metadata.risk_tags ?? []);
+  if (metadata.origin) {
+    appendLabeledText(lines, "Origin", metadata.origin);
+  }
 }
 
 function appendEvidence(lines: string[], evidence: string): void {
@@ -79,6 +106,9 @@ function appendFinding(
   if (verbose) {
     lines.push(`  Rule: ${finding.rule_id}`);
     lines.push(`  Finding ID: ${finding.finding_id}`);
+    if (finding.fingerprint) {
+      lines.push(`  Fingerprint: ${finding.fingerprint}`);
+    }
     lines.push(
       `  Category: ${finding.category} | Layer: ${finding.layer} | Confidence: ${finding.confidence}`,
     );
@@ -96,6 +126,7 @@ function appendFinding(
     if (finding.remediation_actions.length > 0) {
       lines.push(`  Remediation: ${finding.remediation_actions.join(", ")}`);
     }
+    appendMetadata(lines, finding.metadata);
   }
   if (finding.layer === "L3" && finding.source_config) {
     const fieldSuffix = finding.source_config.field ? ` (${finding.source_config.field})` : "";

@@ -1,7 +1,3 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { dirname, extname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
 export type RuleQueryType = "json_path" | "toml_path" | "env_key" | "text_pattern";
 export type RuleCondition =
   | "equals_true"
@@ -35,8 +31,6 @@ export interface RuleEvaluationInput {
   parsed: unknown;
   textContent: string;
 }
-
-const rulesDir = resolve(dirname(fileURLToPath(import.meta.url)), "rules");
 
 function escapeRegex(value: string): string {
   return value.replace(/[|\\{}()[\]^$+?.]/g, "\\$&");
@@ -182,13 +176,4 @@ export function evaluateRule(rule: DetectionRule, input: RuleEvaluationInput): b
   return false;
 }
 
-export function loadRulePacks(baseDir = rulesDir): DetectionRule[] {
-  const files = readdirSync(baseDir)
-    .filter((file) => extname(file) === ".json")
-    .sort();
-
-  return files.flatMap((file) => {
-    const raw = readFileSync(join(baseDir, file), "utf8");
-    return JSON.parse(raw) as DetectionRule[];
-  });
-}
+export { loadRulePacks } from "./rule-pack-loader.js";

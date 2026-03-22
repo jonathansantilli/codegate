@@ -5,6 +5,7 @@ import { parse as parseJsonc } from "jsonc-parser";
 import type { Finding } from "./types/finding.js";
 import type { CodeGateReport } from "./types/report.js";
 import { applyReportSummary, computeExitCode as computeReportExitCode } from "./report-summary.js";
+import { applySuppressionPolicy, type SuppressionRule } from "./config/suppression-policy.js";
 
 export const OUTPUT_FORMATS = ["terminal", "json", "sarif", "markdown", "html"] as const;
 export type OutputFormat = (typeof OUTPUT_FORMATS)[number];
@@ -42,7 +43,11 @@ export interface CodeGateConfig {
   check_ide_settings: boolean;
   owasp_mapping: boolean;
   trusted_api_domains: string[];
+  rule_pack_paths?: string[];
+  allowed_rules?: string[];
+  skip_rules?: string[];
   suppress_findings: string[];
+  suppression_rules?: SuppressionRule[];
 }
 
 interface PartialTuiConfig {
@@ -75,7 +80,11 @@ interface PartialCodeGateConfig {
   check_ide_settings?: boolean;
   owasp_mapping?: boolean;
   trusted_api_domains?: string[];
+  rule_pack_paths?: string[];
+  allowed_rules?: string[];
+  skip_rules?: string[];
   suppress_findings?: string[];
+  suppression_rules?: SuppressionRule[];
 }
 
 export interface CliConfigOverrides {
@@ -119,7 +128,11 @@ export const DEFAULT_CONFIG: CodeGateConfig = {
   check_ide_settings: true,
   owasp_mapping: true,
   trusted_api_domains: [],
+  rule_pack_paths: [],
+  allowed_rules: [],
+  skip_rules: [],
   suppress_findings: [],
+  suppression_rules: [],
 };
 
 function normalizeOutputFormat(value: string | undefined): OutputFormat | undefined {
@@ -325,11 +338,31 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
       globalConfig.trusted_api_domains,
       projectConfig.trusted_api_domains,
     ]),
+    rule_pack_paths: unique([
+      DEFAULT_CONFIG.rule_pack_paths,
+      globalConfig.rule_pack_paths,
+      projectConfig.rule_pack_paths,
+    ]),
+    allowed_rules: unique([
+      DEFAULT_CONFIG.allowed_rules,
+      globalConfig.allowed_rules,
+      projectConfig.allowed_rules,
+    ]),
+    skip_rules: unique([
+      DEFAULT_CONFIG.skip_rules,
+      globalConfig.skip_rules,
+      projectConfig.skip_rules,
+    ]),
     suppress_findings: unique([
       DEFAULT_CONFIG.suppress_findings,
       globalConfig.suppress_findings,
       projectConfig.suppress_findings,
     ]),
+    suppression_rules: [
+      ...(DEFAULT_CONFIG.suppression_rules ?? []),
+      ...(globalConfig.suppression_rules ?? []),
+      ...(projectConfig.suppression_rules ?? []),
+    ],
   };
 }
 
@@ -338,11 +371,12 @@ export function computeExitCode(findings: Finding[], threshold: SeverityThreshol
 }
 
 export function applyConfigPolicy(report: CodeGateReport, config: CodeGateConfig): CodeGateReport {
-  const suppressionSet = new Set(config.suppress_findings);
-  const findings = report.findings.map((finding) => ({
+  const findings = applySuppressionPolicy(report.findings, {
+    suppress_findings: config.suppress_findings,
+    suppression_rules: config.suppression_rules,
+  }).map((finding) => ({
     ...finding,
     owasp: config.owasp_mapping ? finding.owasp : [],
-    suppressed: finding.suppressed || suppressionSet.has(finding.finding_id),
   }));
 
   return applyReportSummary(

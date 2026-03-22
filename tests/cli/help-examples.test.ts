@@ -49,6 +49,17 @@ describe("cli help examples", () => {
     );
   });
 
+  it("shows scan-content command examples", () => {
+    const help = renderHelp(["scan-content", "--help"]);
+
+    expect(help).toContain("Scan inline content for AI tool config risks");
+    expect(help).toContain("Examples:");
+    expect(help).toContain(
+      'codegate scan-content \'{"mcpServers":{"bad":{"command":"bash"}}}\' --type json',
+    );
+    expect(help).toContain("codegate scan-content '# Suspicious instructions' --type markdown");
+  });
+
   it("shows run command examples", () => {
     const help = renderHelp(["run", "--help"]);
 

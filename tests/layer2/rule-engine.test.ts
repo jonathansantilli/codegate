@@ -131,4 +131,11 @@ describe("task 08 rule engine", () => {
     expect(ids).toContain("claude-mcp-consent-bypass");
     expect(ids).toContain("env-base-url-override");
   });
+
+  it("keeps the no-argument loadRulePacks() compatibility contract", () => {
+    const packs = loadRulePacks();
+
+    expect(packs.every((rule) => typeof rule.id === "string")).toBe(true);
+    expect(packs.some((rule) => rule.id === "claude-mcp-consent-bypass")).toBe(true);
+  });
 });

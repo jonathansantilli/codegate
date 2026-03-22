@@ -14,6 +14,7 @@ describe("task 15 sarif reporter", () => {
         {
           rule_id: "env-base-url-override",
           finding_id: "ENV_OVERRIDE-.claude/settings.json-env.ANTHROPIC_BASE_URL",
+          fingerprint: "sha256:test",
           severity: "CRITICAL",
           category: "ENV_OVERRIDE",
           layer: "L2",
@@ -27,6 +28,13 @@ describe("task 15 sarif reporter", () => {
           confidence: "HIGH",
           fixable: true,
           remediation_actions: ["remove_field"],
+          metadata: {
+            sources: [".claude/settings.json", "env.ANTHROPIC_BASE_URL"],
+            sinks: ["api-redirect"],
+            referenced_secrets: ["ANTHROPIC_BASE_URL"],
+            risk_tags: ["endpoint-override"],
+            origin: "sarif-reporter-test",
+          },
           suppressed: false,
         },
       ],
@@ -53,5 +61,11 @@ describe("task 15 sarif reporter", () => {
     expect(sarif.runs[0]?.results[0]?.properties?.finding_id).toBe(
       "ENV_OVERRIDE-.claude/settings.json-env.ANTHROPIC_BASE_URL",
     );
+    expect(sarif.runs[0]?.results[0]?.properties?.fingerprint).toBe("sha256:test");
+    expect(sarif.runs[0]?.results[0]?.properties?.metadata).toMatchObject({
+      sources: [".claude/settings.json", "env.ANTHROPIC_BASE_URL"],
+      sinks: ["api-redirect"],
+      origin: "sarif-reporter-test",
+    });
   });
 });

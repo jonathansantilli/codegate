@@ -2,6 +2,7 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { afterEach, describe, expect, it } from "vitest";
+import { buildSparseFetchPlan } from "../src/scan-target/fetch-plan";
 import {
   collectExplicitCandidates,
   extractSkillFromRepoPath,
@@ -115,5 +116,15 @@ describe("scan target helpers", () => {
       "skills/security-review/SKILL.md",
       "skills/security-review/nested/payload.txt",
     ]);
+  });
+
+  it("plans a sparse fetch for a deterministic skill-targeted repository scan", () => {
+    expect(
+      buildSparseFetchPlan("https://github.com/example/skills.git", {
+        preferredSkill: "security-review",
+      }),
+    ).toEqual({
+      sparsePaths: ["/*", "!/*/", "/.*/**", "/hooks/**", "/skills/security-review/**"],
+    });
   });
 });

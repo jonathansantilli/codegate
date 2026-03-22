@@ -7,6 +7,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const mappings = [
   ["src/knowledge-base", "dist/knowledge-base"],
   ["src/layer3-dynamic/prompt-templates", "dist/layer3-dynamic/prompt-templates"],
+  ["src/layer2-static/advisories", "dist/layer2-static/advisories"],
 ];
 
 for (const [sourceRelative, destinationRelative] of mappings) {

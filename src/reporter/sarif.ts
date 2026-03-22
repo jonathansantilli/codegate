@@ -111,6 +111,7 @@ function findingToResult(finding: Finding): SarifResult {
     locations: [findingToLocation(finding)],
     properties: {
       finding_id: finding.finding_id,
+      fingerprint: finding.fingerprint ?? null,
       severity: finding.severity,
       category: finding.category,
       layer: finding.layer,
@@ -121,6 +122,7 @@ function findingToResult(finding: Finding): SarifResult {
       evidence: finding.evidence ?? null,
       fixable: finding.fixable,
       suppressed: finding.suppressed,
+      metadata: finding.metadata ?? null,
       source_config: finding.source_config ?? null,
     },
   };

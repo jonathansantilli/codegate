@@ -88,6 +88,7 @@ All notable changes to this project will be documented in this file.
 - `codegate run <tool>` is terminal/TUI only and no longer documents machine-readable `--format` output.
 - `codegate run <tool>` can require explicit confirmation for warning-level findings when `auto_proceed_below_threshold` is disabled and the cwd is not covered by `trusted_directories`.
 - `--force` on `codegate run <tool>` now skips the warning-level launch confirmation prompt.
+- Wrapper scans and `scan` now honor granular policy controls for `suppression_rules`, `rule_pack_paths`, `allowed_rules`, and `skip_rules` through the resolved config.
 - `codegate scan [target]` now accepts safely staged artifact targets in addition to local directories, including local files, remote file URLs, and git repository URLs.
 - When `codegate scan [target]` is given a skill/plugin-style entrypoint file, it now stages and scans the containing artifact folder recursively instead of analyzing only the entrypoint file.
 
