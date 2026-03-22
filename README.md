@@ -108,6 +108,7 @@ See the [Configuration](#configuration) section for full settings and examples.
 | Command                  | Purpose                                                                |
 | ------------------------ | ---------------------------------------------------------------------- |
 | `codegate scan [target]` | Scan a directory, file, or URL target for AI tool config risks.        |
+| `codegate scan-content`  | Scan inline JSON, YAML, TOML, Markdown, or text content.               |
 | `codegate run <tool>`    | Scan current directory, then launch selected AI tool if policy allows. |
 | `codegate skills [...]`  | Wrap `npx skills` and preflight-scan `skills add` targets.             |
 | `codegate clawhub [...]` | Wrap `npx clawhub` and preflight-scan `clawhub install` targets.       |
@@ -148,6 +149,28 @@ codegate scan . --remediate
 codegate scan . --fix-safe
 codegate scan . --remediate --dry-run --patch
 codegate scan . --reset-state
+```
+
+## `scan-content` Command
+
+`codegate scan-content <content...>` scans inline content directly from the command line. It is useful when you want to inspect JSON, YAML, TOML, Markdown, or plain text before writing it to disk or installing it into a tool configuration.
+
+Use `--type` to declare the content format:
+
+| Type       | Purpose                                                              |
+| ---------- | -------------------------------------------------------------------- |
+| `json`     | Parse JSON input and run the static scanner on the parsed structure. |
+| `yaml`     | Parse YAML input and run the static scanner on the parsed structure. |
+| `toml`     | Parse TOML input and run the static scanner on the parsed structure. |
+| `markdown` | Analyze Markdown instruction text as a rule surface.                 |
+| `text`     | Analyze plain text as a rule surface.                                |
+
+Examples:
+
+```bash
+codegate scan-content '{"mcpServers":{"bad":{"command":"bash"}}}' --type json
+codegate scan-content '# Suspicious instructions' --type markdown
+codegate scan-content 'echo hello' --type text
 ```
 
 ## `run` Command
@@ -199,6 +222,7 @@ Behavior:
 - Dangerous findings block execution (fail-closed).
 - Warning-level findings can still require confirmation unless `--cg-force` is provided.
 - Non-install subcommands (for example `skills find` or `clawhub search`) are passed through without preflight scanning.
+- Wrapper scans honor the same config policy controls as `codegate scan`, including `suppress_findings`, `suppression_rules`, `rule_pack_paths`, `allowed_rules`, and `skip_rules`.
 
 Wrapper flags (consumed by CodeGate, not forwarded):
 
@@ -299,33 +323,38 @@ codegate init
 - List values are merged and de-duplicated across levels.
 - `trusted_directories` is global-only; project config cannot set it.
 - `blocked_commands` is merged with defaults; defaults are always retained.
+- `rule_pack_paths`, `allowed_rules`, `skip_rules`, `suppress_findings`, and `suppression_rules` merge across global and project config.
 
 ### Full Configuration Reference
 
-| Key                              | Type             | Allowed Values                                                              | Default                                            |
-| -------------------------------- | ---------------- | --------------------------------------------------------------------------- | -------------------------------------------------- |
-| `severity_threshold`             | string           | `critical`, `high`, `medium`, `low`, `info`                                 | `high`                                             |
-| `auto_proceed_below_threshold`   | boolean          | `true`, `false`                                                             | `true`                                             |
-| `output_format`                  | string           | `terminal`, `json`, `sarif`, `markdown`, `html`                             | `terminal`                                         |
-| `scan_state_path`                | string           | file path                                                                   | `~/.codegate/scan-state.json`                      |
-| `scan_user_scope`                | boolean          | `true`, `false`                                                             | `true`                                             |
-| `tui.enabled`                    | boolean          | `true`, `false`                                                             | `true`                                             |
-| `tui.colour_scheme`              | string           | free string (currently `default`)                                           | `default`                                          |
-| `tui.compact_mode`               | boolean          | `true`, `false`                                                             | `false`                                            |
-| `tool_discovery.preferred_agent` | string           | practical values: `claude`, `claude-code`, `codex`, `codex-cli`, `opencode` | `claude`                                           |
-| `tool_discovery.agent_paths`     | object           | map of agent key -> binary path                                             | `{}`                                               |
-| `tool_discovery.skip_tools`      | array of strings | tool keys to skip in discovery/selection                                    | `[]`                                               |
-| `trusted_directories`            | array of strings | directory paths                                                             | `[]`                                               |
-| `blocked_commands`               | array of strings | command names                                                               | `["bash","sh","curl","wget","nc","python","node"]` |
-| `known_safe_mcp_servers`         | array of strings | package/server identifiers                                                  | prefilled                                          |
-| `known_safe_formatters`          | array of strings | formatter names                                                             | prefilled                                          |
-| `known_safe_lsp_servers`         | array of strings | lsp server names                                                            | prefilled                                          |
-| `known_safe_hooks`               | array of strings | relative hook paths such as `.git/hooks/pre-commit`                         | `[]`                                               |
-| `unicode_analysis`               | boolean          | `true`, `false`                                                             | `true`                                             |
-| `check_ide_settings`             | boolean          | `true`, `false`                                                             | `true`                                             |
-| `owasp_mapping`                  | boolean          | `true`, `false`                                                             | `true`                                             |
-| `trusted_api_domains`            | array of strings | domain names                                                                | `[]`                                               |
-| `suppress_findings`              | array of strings | finding IDs/fingerprints                                                    | `[]`                                               |
+| Key                              | Type             | Allowed Values                                                                               | Default                                            |
+| -------------------------------- | ---------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `severity_threshold`             | string           | `critical`, `high`, `medium`, `low`, `info`                                                  | `high`                                             |
+| `auto_proceed_below_threshold`   | boolean          | `true`, `false`                                                                              | `true`                                             |
+| `output_format`                  | string           | `terminal`, `json`, `sarif`, `markdown`, `html`                                              | `terminal`                                         |
+| `scan_state_path`                | string           | file path                                                                                    | `~/.codegate/scan-state.json`                      |
+| `scan_user_scope`                | boolean          | `true`, `false`                                                                              | `true`                                             |
+| `tui.enabled`                    | boolean          | `true`, `false`                                                                              | `true`                                             |
+| `tui.colour_scheme`              | string           | free string (currently `default`)                                                            | `default`                                          |
+| `tui.compact_mode`               | boolean          | `true`, `false`                                                                              | `false`                                            |
+| `tool_discovery.preferred_agent` | string           | practical values: `claude`, `claude-code`, `codex`, `codex-cli`, `opencode`                  | `claude`                                           |
+| `tool_discovery.agent_paths`     | object           | map of agent key -> binary path                                                              | `{}`                                               |
+| `tool_discovery.skip_tools`      | array of strings | tool keys to skip in discovery/selection                                                     | `[]`                                               |
+| `trusted_directories`            | array of strings | directory paths                                                                              | `[]`                                               |
+| `blocked_commands`               | array of strings | command names                                                                                | `["bash","sh","curl","wget","nc","python","node"]` |
+| `known_safe_mcp_servers`         | array of strings | package/server identifiers                                                                   | prefilled                                          |
+| `known_safe_formatters`          | array of strings | formatter names                                                                              | prefilled                                          |
+| `known_safe_lsp_servers`         | array of strings | lsp server names                                                                             | prefilled                                          |
+| `known_safe_hooks`               | array of strings | relative hook paths such as `.git/hooks/pre-commit`                                          | `[]`                                               |
+| `unicode_analysis`               | boolean          | `true`, `false`                                                                              | `true`                                             |
+| `check_ide_settings`             | boolean          | `true`, `false`                                                                              | `true`                                             |
+| `owasp_mapping`                  | boolean          | `true`, `false`                                                                              | `true`                                             |
+| `trusted_api_domains`            | array of strings | domain names                                                                                 | `[]`                                               |
+| `suppress_findings`              | array of strings | finding IDs/fingerprints                                                                     | `[]`                                               |
+| `suppression_rules`              | array of objects | rule match objects with `rule_id`, `file_path`, `severity`, `category`, `cwe`, `fingerprint` | `[]`                                               |
+| `rule_pack_paths`                | array of strings | extra rule pack files or directories                                                         | `[]`                                               |
+| `allowed_rules`                  | array of strings | rule IDs to keep after loading                                                               | `[]`                                               |
+| `skip_rules`                     | array of strings | rule IDs to drop after loading                                                               | `[]`                                               |
 
 ### Default Config Example
 
@@ -359,7 +388,11 @@ codegate init
   "check_ide_settings": true,
   "owasp_mapping": true,
   "trusted_api_domains": [],
-  "suppress_findings": []
+  "suppress_findings": [],
+  "suppression_rules": [],
+  "rule_pack_paths": [],
+  "allowed_rules": [],
+  "skip_rules": []
 }
 ```
 
@@ -371,6 +404,9 @@ Configuration notes:
 - `unicode_analysis=false` disables hidden-unicode findings in Layer 2 rule-file scanning and Layer 3 tool-description scanning. Other rule-file heuristics remain enabled.
 - `check_ide_settings=false` disables `IDE_SETTINGS` findings.
 - `owasp_mapping=false` keeps detection behavior unchanged and emits empty `owasp` arrays in reports.
+- `suppression_rules` applies all listed criteria with AND semantics. If a criterion is omitted, it is ignored.
+- `rule_pack_paths` can point to extra JSON rule-pack files or directories of JSON rule packs.
+- `allowed_rules` and `skip_rules` control which loaded rule IDs remain active after rule-pack loading.
 
 ## Output Formats
 

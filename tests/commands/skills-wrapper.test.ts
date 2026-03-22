@@ -25,6 +25,10 @@ const BASE_CONFIG: CodeGateConfig = {
   owasp_mapping: true,
   trusted_api_domains: [],
   suppress_findings: [],
+  suppression_rules: [],
+  rule_pack_paths: [],
+  allowed_rules: [],
+  skip_rules: [],
 };
 
 function report(exitCode: 0 | 1 | 2): CodeGateReport {
@@ -543,6 +547,51 @@ describe("skills wrapper execution", () => {
     );
 
     expect(resolvedConfig?.scan_user_scope).toBe(true);
+  });
+
+  it("passes granular policy controls into the scan config", async () => {
+    let resolvedConfig: CodeGateConfig | undefined;
+
+    await executeSkillsWrapper(
+      {
+        version: "0.1.0",
+        skillsArgs: ["add", "https://github.com/vercel-labs/skills", "--skill", "find-skills"],
+      },
+      makeDeps({
+        resolveConfig: (options) => ({
+          ...BASE_CONFIG,
+          output_format: options.cli?.format ?? BASE_CONFIG.output_format,
+          tui: {
+            ...BASE_CONFIG.tui,
+            enabled: options.cli?.noTui ? false : BASE_CONFIG.tui.enabled,
+          },
+          rule_pack_paths: ["/tmp/rules/custom.json"],
+          allowed_rules: ["rule-allow"],
+          skip_rules: ["rule-skip"],
+          suppress_findings: ["legacy-suppression"],
+          suppression_rules: [
+            {
+              rule_id: "rule-allow",
+              file_path: "skills/**/*.md",
+              severity: "LOW",
+              category: "RULE_INJECTION",
+              cwe: "CWE-116",
+              fingerprint: "sha256:policy-test",
+            },
+          ],
+        }),
+        runScan: async (input) => {
+          resolvedConfig = input.config;
+          return report(0);
+        },
+      }),
+    );
+
+    expect(resolvedConfig?.rule_pack_paths).toEqual(["/tmp/rules/custom.json"]);
+    expect(resolvedConfig?.allowed_rules).toEqual(["rule-allow"]);
+    expect(resolvedConfig?.skip_rules).toEqual(["rule-skip"]);
+    expect(resolvedConfig?.suppress_findings).toEqual(["legacy-suppression"]);
+    expect(resolvedConfig?.suppression_rules).toHaveLength(1);
   });
 
   it("runs deep discovery when --cg-deep is set", async () => {

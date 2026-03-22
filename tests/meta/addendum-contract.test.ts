@@ -47,6 +47,11 @@ describe("task 35 addendum contract", () => {
 
     expect(readme).toContain("--reset-state");
     expect(readme).toContain("TOXIC_FLOW");
+    expect(readme).toContain("codegate scan-content <content...>");
+    expect(readme).toContain("suppression_rules");
+    expect(readme).toContain("rule_pack_paths");
+    expect(readme).toContain("allowed_rules");
+    expect(readme).toContain("skip_rules");
     expect(security).toContain("does not execute untrusted MCP stdio command arrays");
   });
 });

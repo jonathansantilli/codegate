@@ -14,6 +14,7 @@ describe("task 15 markdown reporter", () => {
         {
           rule_id: "env-base-url-override",
           finding_id: "ENV_OVERRIDE-.claude/settings.json-env.ANTHROPIC_BASE_URL",
+          fingerprint: "sha256:test",
           severity: "CRITICAL",
           category: "ENV_OVERRIDE",
           layer: "L2",
@@ -27,6 +28,13 @@ describe("task 15 markdown reporter", () => {
           confidence: "HIGH",
           fixable: true,
           remediation_actions: ["remove_field"],
+          metadata: {
+            sources: [".claude/settings.json", "env.ANTHROPIC_BASE_URL"],
+            sinks: ["api-redirect"],
+            referenced_secrets: ["ANTHROPIC_BASE_URL"],
+            risk_tags: ["endpoint-override"],
+            origin: "markdown-reporter-test",
+          },
           suppressed: false,
         },
       ],
@@ -43,5 +51,7 @@ describe("task 15 markdown reporter", () => {
     expect(markdown).toContain("# CodeGate Report");
     expect(markdown).toContain("| CRITICAL | ENV_OVERRIDE");
     expect(markdown).toContain("`.claude/settings.json`");
+    expect(markdown).toContain("sha256:test");
+    expect(markdown).toContain("sources=.claude/settings.json, env.ANTHROPIC_BASE_URL");
   });
 });

@@ -2,6 +2,7 @@ import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, statSync
 import { spawnSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { buildSparseFetchPlan } from "./fetch-plan.js";
 import {
   cleanupTempDir,
   collectExplicitCandidates,
@@ -25,21 +26,88 @@ interface CloneGitRepoOptions {
   displayTarget?: string;
 }
 
-function cloneRepository(source: string, destination: string): void {
-  const result = spawnSync(
-    "git",
-    ["clone", "--depth", "1", "--filter=blob:none", source, destination],
-    {
-      encoding: "utf8",
-    },
-  );
+function runGit(args: string[]): void {
+  const result = spawnSync("git", args, {
+    encoding: "utf8",
+  });
+
+  if (result.status !== 0) {
+    const stderr = result.stderr?.trim();
+    throw new Error(stderr && stderr.length > 0 ? stderr : `git ${args.join(" ")} failed`);
+  }
+}
+
+function cloneRepository(source: string, destination: string, sparsePaths?: string[]): void {
+  const cloneArgs = ["clone", "--depth", "1", "--filter=blob:none"];
+  if (sparsePaths && sparsePaths.length > 0) {
+    cloneArgs.push("--no-checkout");
+  }
+  cloneArgs.push(source, destination);
+
+  const result = spawnSync("git", cloneArgs, {
+    encoding: "utf8",
+  });
 
   if (result.status !== 0) {
     const stderr = result.stderr?.trim();
     throw new Error(stderr && stderr.length > 0 ? stderr : `git clone failed for ${source}`);
   }
 
-  cleanupTempDir(join(destination, ".git"));
+  if (!sparsePaths || sparsePaths.length === 0) {
+    cleanupTempDir(join(destination, ".git"));
+    return;
+  }
+
+  try {
+    runGit(["-C", destination, "sparse-checkout", "init", "--no-cone"]);
+    runGit(["-C", destination, "sparse-checkout", "set", "--no-cone", ...sparsePaths]);
+    runGit(["-C", destination, "checkout", "--force", "HEAD"]);
+    cleanupTempDir(join(destination, ".git"));
+    return;
+  } catch (error) {
+    cleanupTempDir(destination);
+    const fallback = spawnSync(
+      "git",
+      ["clone", "--depth", "1", "--filter=blob:none", source, destination],
+      {
+        encoding: "utf8",
+      },
+    );
+    if (fallback.status !== 0) {
+      const stderr = fallback.stderr?.trim();
+      throw new Error(stderr && stderr.length > 0 ? stderr : `git clone failed for ${source}`, {
+        cause: error,
+      });
+    }
+    cleanupTempDir(join(destination, ".git"));
+  }
+}
+
+function cloneSparseRepository(source: string, destination: string, sparsePaths: string[]): void {
+  cloneRepository(source, destination, sparsePaths);
+}
+
+function cloneFullRepository(source: string, destination: string): void {
+  cloneRepository(source, destination);
+}
+
+function stageSparseClone(
+  source: string,
+  destination: string,
+  preferredSkill?: string,
+  inferredSkill?: string,
+): void {
+  const sparsePlan = buildSparseFetchPlan(source, {
+    preferredSkill,
+    inferredSkill,
+  });
+
+  if (!sparsePlan) {
+    cloneFullRepository(source, destination);
+    return;
+  }
+
+  cloneSparseRepository(source, destination, sparsePlan.sparsePaths);
 }
 
 export function stageLocalFile(absolutePath: string): ResolvedScanTarget {
@@ -201,7 +269,7 @@ export async function cloneGitRepo(
   const repoDir = join(tempRoot, "repo");
 
   try {
-    cloneRepository(rawTarget, repoDir);
+    stageSparseClone(rawTarget, repoDir, options.preferredSkill, options.inferredSkill);
     return await stageSkillAwareRepository(
       tempRoot,
       repoDir,
@@ -223,7 +291,7 @@ export function stageRepoSubdirectory(
   const repoDir = join(tempRoot, "repo");
 
   try {
-    cloneRepository(repoUrl, repoDir);
+    stageSparseClone(repoUrl, repoDir, undefined, extractSkillFromRepoPath(filePath) ?? undefined);
 
     const inferredSkill = extractSkillFromRepoPath(filePath);
     if (inferredSkill) {

@@ -13,6 +13,7 @@ import {
 } from "./layer3-dynamic/tool-description-scanner.js";
 import { detectToxicFlows, type ToxicToolClass } from "./layer3-dynamic/toxic-flow.js";
 import { applyReportSummary } from "./report-summary.js";
+import { withFindingFingerprint } from "./report/finding-fingerprint.js";
 import type { Finding } from "./types/finding.js";
 
 export interface StaticPipelineInput {
@@ -80,7 +81,7 @@ export function runStaticPipeline(input: StaticPipelineInput): CodeGateReport {
     symlinkEscapes: input.symlinkEscapes,
     hooks: input.hooks,
     config: input.config,
-  });
+  }).map(withFindingFingerprint);
 
   const report = createEmptyReport({
     version: input.version,
@@ -143,7 +144,7 @@ function parseLayer3Response(resourceId: string, metadata: unknown): Finding[] {
     .filter((item): item is Layer3ResponseFinding => typeof item === "object" && item !== null)
     .map((item, index) => {
       const findingId = item.id ?? `L3-${resourceId}-${index}`;
-      return {
+      return withFindingFingerprint({
         rule_id: item.id ?? "layer3-analysis-finding",
         finding_id: findingId,
         severity: parseSeverity(item.severity),
@@ -162,7 +163,7 @@ function parseLayer3Response(resourceId: string, metadata: unknown): Finding[] {
         remediation_actions: item.remediation_actions ?? [],
         source_config: item.source_config ?? null,
         suppressed: false,
-      };
+      });
     });
 }
 
@@ -274,12 +275,12 @@ function deriveLayer3ToolFindings(
       serverId: resourceId,
       tools: toolDescriptions,
       unicodeAnalysis: options.unicodeAnalysis,
-    }),
+    }).map(withFindingFingerprint),
     ...detectToxicFlows({
       scopeId: resourceId,
       tools: toolDescriptions,
       knownClassifications,
-    }),
+    }).map(withFindingFingerprint),
   ];
 }
 
@@ -291,7 +292,7 @@ function layer3ErrorFinding(
   const severity: Finding["severity"] =
     status === "timeout" ? "MEDIUM" : status === "skipped_without_consent" ? "INFO" : "LOW";
 
-  return {
+  return withFindingFingerprint({
     rule_id: `layer3-${status}`,
     finding_id: `L3-${status}-${resourceId}`,
     severity,
@@ -308,7 +309,7 @@ function layer3ErrorFinding(
     fixable: false,
     remediation_actions: [],
     suppressed: false,
-  };
+  });
 }
 
 function isRegistryMetadataResource(resourceId: string): boolean {
@@ -375,7 +376,7 @@ export function mergeLayer3Findings(
 ): CodeGateReport {
   return applyReportSummary({
     ...baseReport,
-    findings: [...baseReport.findings, ...layer3Findings],
+    findings: [...baseReport.findings, ...layer3Findings].map(withFindingFingerprint),
   });
 }
 

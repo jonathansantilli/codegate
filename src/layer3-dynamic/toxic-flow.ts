@@ -76,6 +76,12 @@ function makeFinding(
     confidence: "HIGH",
     fixable: false,
     remediation_actions: [],
+    metadata: {
+      sources: [sourceTool],
+      sinks: [sinkTool],
+      risk_tags: ["toxic-flow"],
+      origin: "toxic-flow",
+    },
     suppressed: false,
   };
 }

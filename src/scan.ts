@@ -782,6 +782,9 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
       trustedApiDomains: input.config.trusted_api_domains,
       unicodeAnalysis: input.config.unicode_analysis,
       checkIdeSettings: input.config.check_ide_settings,
+      rulePackPaths: input.config.rule_pack_paths,
+      allowedRules: input.config.allowed_rules,
+      skipRules: input.config.skip_rules,
     },
   });
 

@@ -123,6 +123,12 @@ function makeFinding(
     confidence: "HIGH",
     fixable: true,
     remediation_actions: ["remove_field", "replace_with_default"],
+    metadata: {
+      sources: [filePath, field],
+      sinks: ["process-execution"],
+      risk_tags: ["command-execution", "shell-pipeline"],
+      origin: "command-exec",
+    },
     evidence: evidence?.evidence ?? null,
     suppressed: false,
   };
