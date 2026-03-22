@@ -1,3 +1,9 @@
+# [0.8.0](https://github.com/jonathansantilli/codegate/compare/v0.7.0...v0.8.0) (2026-03-22)
+
+### Features
+
+- uplift scan methodology with fingerprints, policy rules, advisories, and scan-content ([#28](https://github.com/jonathansantilli/codegate/issues/28)) ([f3cf1b1](https://github.com/jonathansantilli/codegate/commit/f3cf1b18b1efdf44887b0e21ea2f3d1a8471fbb5))
+
 # [0.7.0](https://github.com/jonathansantilli/codegate/compare/v0.6.1...v0.7.0) (2026-03-17)
 
 ### Features
