@@ -33,6 +33,7 @@ interface SarifResult {
   level: "error" | "warning" | "note";
   message: { text: string };
   locations: SarifLocation[];
+  relatedLocations?: SarifLocation[];
   properties: Record<string, unknown>;
 }
 
@@ -64,23 +65,52 @@ function toSarifLevel(severity: Finding["severity"]): SarifResult["level"] {
 }
 
 function findingToLocation(finding: Finding): SarifLocation {
+  return locationToSarif({
+    filePath: finding.file_path,
+    location: finding.location,
+  });
+}
+
+function locationToSarif(input: {
+  filePath: string;
+  location?: {
+    line?: number;
+    column?: number;
+  };
+}): SarifLocation {
   const region: SarifRegion = {};
 
-  if (typeof finding.location.line === "number") {
-    region.startLine = finding.location.line;
+  if (typeof input.location?.line === "number") {
+    region.startLine = input.location.line;
   }
-  if (typeof finding.location.column === "number") {
-    region.startColumn = finding.location.column;
+  if (typeof input.location?.column === "number") {
+    region.startColumn = input.location.column;
   }
 
   return {
     physicalLocation: {
       artifactLocation: {
-        uri: finding.file_path,
+        uri: input.filePath,
       },
       region: Object.keys(region).length > 0 ? region : undefined,
     },
   };
+}
+
+function findingToRelatedLocations(finding: Finding): SarifLocation[] | undefined {
+  const related = finding.affected_locations ?? [];
+  if (related.length === 0) {
+    return undefined;
+  }
+
+  const locations = related.map((location) =>
+    locationToSarif({
+      filePath: location.file_path,
+      location: location.location,
+    }),
+  );
+
+  return locations.length > 0 ? locations : undefined;
 }
 
 function buildRules(findings: Finding[]): SarifRule[] {
@@ -109,6 +139,7 @@ function findingToResult(finding: Finding): SarifResult {
     level: toSarifLevel(finding.severity),
     message: { text: finding.description },
     locations: [findingToLocation(finding)],
+    relatedLocations: findingToRelatedLocations(finding),
     properties: {
       finding_id: finding.finding_id,
       fingerprint: finding.fingerprint ?? null,

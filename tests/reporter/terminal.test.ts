@@ -70,6 +70,16 @@ describe("task 15 terminal reporter", () => {
           layer: "L2",
           file_path: ".mcp.json",
           location: { field: "mcpServers.bad.command", line: 12, column: 9 },
+          affected_locations: [
+            {
+              file_path: ".mcp.json",
+              location: { field: "mcpServers.bad.args", line: 14, column: 11 },
+            },
+            {
+              file_path: ".cursor/mcp.json",
+              location: { field: "mcpServers.bad.command", line: 3, column: 5 },
+            },
+          ],
           description: "Potential command execution from project MCP server",
           affected_tools: ["claude-code"],
           cve: "CVE-2025-61260",
@@ -105,6 +115,7 @@ describe("task 15 terminal reporter", () => {
     expect(output).toContain("CVE: CVE-2025-61260");
     expect(output).toContain("OWASP: ASI02, ASI05");
     expect(output).toContain("Metadata:");
+    expect(output).toContain("Affected locations:");
     expect(output).toContain("Sources:");
     expect(output).toContain("Risk tags:");
   });

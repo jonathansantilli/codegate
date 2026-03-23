@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { join, relative, resolve, sep } from "node:path";
+import { basename, join, relative, resolve, sep } from "node:path";
 import {
   collectLocalTextAnalysisTargets,
   type LocalTextAnalysisTarget,
@@ -25,10 +25,15 @@ import {
   loadScanState,
   saveScanState,
 } from "./layer2-static/state/scan-state.js";
+import {
+  applyInlineIgnoreDirectives,
+  collectInlineIgnoreDirectives,
+} from "./config/inline-ignore.js";
+import { isGitHubDependabotPath } from "./layer2-static/dependabot/parser.js";
 import type { DiscoveryFormat } from "./types/discovery.js";
 import type { Finding } from "./types/finding.js";
 import type { CodeGateReport } from "./types/report.js";
-import type { CodeGateConfig } from "./config.js";
+import type { CodeGateConfig, ScanCollectionKind, ScanCollectionMode } from "./config.js";
 import type { DeepScanResource } from "./pipeline.js";
 
 interface CandidatePattern {
@@ -56,11 +61,15 @@ export interface ScanEngineInput {
 export interface DeepScanDiscoveryOptions {
   includeUserScope?: boolean;
   homeDir?: string;
+  collectModes?: ScanCollectionMode[];
+  collectKinds?: ScanCollectionKind[];
 }
 
 export interface ScanSurfaceOptions {
   includeUserScope?: boolean;
   homeDir?: string;
+  collectModes?: ScanCollectionMode[];
+  collectKinds?: ScanCollectionKind[];
 }
 
 export interface ScanDiscoveryCandidate {
@@ -88,6 +97,8 @@ export interface ScanDiscoveryContextOptions {
   homeDir?: string;
   parseSelected?: boolean;
   explicitCandidates?: ScanDiscoveryCandidate[];
+  collectModes?: ScanCollectionMode[];
+  collectKinds?: ScanCollectionKind[];
 }
 
 const INFERRED_ARTIFACT_RULES: Array<{
@@ -95,6 +106,21 @@ const INFERRED_ARTIFACT_RULES: Array<{
   format: DiscoveryFormat;
   tool: string;
 }> = [
+  {
+    pattern: /(?:^|\/)\.github\/workflows\/[^/]+\.ya?ml$/iu,
+    format: "yaml",
+    tool: "github-actions",
+  },
+  {
+    pattern: /(?:^|\/)\.github\/dependabot\.ya?ml$/iu,
+    format: "yaml",
+    tool: "dependabot",
+  },
+  {
+    pattern: /(?:^|\/)action\.ya?ml$/iu,
+    format: "yaml",
+    tool: "github-actions",
+  },
   { pattern: /(?:^|\/)agents\.md$/iu, format: "markdown", tool: "claude-code" },
   { pattern: /(?:^|\/)claude\.md$/iu, format: "markdown", tool: "claude-code" },
   { pattern: /(?:^|\/)codex\.md$/iu, format: "markdown", tool: "codex-cli" },
@@ -120,6 +146,16 @@ function wildcardToRegex(pattern: string): RegExp {
 
 function normalizePathForMatch(path: string): string {
   return path.split(sep).join("/");
+}
+
+function normalizeCollectionKinds(
+  input: ScanCollectionKind[] | undefined,
+): Set<ScanCollectionKind> | undefined {
+  if (!input || input.length === 0) {
+    return undefined;
+  }
+
+  return new Set(input);
 }
 
 function normalizeUserScopePattern(pattern: string): string {
@@ -151,6 +187,40 @@ function gatherCandidatePatterns(kb: KnowledgeBaseLoadResult): CandidatePattern[
   }
 
   return candidates;
+}
+
+function isWorkflowCollectionCandidate(reportPath: string): boolean {
+  return /(?:^|\/)\.github\/workflows\/[^/]+\.ya?ml$/iu.test(normalizePathForMatch(reportPath));
+}
+
+function isActionCollectionCandidate(reportPath: string): boolean {
+  const fileName = basename(normalizePathForMatch(reportPath)).toLowerCase();
+  return fileName === "action.yml" || fileName === "action.yaml";
+}
+
+function inferCollectionKind(reportPath: string): ScanCollectionKind | null {
+  if (isWorkflowCollectionCandidate(reportPath)) {
+    return "workflows";
+  }
+  if (isActionCollectionCandidate(reportPath)) {
+    return "actions";
+  }
+  if (isGitHubDependabotPath(reportPath)) {
+    return "dependabot";
+  }
+  return null;
+}
+
+function matchesCollectionKinds(
+  reportPath: string,
+  collectKinds: Set<ScanCollectionKind> | undefined,
+): boolean {
+  if (!collectKinds) {
+    return true;
+  }
+
+  const kind = inferCollectionKind(reportPath);
+  return kind !== null && collectKinds.has(kind);
 }
 
 function isRegularFile(path: string): boolean {
@@ -261,9 +331,21 @@ function collectSelectedCandidates(
   absoluteTarget: string,
   walkedFiles: string[],
   patterns: CandidatePattern[],
-  options: { includeUserScope: boolean; homeDir: string },
+  options: {
+    includeUserScope: boolean;
+    homeDir: string;
+    collectModes: Set<ScanCollectionMode>;
+    collectKinds?: Set<ScanCollectionKind>;
+  },
 ): ScanDiscoveryCandidate[] {
   const selected = new Map<string, ScanDiscoveryCandidate>();
+  const includeAll = options.collectModes.has("all");
+  const includeProject =
+    includeAll || options.collectModes.has("default") || options.collectModes.has("project");
+  const includeUser =
+    includeAll ||
+    options.collectModes.has("user") ||
+    (options.collectModes.has("default") && options.includeUserScope);
 
   const filesByRelativePath = walkedFiles
     .map((filePath) => ({
@@ -273,11 +355,17 @@ function collectSelectedCandidates(
     .filter((entry) => !entry.relativePath.startsWith(".."));
 
   for (const file of filesByRelativePath) {
+    if (!includeProject) {
+      continue;
+    }
     for (const candidate of patterns) {
       if (candidate.scope !== "project") {
         continue;
       }
       if (!wildcardToRegex(candidate.pattern).test(file.relativePath)) {
+        continue;
+      }
+      if (!matchesCollectionKinds(file.relativePath, options.collectKinds)) {
         continue;
       }
       if (!selected.has(file.relativePath)) {
@@ -291,8 +379,14 @@ function collectSelectedCandidates(
     }
   }
 
-  if (!options.includeUserScope) {
+  if (!includeUser) {
     for (const file of filesByRelativePath) {
+      if (!includeProject) {
+        continue;
+      }
+      if (!matchesCollectionKinds(file.relativePath, options.collectKinds)) {
+        continue;
+      }
       if (selected.has(file.relativePath)) {
         continue;
       }
@@ -308,41 +402,55 @@ function collectSelectedCandidates(
     return Array.from(selected.values());
   }
 
-  for (const candidate of patterns) {
-    if (candidate.scope !== "user") {
-      continue;
-    }
-    const userPattern = normalizeUserScopePattern(candidate.pattern);
-    if (userPattern.includes("*")) {
-      for (const match of collectUserScopeWildcardMatches(options.homeDir, userPattern)) {
-        const reportPath = toUserReportPath(match.relativePath);
-        if (!selected.has(reportPath)) {
-          selected.set(reportPath, {
-            reportPath,
-            absolutePath: match.absolutePath,
-            format: candidate.format,
-            tool: candidate.tool,
-          });
-        }
+  if (includeUser) {
+    for (const candidate of patterns) {
+      if (candidate.scope !== "user") {
+        continue;
       }
-      continue;
-    }
-    const absolutePath = resolve(options.homeDir, userPattern);
-    if (!existsSync(absolutePath) || !isRegularFile(absolutePath)) {
-      continue;
-    }
-    const reportPath = toUserReportPath(userPattern);
-    if (!selected.has(reportPath)) {
-      selected.set(reportPath, {
-        reportPath,
-        absolutePath,
-        format: candidate.format,
-        tool: candidate.tool,
-      });
+      const userPattern = normalizeUserScopePattern(candidate.pattern);
+      if (userPattern.includes("*")) {
+        for (const match of collectUserScopeWildcardMatches(options.homeDir, userPattern)) {
+          const reportPath = toUserReportPath(match.relativePath);
+          if (!matchesCollectionKinds(reportPath, options.collectKinds)) {
+            continue;
+          }
+          if (!selected.has(reportPath)) {
+            selected.set(reportPath, {
+              reportPath,
+              absolutePath: match.absolutePath,
+              format: candidate.format,
+              tool: candidate.tool,
+            });
+          }
+        }
+        continue;
+      }
+      const absolutePath = resolve(options.homeDir, userPattern);
+      if (!existsSync(absolutePath) || !isRegularFile(absolutePath)) {
+        continue;
+      }
+      const reportPath = toUserReportPath(userPattern);
+      if (!matchesCollectionKinds(reportPath, options.collectKinds)) {
+        continue;
+      }
+      if (!selected.has(reportPath)) {
+        selected.set(reportPath, {
+          reportPath,
+          absolutePath,
+          format: candidate.format,
+          tool: candidate.tool,
+        });
+      }
     }
   }
 
   for (const file of filesByRelativePath) {
+    if (!includeProject && !includeAll) {
+      continue;
+    }
+    if (!matchesCollectionKinds(file.relativePath, options.collectKinds)) {
+      continue;
+    }
     if (selected.has(file.relativePath)) {
       continue;
     }
@@ -358,9 +466,23 @@ function collectSelectedCandidates(
   return Array.from(selected.values());
 }
 
+function normalizeCollectionModes(
+  input: ScanCollectionMode[] | undefined,
+): Set<ScanCollectionMode> {
+  const normalized = new Set<ScanCollectionMode>();
+  for (const mode of input ?? []) {
+    normalized.add(mode);
+  }
+  if (normalized.size === 0) {
+    normalized.add("default");
+  }
+  return normalized;
+}
+
 function mergeExplicitCandidates(
   selected: ScanDiscoveryCandidate[],
   explicitCandidates: ScanDiscoveryCandidate[] | undefined,
+  collectKinds?: Set<ScanCollectionKind>,
 ): ScanDiscoveryCandidate[] {
   if (!explicitCandidates || explicitCandidates.length === 0) {
     return selected;
@@ -371,6 +493,9 @@ function mergeExplicitCandidates(
     merged.set(candidate.reportPath, candidate);
   }
   for (const candidate of explicitCandidates) {
+    if (!matchesCollectionKinds(candidate.reportPath, collectKinds)) {
+      continue;
+    }
     merged.set(candidate.reportPath, candidate);
   }
   return Array.from(merged.values());
@@ -415,11 +540,16 @@ function ensureParsedCandidates(context: ScanDiscoveryContext): ParsedScanDiscov
   return context.parsedCandidates;
 }
 
-function makeParseErrorFinding(filePath: string, tool: string, message: string): Finding {
+function makeParseErrorFinding(
+  filePath: string,
+  tool: string,
+  message: string,
+  strictCollection: boolean,
+): Finding {
   return {
     rule_id: "parse-error",
     finding_id: `PARSE_ERROR-${filePath}`,
-    severity: "LOW",
+    severity: strictCollection ? "HIGH" : "LOW",
     category: "PARSE_ERROR",
     layer: "L1",
     file_path: filePath,
@@ -633,6 +763,8 @@ export function discoverDeepScanResources(
   const context = createScanDiscoveryContext(scanTarget, kbInput, {
     includeUserScope: options.includeUserScope,
     homeDir: options.homeDir,
+    collectModes: options.collectModes,
+    collectKinds: options.collectKinds,
     parseSelected: true,
   });
   return discoverDeepScanResourcesFromContext(context);
@@ -652,12 +784,20 @@ export function createScanDiscoveryContext(
   const kb = kbInput ?? loadKnowledgeBase();
   const patterns = gatherCandidatePatterns(kb);
   const walked = walkProjectTree(absoluteTarget);
+  const collectModes = normalizeCollectionModes(options.collectModes);
+  const collectKinds = normalizeCollectionKinds(options.collectKinds);
+  const explicitOnly = collectModes.size === 1 && collectModes.has("explicit");
   const selected = mergeExplicitCandidates(
-    collectSelectedCandidates(absoluteTarget, walked.files, patterns, {
-      includeUserScope: options.includeUserScope === true,
-      homeDir: resolve(options.homeDir ?? homedir()),
-    }),
+    explicitOnly
+      ? []
+      : collectSelectedCandidates(absoluteTarget, walked.files, patterns, {
+          includeUserScope: options.includeUserScope === true,
+          homeDir: resolve(options.homeDir ?? homedir()),
+          collectModes,
+          collectKinds,
+        }),
     options.explicitCandidates,
+    collectKinds,
   );
 
   return {
@@ -691,6 +831,8 @@ export function collectScanSurface(
   const context = createScanDiscoveryContext(scanTarget, kbInput, {
     includeUserScope: options.includeUserScope === true,
     homeDir: options.homeDir,
+    collectModes: options.collectModes,
+    collectKinds: options.collectKinds,
   });
 
   const surface = new Set<string>(context.walked.files);
@@ -719,6 +861,8 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
     input.discoveryContext ??
     createScanDiscoveryContext(input.scanTarget, input.kb, {
       includeUserScope: input.config.scan_user_scope === true,
+      collectModes: input.config.scan_collection_modes,
+      collectKinds: input.config.scan_collection_kinds,
       homeDir: input.homeDir,
       parseSelected: true,
     });
@@ -729,7 +873,14 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
 
   for (const item of ensureParsedCandidates(context)) {
     if (!item.parsed.ok) {
-      parseErrors.push(makeParseErrorFinding(item.reportPath, item.tool, item.parsed.error));
+      parseErrors.push(
+        makeParseErrorFinding(
+          item.reportPath,
+          item.tool,
+          item.parsed.error,
+          input.config.strict_collection === true,
+        ),
+      );
       continue;
     }
 
@@ -759,7 +910,7 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
       };
     });
 
-  const report = runStaticPipeline({
+  const report = await runStaticPipeline({
     version: input.version,
     kbVersion: kb.schemaVersion,
     scanTarget: input.scanTarget,
@@ -785,6 +936,10 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
       rulePackPaths: input.config.rule_pack_paths,
       allowedRules: input.config.allowed_rules,
       skipRules: input.config.skip_rules,
+      persona: input.config.persona,
+      runtimeMode: input.config.runtime_mode,
+      workflowAuditsEnabled: input.config.workflow_audits?.enabled === true,
+      rulePolicies: input.config.rules,
     },
   });
 
@@ -802,7 +957,16 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
   });
   saveScanState(stateResult.nextState, input.scanStatePath);
 
-  const findings = [...report.findings, ...parseErrors, ...stateResult.findings];
+  const inlineIgnores = collectInlineIgnoreDirectives(
+    staticFiles.map((file) => ({
+      filePath: file.filePath,
+      textContent: file.textContent,
+    })),
+  );
+  const findings = applyInlineIgnoreDirectives(
+    [...report.findings, ...parseErrors, ...stateResult.findings],
+    inlineIgnores,
+  );
   return applyReportSummary({
     ...report,
     findings,

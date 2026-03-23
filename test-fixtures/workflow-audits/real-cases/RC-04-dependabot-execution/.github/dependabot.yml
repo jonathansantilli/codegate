@@ -1,0 +1,8 @@
+# Source: https://github.com/RoleModel/rolemodel_rails/blob/83f8c13518afd1137405b81fc4723e202f833368/lib/generators/rolemodel/github/templates/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: bundler
+    directory: "/"
+    insecure-external-code-execution: allow
+    schedule:
+      interval: weekly

@@ -74,14 +74,16 @@ interface Layer3ToolEntry {
 
 type ToolClassificationMap = Record<string, ToxicToolClass[]>;
 
-export function runStaticPipeline(input: StaticPipelineInput): CodeGateReport {
-  const findings = runStaticEngine({
-    projectRoot: input.projectRoot,
-    files: input.files,
-    symlinkEscapes: input.symlinkEscapes,
-    hooks: input.hooks,
-    config: input.config,
-  }).map(withFindingFingerprint);
+export async function runStaticPipeline(input: StaticPipelineInput): Promise<CodeGateReport> {
+  const findings = (
+    await runStaticEngine({
+      projectRoot: input.projectRoot,
+      files: input.files,
+      symlinkEscapes: input.symlinkEscapes,
+      hooks: input.hooks,
+      config: input.config,
+    })
+  ).map(withFindingFingerprint);
 
   const report = createEmptyReport({
     version: input.version,
