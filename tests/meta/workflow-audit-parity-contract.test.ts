@@ -44,6 +44,10 @@ const expectedCheckedAuditIds = [
   "workflow-artifact-trust-chain",
   "workflow-pr-target-checkout-head",
   "workflow-secret-exfiltration",
+  "workflow-oidc-untrusted-context",
+  "workflow-dynamic-matrix-injection",
+  "dependabot-auto-merge",
+  "workflow-local-action-mutation",
 ] as const;
 
 function readChecklist(): string {
