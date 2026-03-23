@@ -40,6 +40,8 @@ const expectedCheckedAuditIds = [
   "hardcoded-container-credentials",
   "unredacted-secrets",
   "bot-conditions",
+  "workflow-call-boundary",
+  "workflow-artifact-trust-chain",
   "workflow-pr-target-checkout-head",
 ] as const;
 

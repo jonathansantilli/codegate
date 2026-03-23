@@ -42,6 +42,8 @@ import { detectWorkflowHardcodedContainerCredentials } from "./detectors/workflo
 import { detectWorkflowUnredactedSecrets } from "./detectors/workflow-unredacted-secrets.js";
 import { detectWorkflowBotConditions } from "./detectors/workflow-bot-conditions.js";
 import { detectWorkflowPrTargetCheckoutHead } from "./detectors/workflow-pr-target-checkout-head.js";
+import { detectWorkflowArtifactTrustChain } from "./detectors/workflow-artifact-trust-chain.js";
+import { detectWorkflowCallBoundary } from "./detectors/workflow-call-boundary.js";
 import { filterRegisteredAudits, type RegisteredAudit } from "./audits/registry.js";
 import type { AuditPersona, RuntimeMode } from "../config.js";
 import { FINDING_CATEGORIES, type Finding } from "../types/finding.js";
@@ -653,6 +655,28 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
       run: ({ file, input }) =>
         input.config.workflowAuditsEnabled
           ? detectWorkflowPrTargetCheckoutHead({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-artifact-trust-chain",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowArtifactTrustChain({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-call-boundary",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowCallBoundary({
               filePath: file.filePath,
               parsed: file.parsed,
               textContent: file.textContent,
