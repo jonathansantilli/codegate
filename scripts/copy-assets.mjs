@@ -8,6 +8,7 @@ const mappings = [
   ["src/knowledge-base", "dist/knowledge-base"],
   ["src/layer3-dynamic/prompt-templates", "dist/layer3-dynamic/prompt-templates"],
   ["src/layer2-static/advisories", "dist/layer2-static/advisories"],
+  ["src/layer2-static/rules", "dist/layer2-static/rules"],
 ];
 
 for (const [sourceRelative, destinationRelative] of mappings) {
