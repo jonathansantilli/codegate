@@ -59,7 +59,7 @@ Use this checklist to track the workflow-audit detectors implemented in CodeGate
 - [ ] `workflow-oidc-untrusted-context`
 - [x] `workflow-pr-target-checkout-head`
 - [ ] `workflow-dynamic-matrix-injection`
-- [ ] `workflow-secret-exfiltration`
+- [x] `workflow-secret-exfiltration`
 - [ ] `dependabot-auto-merge`
 - [ ] `workflow-local-action-mutation`
 
