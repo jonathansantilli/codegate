@@ -1,3 +1,9 @@
+# [0.9.0](https://github.com/jonathansantilli/codegate/compare/v0.8.0...v0.9.0) (2026-03-23)
+
+### Features
+
+- add workflow audit pack with real-case validation ([a9ab51a](https://github.com/jonathansantilli/codegate/commit/a9ab51ade8d04e390608652ddac9d60fc4608f4f))
+
 # [0.8.0](https://github.com/jonathansantilli/codegate/compare/v0.7.0...v0.8.0) (2026-03-22)
 
 ### Features
