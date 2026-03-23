@@ -44,6 +44,7 @@ import { detectWorkflowBotConditions } from "./detectors/workflow-bot-conditions
 import { detectWorkflowPrTargetCheckoutHead } from "./detectors/workflow-pr-target-checkout-head.js";
 import { detectWorkflowArtifactTrustChain } from "./detectors/workflow-artifact-trust-chain.js";
 import { detectWorkflowCallBoundary } from "./detectors/workflow-call-boundary.js";
+import { detectWorkflowSecretExfiltration } from "./detectors/workflow-secret-exfiltration.js";
 import { filterRegisteredAudits, type RegisteredAudit } from "./audits/registry.js";
 import type { AuditPersona, RuntimeMode } from "../config.js";
 import { FINDING_CATEGORIES, type Finding } from "../types/finding.js";
@@ -680,6 +681,18 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
               filePath: file.filePath,
               parsed: file.parsed,
               textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-secret-exfiltration",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowSecretExfiltration({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              trustedApiDomains: input.config.trustedApiDomains,
             })
           : [],
     },
