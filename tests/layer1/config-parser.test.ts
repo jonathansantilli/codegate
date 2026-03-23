@@ -63,4 +63,30 @@ describe("task 09 config parser", () => {
       expect(result.error).toContain("parse");
     }
   });
+
+  it("parses GitHub workflow YAML structures", () => {
+    const dir = createTempDir();
+    const workflowPath = join(dir, "ci.yml");
+    writeFileSync(
+      workflowPath,
+      [
+        "name: CI",
+        "on:",
+        "  pull_request:",
+        "jobs:",
+        "  test:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - uses: actions/checkout@v4",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const result = parseConfigFile(workflowPath, "yaml");
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      const parsed = result.data as Record<string, unknown>;
+      expect(parsed.jobs).toBeTruthy();
+    }
+  });
 });

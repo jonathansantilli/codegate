@@ -10,6 +10,10 @@ import { Command, Option } from "commander";
 import {
   DEFAULT_CONFIG,
   OUTPUT_FORMATS,
+  PERSONAS,
+  RUNTIME_MODES,
+  SCAN_COLLECTION_MODES,
+  SCAN_COLLECTION_KINDS,
   resolveEffectiveConfig,
   type CliConfigOverrides,
   type CodeGateConfig,
@@ -286,6 +290,8 @@ const defaultCliDeps: CliDeps = {
   prepareScanDiscovery: (scanTarget, config, options) =>
     createScanDiscoveryContext(scanTarget, undefined, {
       includeUserScope: config?.scan_user_scope === true,
+      collectModes: config?.scan_collection_modes,
+      collectKinds: config?.scan_collection_kinds,
       parseSelected: true,
       explicitCandidates: options?.explicitCandidates,
     }),
@@ -318,6 +324,8 @@ const defaultCliDeps: CliDeps = {
       ? discoverDeepScanResourcesFromContext(discoveryContext)
       : discoverDeepScanResources(scanTarget, undefined, {
           includeUserScope: config?.scan_user_scope === true,
+          collectModes: config?.scan_collection_modes,
+          collectKinds: config?.scan_collection_kinds,
         }),
   discoverLocalTextTargets: (_scanTarget, _config, discoveryContext) =>
     discoveryContext ? discoverLocalTextAnalysisTargetsFromContext(discoveryContext) : [],
@@ -362,6 +370,34 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
     .option("--config <path>", "use a specific global config file")
     .option("--force", "skip interactive confirmations")
     .option("--include-user-scope", "include user/home AI tool config paths in scan")
+    .addOption(
+      new Option(
+        "--collect <mode>",
+        "collection mode (repeatable): default, project, user, explicit, all",
+      )
+        .choices([...SCAN_COLLECTION_MODES])
+        .argParser((value: string, previous: string[] = []) => [...previous, value]),
+    )
+    .addOption(
+      new Option(
+        "--collect-kind <kind>",
+        "collection kind (repeatable): workflows, actions, dependabot",
+      )
+        .choices([...SCAN_COLLECTION_KINDS])
+        .argParser((value: string, previous: string[] = []) => [...previous, value]),
+    )
+    .option("--strict-collection", "treat parse failures in collected inputs as high severity")
+    .addOption(
+      new Option("--persona <type>", "audit sensitivity persona")
+        .choices([...PERSONAS])
+        .argParser((value) => value),
+    )
+    .addOption(
+      new Option("--runtime-mode <mode>", "runtime network mode for optional online audits")
+        .choices([...RUNTIME_MODES])
+        .argParser((value) => value),
+    )
+    .option("--workflow-audits", "enable workflow security audit pack for .github/workflows")
     .option("--skill <name>", "select one skill directory when scanning a skills index repo URL")
     .option("--reset-state", "clear persisted scan-state history and exit")
     .addHelpText(
@@ -371,6 +407,7 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
         "codegate scan ./skills/security-review/SKILL.md",
         "codegate scan https://github.com/owner/repo",
         "codegate scan https://github.com/owner/repo --skill security-review",
+        "codegate scan . --workflow-audits --collect project --persona auditor --runtime-mode online",
         "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
         "codegate scan https://example.com/security-review/SKILL.md --format json",
       ]),
@@ -388,6 +425,7 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
       let resolvedTarget: ResolvedScanTarget | undefined;
 
       try {
+        const scanOptions = options as ScanCommandOptions & { collectKind?: string[] };
         const resolveTarget =
           deps.resolveScanTarget ??
           ((input: {
@@ -412,13 +450,30 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
           scanTarget,
           cli: cliConfig,
         });
-        const config =
-          options.includeUserScope === true
-            ? {
-                ...baseConfig,
-                scan_user_scope: true,
-              }
-            : baseConfig;
+        const config = {
+          ...baseConfig,
+          scan_collection_modes:
+            options.collect && options.collect.length > 0
+              ? options.collect
+              : baseConfig.scan_collection_modes,
+          scan_collection_kinds: (scanOptions.collectKind && scanOptions.collectKind.length > 0
+            ? scanOptions.collectKind
+            : baseConfig.scan_collection_kinds) as CodeGateConfig["scan_collection_kinds"],
+          strict_collection:
+            options.strictCollection === true
+              ? true
+              : (baseConfig.strict_collection ?? DEFAULT_CONFIG.strict_collection),
+          persona: options.persona ?? baseConfig.persona,
+          runtime_mode: options.runtimeMode ?? baseConfig.runtime_mode,
+          workflow_audits: {
+            enabled:
+              options.workflowAudits === true
+                ? true
+                : (baseConfig.workflow_audits?.enabled ?? false),
+          },
+          scan_user_scope:
+            options.includeUserScope === true ? true : (baseConfig.scan_user_scope ?? false),
+        };
 
         if (options.resetState) {
           const reset = deps.resetScanState ?? ((path?: string) => resetScanState(path));

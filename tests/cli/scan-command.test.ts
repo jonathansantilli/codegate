@@ -72,6 +72,11 @@ function buildDeps(overrides: Partial<CliDeps>): CliDeps {
       check_ide_settings: true,
       owasp_mapping: true,
       trusted_api_domains: [],
+      strict_collection: false,
+      scan_collection_modes: ["default"],
+      persona: "regular",
+      runtime_mode: "offline",
+      workflow_audits: { enabled: false },
       suppress_findings: [],
     }),
     runScan: async () => makeReport([]),
@@ -231,5 +236,64 @@ describe("task 16 scan command", () => {
 
     await runScanCommand(deps, ["."]);
     expect(receivedConfig?.scan_user_scope).toBe(true);
+  });
+
+  it("passes collection and strict flags into effective scan config", async () => {
+    let receivedConfig:
+      | {
+          strict_collection?: boolean;
+          scan_collection_modes?: string[];
+        }
+      | undefined;
+
+    const deps = buildDeps({
+      resolveConfig: () => ({
+        ...DEFAULT_CONFIG,
+      }),
+      runScan: async (input) => {
+        receivedConfig = input.config;
+        return makeReport([]);
+      },
+    });
+
+    await runScanCommand(deps, [
+      ".",
+      "--collect",
+      "project",
+      "--collect",
+      "explicit",
+      "--strict-collection",
+    ]);
+
+    expect(receivedConfig?.strict_collection).toBe(true);
+    expect(receivedConfig?.scan_collection_modes).toEqual(["project", "explicit"]);
+  });
+
+  it("passes collection kind filters into effective scan config", async () => {
+    let receivedConfig:
+      | {
+          scan_collection_kinds?: string[];
+        }
+      | undefined;
+
+    const deps = buildDeps({
+      resolveConfig: () => ({
+        ...DEFAULT_CONFIG,
+      }),
+      runScan: async (input) => {
+        receivedConfig = input.config;
+        return makeReport([]);
+      },
+    });
+
+    await runScanCommand(deps, [
+      ".",
+      "--collect-kind",
+      "workflows",
+      "--collect-kind",
+      "dependabot",
+    ]);
+
+    expect(receivedConfig?.scan_collection_kinds).toEqual(["workflows", "dependabot"]);
   });
 });

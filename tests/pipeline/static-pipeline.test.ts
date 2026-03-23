@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { runStaticPipeline } from "../../src/pipeline";
 
 describe("task 14 static pipeline orchestration", () => {
-  it("deduplicates repeated threats across files and preserves affected locations", () => {
-    const report = runStaticPipeline({
+  it("deduplicates repeated threats across files and preserves affected locations", async () => {
+    const report = await runStaticPipeline({
       version: "0.1.0",
       kbVersion: "2026-02-28",
       scanTarget: ".",

@@ -7,6 +7,42 @@ import { detectIdeSettingsIssues } from "./detectors/ide-settings.js";
 import { detectPluginManifestIssues } from "./detectors/plugin-manifest.js";
 import { detectRuleFileIssues } from "./detectors/rule-file.js";
 import { detectSymlinkEscapes, type SymlinkEscapeEntry } from "./detectors/symlink.js";
+import { detectWorkflowExcessivePermissions } from "./detectors/workflow-excessive-permissions.js";
+import { detectWorkflowDangerousTriggers } from "./detectors/workflow-dangerous-triggers.js";
+import { detectWorkflowTemplateInjection } from "./detectors/workflow-template-injection.js";
+import { detectWorkflowKnownVulnAction } from "./detectors/workflow-known-vuln-action.js";
+import { detectWorkflowUnpinnedUses } from "./detectors/workflow-unpinned-uses.js";
+import { detectWorkflowArtipacked } from "./detectors/workflow-artipacked.js";
+import { detectWorkflowCachePoisoning } from "./detectors/workflow-cache-poisoning.js";
+import { detectWorkflowGithubEnv } from "./detectors/workflow-github-env.js";
+import { detectWorkflowInsecureCommands } from "./detectors/workflow-insecure-commands.js";
+import { detectWorkflowSelfHostedRunner } from "./detectors/workflow-self-hosted-runner.js";
+import { detectWorkflowOverprovisionedSecrets } from "./detectors/workflow-overprovisioned-secrets.js";
+import { detectWorkflowSecretsOutsideEnv } from "./detectors/workflow-secrets-outside-env.js";
+import { detectWorkflowSecretsInherit } from "./detectors/workflow-secrets-inherit.js";
+import { detectWorkflowUndocumentedPermissions } from "./detectors/workflow-undocumented-permissions.js";
+import { detectWorkflowUseTrustedPublishing } from "./detectors/workflow-use-trusted-publishing.js";
+import { detectWorkflowArchivedUses } from "./detectors/workflow-archived-uses.js";
+import { detectWorkflowStaleActionRefs } from "./detectors/workflow-stale-action-refs.js";
+import { detectWorkflowForbiddenUses } from "./detectors/workflow-forbidden-uses.js";
+import { detectWorkflowRefConfusion } from "./detectors/workflow-ref-confusion.js";
+import { detectWorkflowRefVersionMismatch } from "./detectors/workflow-ref-version-mismatch.js";
+import { detectWorkflowImpostorCommit } from "./detectors/workflow-impostor-commit.js";
+import { detectWorkflowUnpinnedImages } from "./detectors/workflow-unpinned-images.js";
+import { detectWorkflowAnonymousDefinition } from "./detectors/workflow-anonymous-definition.js";
+import { detectWorkflowConcurrencyLimits } from "./detectors/workflow-concurrency-limits.js";
+import { detectWorkflowSuperfluousActions } from "./detectors/workflow-superfluous-actions.js";
+import { detectWorkflowMisfeature } from "./detectors/workflow-misfeature.js";
+import { detectWorkflowObfuscation } from "./detectors/workflow-obfuscation.js";
+import { detectWorkflowUnsoundCondition } from "./detectors/workflow-unsound-condition.js";
+import { detectWorkflowUnsoundContains } from "./detectors/workflow-unsound-contains.js";
+import { detectDependabotCooldown } from "./detectors/dependabot-cooldown.js";
+import { detectDependabotExecution } from "./detectors/dependabot-execution.js";
+import { detectWorkflowHardcodedContainerCredentials } from "./detectors/workflow-hardcoded-container-credentials.js";
+import { detectWorkflowUnredactedSecrets } from "./detectors/workflow-unredacted-secrets.js";
+import { detectWorkflowBotConditions } from "./detectors/workflow-bot-conditions.js";
+import { filterRegisteredAudits, type RegisteredAudit } from "./audits/registry.js";
+import type { AuditPersona, RuntimeMode } from "../config.js";
 import { FINDING_CATEGORIES, type Finding } from "../types/finding.js";
 import type { DiscoveryFormat } from "../types/discovery.js";
 import { buildFindingEvidence } from "./evidence.js";
@@ -31,6 +67,10 @@ export interface StaticEngineConfig {
   rulePackPaths?: string[];
   allowedRules?: string[];
   skipRules?: string[];
+  persona?: AuditPersona;
+  runtimeMode?: RuntimeMode;
+  workflowAuditsEnabled?: boolean;
+  rulePolicies?: Record<string, { disable?: boolean; config?: Record<string, unknown> }>;
 }
 
 export interface StaticEngineInput {
@@ -49,6 +89,15 @@ const GENERIC_AFFECTED_TOOLS = [
   "windsurf",
   "github-copilot",
 ];
+
+interface FileAuditContext {
+  file: StaticFileInput;
+  input: StaticEngineInput;
+}
+
+interface GlobalAuditContext {
+  input: StaticEngineInput;
+}
 
 function parseRuleSeverity(value: string): Finding["severity"] {
   const normalized = value.trim().toUpperCase();
@@ -76,6 +125,26 @@ function remediationActionsForRule(rule: DetectionRule): string[] {
     return ["quarantine_file", "remove_block"];
   }
   return ["remove_field", "replace_with_default"];
+}
+
+function resolveDisabledAuditIds(
+  policies: StaticEngineConfig["rulePolicies"] | undefined,
+): string[] {
+  if (!policies) {
+    return [];
+  }
+
+  return Object.entries(policies)
+    .filter(([, policy]) => policy?.disable === true)
+    .map(([ruleId]) => ruleId);
+}
+
+function findRulePolicyConfig(
+  policies: StaticEngineConfig["rulePolicies"] | undefined,
+  ruleId: string,
+): Record<string, unknown> | undefined {
+  const config = policies?.[ruleId]?.config;
+  return config && typeof config === "object" ? config : undefined;
 }
 
 function findingFromRulePackMatch(file: StaticFileInput, rule: DetectionRule): Finding {
@@ -154,8 +223,489 @@ function dedupeFindings(findings: Finding[]): Finding[] {
   return Array.from(deduped.values());
 }
 
-export function runStaticEngine(input: StaticEngineInput): Finding[] {
+function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
+  return [
+    {
+      id: "env-overrides",
+      run: ({ file, input }) =>
+        detectEnvOverrides({
+          filePath: file.filePath,
+          parsed: file.parsed,
+          textContent: file.textContent,
+          trustedApiDomains: input.config.trustedApiDomains,
+        }),
+    },
+    {
+      id: "consent-bypass",
+      run: ({ file, input }) =>
+        detectConsentBypass({
+          filePath: file.filePath,
+          parsed: file.parsed,
+          textContent: file.textContent,
+          trustedApiDomains: input.config.trustedApiDomains,
+        }),
+    },
+    {
+      id: "command-execution",
+      run: ({ file, input }) =>
+        detectCommandExecution({
+          filePath: file.filePath,
+          parsed: file.parsed,
+          textContent: file.textContent,
+          knownSafeMcpServers: input.config.knownSafeMcpServers,
+          knownSafeFormatters: input.config.knownSafeFormatters,
+          knownSafeLspServers: input.config.knownSafeLspServers,
+          blockedCommands: input.config.blockedCommands,
+        }),
+    },
+    {
+      id: "ide-settings",
+      run: ({ file, input }) =>
+        input.config.checkIdeSettings
+          ? detectIdeSettingsIssues({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              projectRoot: input.projectRoot,
+            })
+          : [],
+    },
+    {
+      id: "plugin-manifest",
+      run: ({ file, input }) =>
+        detectPluginManifestIssues({
+          filePath: file.filePath,
+          parsed: file.parsed,
+          textContent: file.textContent,
+          trustedApiDomains: input.config.trustedApiDomains,
+          blockedCommands: input.config.blockedCommands,
+        }),
+    },
+    {
+      id: "advisory-intelligence",
+      run: ({ file }) =>
+        detectAdvisoryIntelligence({
+          filePath: file.filePath,
+          parsed: file.parsed,
+          textContent: file.textContent,
+        }),
+    },
+    {
+      id: "rule-file",
+      run: ({ file, input }) =>
+        file.format === "text" || file.format === "markdown"
+          ? detectRuleFileIssues({
+              filePath: file.filePath,
+              textContent: file.textContent,
+              unicodeAnalysis: input.config.unicodeAnalysis,
+            })
+          : [],
+    },
+    {
+      id: "workflow-unpinned-uses",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUnpinnedUses({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-dangerous-triggers",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowDangerousTriggers({
+              filePath: file.filePath,
+              parsed: file.parsed,
+            })
+          : [],
+    },
+    {
+      id: "workflow-excessive-permissions",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowExcessivePermissions({
+              filePath: file.filePath,
+              parsed: file.parsed,
+            })
+          : [],
+    },
+    {
+      id: "workflow-template-injection",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowTemplateInjection({
+              filePath: file.filePath,
+              parsed: file.parsed,
+            })
+          : [],
+    },
+    {
+      id: "workflow-known-vuln-action",
+      onlineRequired: true,
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowKnownVulnAction({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              runtimeMode: input.config.runtimeMode,
+            })
+          : [],
+    },
+    {
+      id: "workflow-artipacked",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowArtipacked({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-cache-poisoning",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowCachePoisoning({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-github-env",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowGithubEnv({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-insecure-commands",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowInsecureCommands({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-self-hosted-runner",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowSelfHostedRunner({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-overprovisioned-secrets",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowOverprovisionedSecrets({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-secrets-outside-env",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowSecretsOutsideEnv({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-secrets-inherit",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowSecretsInherit({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-undocumented-permissions",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUndocumentedPermissions({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-use-trusted-publishing",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUseTrustedPublishing({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-archived-uses",
+      onlineRequired: true,
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowArchivedUses({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-stale-action-refs",
+      onlineRequired: true,
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowStaleActionRefs({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-forbidden-uses",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowForbiddenUses({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              config: findRulePolicyConfig(input.config.rulePolicies, "workflow-forbidden-uses"),
+            })
+          : [],
+    },
+    {
+      id: "workflow-ref-confusion",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowRefConfusion({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-ref-version-mismatch",
+      onlineRequired: true,
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowRefVersionMismatch({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              runtimeMode: input.config.runtimeMode,
+            })
+          : [],
+    },
+    {
+      id: "workflow-impostor-commit",
+      onlineRequired: true,
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowImpostorCommit({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              runtimeMode: input.config.runtimeMode,
+            })
+          : [],
+    },
+    {
+      id: "workflow-unpinned-images",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUnpinnedImages({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-anonymous-definition",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowAnonymousDefinition({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-concurrency-limits",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowConcurrencyLimits({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-superfluous-actions",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowSuperfluousActions({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-misfeature",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowMisfeature({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-obfuscation",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowObfuscation({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-unsound-condition",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUnsoundCondition({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-unsound-contains",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUnsoundContains({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "dependabot-cooldown",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectDependabotCooldown({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "dependabot-execution",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectDependabotExecution({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "hardcoded-container-credentials",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowHardcodedContainerCredentials({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "unredacted-secrets",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUnredactedSecrets({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "bot-conditions",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowBotConditions({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+  ];
+}
+
+function buildGlobalAudits(): Array<RegisteredAudit<GlobalAuditContext>> {
+  return [
+    {
+      id: "symlink-escapes",
+      run: ({ input }) => detectSymlinkEscapes({ symlinkEscapes: input.symlinkEscapes }),
+    },
+    {
+      id: "git-hooks",
+      run: ({ input }) =>
+        detectGitHookIssues({ hooks: input.hooks, knownSafeHooks: input.config.knownSafeHooks }),
+    },
+  ];
+}
+
+export async function runStaticEngine(input: StaticEngineInput): Promise<Finding[]> {
   const findings: Finding[] = [];
+  const runtimeSelection = {
+    persona: input.config.persona,
+    runtimeMode: input.config.runtimeMode,
+    disabledAuditIds: resolveDisabledAuditIds(input.config.rulePolicies),
+  };
+  const activeFileAudits = filterRegisteredAudits(buildFileAudits(), runtimeSelection);
+  const activeGlobalAudits = filterRegisteredAudits(buildGlobalAudits(), runtimeSelection);
   const rulePackRules = loadRulePacks({
     rule_pack_paths: input.config.rulePackPaths ?? [],
     allowed_rules: input.config.allowedRules ?? [],
@@ -163,73 +713,8 @@ export function runStaticEngine(input: StaticEngineInput): Finding[] {
   });
 
   for (const file of input.files) {
-    findings.push(
-      ...detectEnvOverrides({
-        filePath: file.filePath,
-        parsed: file.parsed,
-        textContent: file.textContent,
-        trustedApiDomains: input.config.trustedApiDomains,
-      }),
-    );
-
-    findings.push(
-      ...detectConsentBypass({
-        filePath: file.filePath,
-        parsed: file.parsed,
-        textContent: file.textContent,
-        trustedApiDomains: input.config.trustedApiDomains,
-      }),
-    );
-
-    findings.push(
-      ...detectCommandExecution({
-        filePath: file.filePath,
-        parsed: file.parsed,
-        textContent: file.textContent,
-        knownSafeMcpServers: input.config.knownSafeMcpServers,
-        knownSafeFormatters: input.config.knownSafeFormatters,
-        knownSafeLspServers: input.config.knownSafeLspServers,
-        blockedCommands: input.config.blockedCommands,
-      }),
-    );
-
-    if (input.config.checkIdeSettings) {
-      findings.push(
-        ...detectIdeSettingsIssues({
-          filePath: file.filePath,
-          parsed: file.parsed,
-          textContent: file.textContent,
-          projectRoot: input.projectRoot,
-        }),
-      );
-    }
-
-    findings.push(
-      ...detectPluginManifestIssues({
-        filePath: file.filePath,
-        parsed: file.parsed,
-        textContent: file.textContent,
-        trustedApiDomains: input.config.trustedApiDomains,
-        blockedCommands: input.config.blockedCommands,
-      }),
-    );
-
-    findings.push(
-      ...detectAdvisoryIntelligence({
-        filePath: file.filePath,
-        parsed: file.parsed,
-        textContent: file.textContent,
-      }),
-    );
-
-    if (file.format === "text" || file.format === "markdown") {
-      findings.push(
-        ...detectRuleFileIssues({
-          filePath: file.filePath,
-          textContent: file.textContent,
-          unicodeAnalysis: input.config.unicodeAnalysis,
-        }),
-      );
+    for (const audit of activeFileAudits) {
+      findings.push(...(await audit.run({ file, input })));
     }
 
     for (const rule of rulePackRules) {
@@ -251,10 +736,9 @@ export function runStaticEngine(input: StaticEngineInput): Finding[] {
     }
   }
 
-  findings.push(...detectSymlinkEscapes({ symlinkEscapes: input.symlinkEscapes }));
-  findings.push(
-    ...detectGitHookIssues({ hooks: input.hooks, knownSafeHooks: input.config.knownSafeHooks }),
-  );
+  for (const audit of activeGlobalAudits) {
+    findings.push(...(await audit.run({ input })));
+  }
 
   return dedupeFindings(findings);
 }

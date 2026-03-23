@@ -1,5 +1,12 @@
 import { resolve } from "node:path";
-import { applyConfigPolicy, type CodeGateConfig, type OutputFormat } from "../config.js";
+import {
+  applyConfigPolicy,
+  type AuditPersona,
+  type CodeGateConfig,
+  type OutputFormat,
+  type RuntimeMode,
+  type ScanCollectionMode,
+} from "../config.js";
 import {
   buildMetaAgentCommand,
   type MetaAgentCommand,
@@ -52,6 +59,11 @@ export interface ScanCommandOptions {
   resetState?: boolean;
   includeUserScope?: boolean;
   skill?: string;
+  collect?: ScanCollectionMode[];
+  strictCollection?: boolean;
+  persona?: AuditPersona;
+  runtimeMode?: RuntimeMode;
+  workflowAudits?: boolean;
 }
 
 export interface ScanRunnerInput {

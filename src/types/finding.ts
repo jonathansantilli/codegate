@@ -14,6 +14,11 @@ export const FINDING_CATEGORIES = [
   "CONFIG_CHANGE",
   "NEW_SERVER",
   "TOXIC_FLOW",
+  "CI_SUPPLY_CHAIN",
+  "CI_TRIGGER",
+  "CI_PERMISSIONS",
+  "CI_TEMPLATE_INJECTION",
+  "CI_VULNERABLE_ACTION",
 ] as const;
 export type FindingCategory = (typeof FINDING_CATEGORIES)[number];
 

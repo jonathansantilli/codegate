@@ -116,6 +116,18 @@ function appendFinding(
     if (formattedLocation) {
       lines.push(`  Location: ${formattedLocation}`);
     }
+    if ((finding.affected_locations?.length ?? 0) > 0) {
+      lines.push("  Affected locations:");
+      for (const location of finding.affected_locations ?? []) {
+        const path = toAbsoluteDisplayPath(report.scan_target, location.file_path);
+        const locationText = formatLocation({
+          field: location.location?.field,
+          line: location.location?.line,
+          column: location.location?.column,
+        });
+        lines.push(`    - ${path}${locationText ? ` (${locationText})` : ""}`);
+      }
+    }
     if (finding.cve) {
       lines.push(`  CVE: ${finding.cve}`);
     }

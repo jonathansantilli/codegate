@@ -50,8 +50,8 @@ describe("finding fingerprints", () => {
     expect(buildFindingFingerprint(base)).not.toBe(buildFindingFingerprint(moved));
   });
 
-  it("stamps fingerprints onto findings returned by the pipeline", () => {
-    const report = runStaticPipeline({
+  it("stamps fingerprints onto findings returned by the pipeline", async () => {
+    const report = await runStaticPipeline({
       version: "0.1.0",
       kbVersion: "2026-02-28",
       scanTarget: ".",

@@ -72,4 +72,68 @@ describe("suppression policy", () => {
     expect(suppressed?.suppressed).toBe(true);
     expect(active?.suppressed).toBe(false);
   });
+
+  it("supports coordinate-based suppression matching", () => {
+    const [suppressed, active] = applySuppressionPolicy(
+      [
+        makeFinding({
+          location: { field: "env.OPENAI_BASE_URL", line: 42, column: 7 },
+        }),
+        makeFinding({
+          location: { field: "env.OPENAI_BASE_URL", line: 11, column: 3 },
+        }),
+      ],
+      {
+        suppress_findings: [],
+        suppression_rules: [
+          {
+            rule_id: "env-base-url-override",
+            location: "packages/app/.mcp.json:42:7",
+          },
+        ],
+      },
+    );
+
+    expect(suppressed?.suppressed).toBe(true);
+    expect(active?.suppressed).toBe(false);
+  });
+
+  it("suppresses findings when a rule is disabled or ignored by rule policy", () => {
+    const [disabled, ignored, active] = applySuppressionPolicy(
+      [
+        makeFinding({
+          rule_id: "workflow-dangerous-triggers",
+          finding_id: "WORKFLOW_DANGEROUS_TRIGGERS-.github/workflows/ci.yml",
+          file_path: ".github/workflows/ci.yml",
+          location: { field: "on", line: 4, column: 2 },
+        }),
+        makeFinding({
+          rule_id: "workflow-unpinned-uses",
+          finding_id: "WORKFLOW_UNPINNED_USES-.github/workflows/ci.yml-0-0",
+          file_path: ".github/workflows/ci.yml",
+          location: { field: "jobs.build.steps[0].uses", line: 12, column: 7 },
+        }),
+        makeFinding({
+          rule_id: "workflow-unpinned-uses",
+          finding_id: "WORKFLOW_UNPINNED_USES-.github/workflows/ci.yml-0-1",
+          file_path: ".github/workflows/ci.yml",
+          location: { field: "jobs.build.steps[1].uses", line: 18, column: 7 },
+        }),
+      ],
+      {
+        suppress_findings: [],
+        suppression_rules: [],
+        rule_policies: {
+          "workflow-dangerous-triggers": { disable: true },
+          "workflow-unpinned-uses": {
+            ignore: [".github/workflows/ci.yml:12:7"],
+          },
+        },
+      },
+    );
+
+    expect(disabled?.suppressed).toBe(true);
+    expect(ignored?.suppressed).toBe(true);
+    expect(active?.suppressed).toBe(false);
+  });
 });
