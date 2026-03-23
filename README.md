@@ -135,10 +135,12 @@ See the [Configuration](#configuration) section for full settings and examples.
 | `--force`               | Skip interactive confirmations.                                                                           |
 | `--include-user-scope`  | Force-enable user/home AI tool config paths for this run (useful if config disables user-scope scanning). |
 | `--collect <mode>`      | Collection scope mode (`default`, `project`, `user`, `explicit`, `all`). Repeatable.                      |
+| `--collect-kind <kind>` | Restrict collection to specific artifact kinds (`workflows`, `actions`, `dependabot`). Repeatable.        |
 | `--strict-collection`   | Treat parse failures in collected inputs as high-severity findings.                                       |
 | `--persona <type>`      | Audit sensitivity (`regular`, `pedantic`, `auditor`).                                                     |
 | `--runtime-mode <mode>` | Runtime mode for optional online audits (`offline`, `online`, `online-no-audits`).                        |
 | `--workflow-audits`     | Enable CI/CD audit pack for GitHub workflow, action, and Dependabot inputs.                               |
+| `--skill <name>`        | Select one skill directory when scanning a skills-index repo URL that contains multiple skills.           |
 | `--reset-state`         | Clear persisted scan-state history and exit.                                                              |
 
 Examples:
@@ -154,7 +156,9 @@ codegate scan . --remediate
 codegate scan . --fix-safe
 codegate scan . --remediate --dry-run --patch
 codegate scan . --workflow-audits --collect project --persona auditor --runtime-mode online
+codegate scan . --workflow-audits --collect project --collect-kind workflows
 codegate scan . --workflow-audits --strict-collection
+codegate scan https://github.com/owner/repo --skill security-review
 codegate scan . --reset-state
 ```
 
@@ -259,12 +263,27 @@ Behavior:
 
 Wrapper flags (consumed by CodeGate, not forwarded):
 
-- `--cg-force`
-- `--cg-deep`
-- `--cg-no-tui`
-- `--cg-include-user-scope`
-- `--cg-format <type>`
-- `--cg-config <path>`
+| Flag                       | Purpose                                                                                   |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| `--cg-force`               | Continue install when preflight scan fails or returns blocking findings.                  |
+| `--cg-deep`                | Enable Layer 3 deep analysis during wrapper preflight scan.                               |
+| `--cg-no-tui`              | Disable TUI and interactive prompts for wrapper preflight scan.                           |
+| `--cg-verbose`             | Enable extended terminal output during wrapper preflight scan.                            |
+| `--cg-include-user-scope`  | Include user/home config surfaces in wrapper preflight scan.                              |
+| `--cg-collect <mode>`      | Preflight collection mode (`default`, `project`, `user`, `explicit`, `all`). Repeatable.  |
+| `--cg-collect-kind <kind>` | Preflight collection kind (`workflows`, `actions`, `dependabot`). Repeatable.             |
+| `--cg-strict-collection`   | Treat parse failures in preflight-collected inputs as high-severity findings.             |
+| `--cg-persona <type>`      | Preflight audit persona (`regular`, `pedantic`, `auditor`).                               |
+| `--cg-runtime-mode <mode>` | Preflight runtime mode (`offline`, `online`, `online-no-audits`).                         |
+| `--cg-workflow-audits`     | Enable workflow audit pack for preflight scans.                                           |
+| `--cg-format <type>`       | Set preflight output format: `terminal`, `json`, `sarif`, `markdown`, `html`.             |
+| `--cg-config <path>`       | Use a specific CodeGate config file for wrapper preflight scan.                           |
+| `--`                       | Stop wrapper-option parsing and pass all following args to the wrapped installer command. |
+
+Inspect command help for complete usage:
+
+- `codegate skills --help`
+- `codegate clawhub --help`
 
 Examples:
 
@@ -272,9 +291,23 @@ Examples:
 codegate skills add https://github.com/vercel-labs/skills --skill find-skills
 codegate skills add https://github.com/owner/repo --skill security-review --cg-force
 codegate skills add https://github.com/owner/repo --skill security-review --cg-deep
+codegate skills add https://github.com/owner/repo --skill security-review --cg-workflow-audits --cg-collect project
+codegate skills add https://github.com/owner/repo --skill security-review --cg-collect-kind workflows
+codegate skills add https://github.com/owner/repo --skill security-review --cg-strict-collection --cg-persona auditor
+codegate skills add https://github.com/owner/repo --skill security-review --cg-runtime-mode online
+codegate skills add https://github.com/owner/repo --skill security-review --cg-format json
+codegate skills add https://github.com/owner/repo --skill security-review --cg-config ~/.codegate/config.json
+codegate skills add https://github.com/owner/repo --skill security-review -- --registry custom
 codegate clawhub install security-auditor
 codegate clawhub install security-auditor --version 1.0.0
 codegate clawhub install security-auditor --cg-deep
+codegate clawhub install security-auditor --cg-workflow-audits --cg-collect project
+codegate clawhub install security-auditor --cg-collect-kind workflows
+codegate clawhub install security-auditor --cg-strict-collection --cg-persona auditor
+codegate clawhub install security-auditor --cg-runtime-mode online
+codegate clawhub install security-auditor --cg-no-tui --cg-format json
+codegate clawhub install security-auditor --cg-config ~/.codegate/config.json
+codegate clawhub install security-auditor -- --registry https://registry.clawhub.ai
 codegate clawhub search security
 ```
 
