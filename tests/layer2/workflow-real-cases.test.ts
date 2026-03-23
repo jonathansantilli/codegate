@@ -43,8 +43,8 @@ function loadRealCaseIndex(): RealCaseEntry[] {
 }
 
 describe("workflow real-case fixtures", () => {
-  it("detects expected findings on commit-pinned public workflow fixtures", async () => {
-    for (const fixture of loadRealCaseIndex()) {
+  for (const fixture of loadRealCaseIndex()) {
+    it(`${fixture.id} detects ${fixture.expected_rule} on commit-pinned fixture`, async () => {
       const targetPath = resolve(
         process.cwd(),
         "test-fixtures/workflow-audits/real-cases",
@@ -62,6 +62,6 @@ describe("workflow real-case fixtures", () => {
         `${fixture.id} should detect ${fixture.expected_rule}`,
       ).toBe(true);
       expect(fixture.source.startsWith("https://github.com/")).toBe(true);
-    }
-  });
+    }, 20_000);
+  }
 });
