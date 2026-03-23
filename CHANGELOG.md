@@ -1,3 +1,9 @@
+## [0.9.1](https://github.com/jonathansantilli/codegate/compare/v0.9.0...v0.9.1) (2026-03-23)
+
+### Bug Fixes
+
+- **build:** copy static rule packs into dist assets ([af1de0a](https://github.com/jonathansantilli/codegate/commit/af1de0a0fa5023d067ba2a84635bdd427f7e99cb))
+
 # [0.9.0](https://github.com/jonathansantilli/codegate/compare/v0.8.0...v0.9.0) (2026-03-23)
 
 ### Features
