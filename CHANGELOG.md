@@ -1,3 +1,9 @@
+# [0.12.0](https://github.com/jonathansantilli/codegate/compare/v0.11.0...v0.12.0) (2026-03-23)
+
+### Features
+
+- **workflow:** harden GitHub Actions supply-chain detections ([ca6233e](https://github.com/jonathansantilli/codegate/commit/ca6233ebeac557c8ed4ee4b19ed46d734538f996))
+
 # [0.11.0](https://github.com/jonathansantilli/codegate/compare/v0.10.0...v0.11.0) (2026-03-23)
 
 ### Features
