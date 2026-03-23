@@ -1,0 +1,5 @@
+{
+  "actions/github-script": ["script"],
+  "azure/powershell": ["inlineScript"],
+  "addnab/docker-run-action": ["run", "options"]
+}

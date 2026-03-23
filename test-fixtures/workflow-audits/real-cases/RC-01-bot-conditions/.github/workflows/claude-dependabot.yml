@@ -1,0 +1,11 @@
+# Source: https://github.com/Significant-Gravitas/AutoGPT/blob/0f67e45d05c855077236f739ca3a02fa95fc7e96/.github/workflows/claude-dependabot.yml
+name: claude-dependabot
+on: pull_request_target
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - uses: actions/checkout@v4
+      - run: npm publish

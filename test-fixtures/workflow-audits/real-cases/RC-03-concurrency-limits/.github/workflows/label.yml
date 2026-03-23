@@ -1,0 +1,10 @@
+# Source: https://github.com/electricitymaps/electricitymaps-contrib/blob/7d22bea77bd73a9bcc8c7e6fe78a973713ba8637/.github/workflows/label.yml
+name: Label PR
+on: [pull_request_target]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "label"

@@ -43,7 +43,7 @@ export async function executeScanContentCommand(
 
     const kbVersion = loadKnowledgeBase().schemaVersion;
     const report = applyConfigPolicy(
-      runStaticPipeline({
+      await runStaticPipeline({
         version: input.version,
         kbVersion,
         scanTarget: `scan-content:${input.type}`,
@@ -71,6 +71,10 @@ export async function executeScanContentCommand(
           rulePackPaths: input.config.rule_pack_paths,
           allowedRules: input.config.allowed_rules,
           skipRules: input.config.skip_rules,
+          persona: input.config.persona,
+          runtimeMode: input.config.runtime_mode,
+          workflowAuditsEnabled: input.config.workflow_audits?.enabled === true,
+          rulePolicies: input.config.rules,
         },
       }),
       input.config,
