@@ -1,3 +1,9 @@
+# [0.11.0](https://github.com/jonathansantilli/codegate/compare/v0.10.0...v0.11.0) (2026-03-23)
+
+### Features
+
+- **wrapper:** add scan-option parity for skills and clawhub ([3eeacc1](https://github.com/jonathansantilli/codegate/commit/3eeacc1a5e7e7e6909354458cf7c5e5139f0f74f))
+
 # [0.10.0](https://github.com/jonathansantilli/codegate/compare/v0.9.1...v0.10.0) (2026-03-23)
 
 ### Features
