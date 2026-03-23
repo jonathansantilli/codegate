@@ -44,6 +44,13 @@ describe("cli help examples", () => {
     expect(help).toContain("codegate scan .");
     expect(help).toContain("codegate scan ./skills/security-review/SKILL.md");
     expect(help).toContain("codegate scan https://github.com/owner/repo");
+    expect(help).toContain("--workflow-audits");
+    expect(help).toContain("--collect <mode>");
+    expect(help).toContain("--persona <type>");
+    expect(help).toContain("--runtime-mode <mode>");
+    expect(help).toContain(
+      "codegate scan . --workflow-audits --collect project --persona auditor --runtime-mode online",
+    );
     expect(help).toContain(
       "codegate scan https://github.com/owner/repo/blob/main/skills/security-review/SKILL.md",
     );

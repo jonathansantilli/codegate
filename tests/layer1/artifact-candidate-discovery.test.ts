@@ -156,4 +156,90 @@ describe("artifact candidate discovery", () => {
       ),
     ).toBe(true);
   });
+
+  it("honors explicit-only collection mode", () => {
+    const root = mkdtempSync(join(tmpdir(), "codegate-artifact-explicit-only-"));
+    mkdirSync(join(root, "skills", "security-review"), { recursive: true });
+    writeFileSync(join(root, "skills", "security-review", "SKILL.md"), "hidden payload\n", "utf8");
+    writeFileSync(join(root, "only-this.md"), "# explicit\n", "utf8");
+
+    const context = createScanDiscoveryContext(root, undefined, {
+      parseSelected: true,
+      collectModes: ["explicit"],
+      explicitCandidates: [
+        {
+          reportPath: "only-this.md",
+          absolutePath: join(root, "only-this.md"),
+          format: "markdown",
+          tool: "codex-cli",
+        },
+      ],
+    });
+
+    expect(context.selected.map((candidate) => normalizeSlashes(candidate.reportPath))).toEqual([
+      "only-this.md",
+    ]);
+  });
+
+  it("filters discovery candidates by collection kind", () => {
+    const root = mkdtempSync(join(tmpdir(), "codegate-artifact-collection-kind-"));
+    const workflowPath = join(root, ".github", "workflows", "build.yml");
+    const actionPath = join(root, "action.yml");
+    const dependabotPath = join(root, ".github", "dependabot.yml");
+
+    mkdirSync(join(root, ".github", "workflows"), { recursive: true });
+    writeFileSync(workflowPath, "name: ci\n", "utf8");
+    writeFileSync(actionPath, "name: demo\nruns:\n  using: composite\n", "utf8");
+    writeFileSync(dependabotPath, "version: 2\n", "utf8");
+
+    const explicitCandidates = [
+      {
+        reportPath: ".github/workflows/build.yml",
+        absolutePath: workflowPath,
+        format: "yaml",
+        tool: "github-actions",
+      },
+      {
+        reportPath: "action.yml",
+        absolutePath: actionPath,
+        format: "yaml",
+        tool: "github-actions",
+      },
+      {
+        reportPath: ".github/dependabot.yml",
+        absolutePath: dependabotPath,
+        format: "yaml",
+        tool: "github-actions",
+      },
+    ];
+
+    const workflowsOnly = createScanDiscoveryContext(root, undefined, {
+      parseSelected: true,
+      collectModes: ["explicit"],
+      collectKinds: ["workflows"],
+      explicitCandidates,
+    } as Parameters<typeof createScanDiscoveryContext>[2] & { collectKinds: string[] });
+    const actionsOnly = createScanDiscoveryContext(root, undefined, {
+      parseSelected: true,
+      collectModes: ["explicit"],
+      collectKinds: ["actions"],
+      explicitCandidates,
+    } as Parameters<typeof createScanDiscoveryContext>[2] & { collectKinds: string[] });
+    const dependabotOnly = createScanDiscoveryContext(root, undefined, {
+      parseSelected: true,
+      collectModes: ["explicit"],
+      collectKinds: ["dependabot"],
+      explicitCandidates,
+    } as Parameters<typeof createScanDiscoveryContext>[2] & { collectKinds: string[] });
+
+    expect(
+      workflowsOnly.selected.map((candidate) => normalizeSlashes(candidate.reportPath)),
+    ).toEqual([".github/workflows/build.yml"]);
+    expect(actionsOnly.selected.map((candidate) => normalizeSlashes(candidate.reportPath))).toEqual(
+      ["action.yml"],
+    );
+    expect(
+      dependabotOnly.selected.map((candidate) => normalizeSlashes(candidate.reportPath)),
+    ).toEqual([".github/dependabot.yml"]);
+  });
 });

@@ -20,6 +20,12 @@ describe("task 15 sarif reporter", () => {
           layer: "L2",
           file_path: ".claude/settings.json",
           location: { field: "env.ANTHROPIC_BASE_URL", line: 2 },
+          affected_locations: [
+            {
+              file_path: ".claude/settings.json",
+              location: { field: "mcpServers.bad.command", line: 9, column: 3 },
+            },
+          ],
           description: "Untrusted endpoint",
           affected_tools: ["claude-code"],
           cve: "CVE-2026-21852",
@@ -51,7 +57,11 @@ describe("task 15 sarif reporter", () => {
       version: string;
       runs: Array<{
         tool: { driver: { rules: Array<{ id: string }> } };
-        results: Array<{ ruleId: string; properties?: Record<string, unknown> }>;
+        results: Array<{
+          ruleId: string;
+          properties?: Record<string, unknown>;
+          relatedLocations?: Array<unknown>;
+        }>;
       }>;
     };
 
@@ -67,5 +77,6 @@ describe("task 15 sarif reporter", () => {
       sinks: ["api-redirect"],
       origin: "sarif-reporter-test",
     });
+    expect(sarif.runs[0]?.results[0]?.relatedLocations?.length).toBe(1);
   });
 });

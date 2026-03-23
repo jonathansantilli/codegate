@@ -33,4 +33,24 @@ describe("task 06 fixture corpus", () => {
     expect(existsSync(resolve(root, "remediation/.mcp.json"))).toBe(true);
     expect(read("remediation/.mcp.json")).toContain("OPENAI_BASE_URL");
   });
+
+  it("contains workflow audit real-case fixtures with source index", () => {
+    expect(existsSync(resolve(root, "workflow-audits/real-cases/index.json"))).toBe(true);
+    expect(
+      existsSync(
+        resolve(
+          root,
+          "workflow-audits/real-cases/RC-01-bot-conditions/.github/workflows/claude-dependabot.yml",
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      existsSync(
+        resolve(
+          root,
+          "workflow-audits/real-cases/RC-04-dependabot-execution/.github/dependabot.yml",
+        ),
+      ),
+    ).toBe(true);
+  });
 });

@@ -120,21 +120,26 @@ See the [Configuration](#configuration) section for full settings and examples.
 
 ## `scan` Command Flags
 
-| Flag                   | Purpose                                                                                                   |
-| ---------------------- | --------------------------------------------------------------------------------------------------------- |
-| `--deep`               | Enable Layer 3 dynamic analysis.                                                                          |
-| `--remediate`          | Enter remediation mode after scan.                                                                        |
-| `--fix-safe`           | Auto-fix unambiguous critical findings.                                                                   |
-| `--dry-run`            | Show proposed fixes but write nothing.                                                                    |
-| `--patch`              | Generate a patch file for review workflows.                                                               |
-| `--no-tui`             | Disable TUI and interactive prompts.                                                                      |
-| `--format <type>`      | Output format: `terminal`, `json`, `sarif`, `markdown`, `html`.                                           |
-| `--output <path>`      | Write report to file instead of stdout.                                                                   |
-| `--verbose`            | Show extended output in terminal format.                                                                  |
-| `--config <path>`      | Use a specific global config file path.                                                                   |
-| `--force`              | Skip interactive confirmations.                                                                           |
-| `--include-user-scope` | Force-enable user/home AI tool config paths for this run (useful if config disables user-scope scanning). |
-| `--reset-state`        | Clear persisted scan-state history and exit.                                                              |
+| Flag                    | Purpose                                                                                                   |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
+| `--deep`                | Enable Layer 3 dynamic analysis.                                                                          |
+| `--remediate`           | Enter remediation mode after scan.                                                                        |
+| `--fix-safe`            | Auto-fix unambiguous critical findings.                                                                   |
+| `--dry-run`             | Show proposed fixes but write nothing.                                                                    |
+| `--patch`               | Generate a patch file for review workflows.                                                               |
+| `--no-tui`              | Disable TUI and interactive prompts.                                                                      |
+| `--format <type>`       | Output format: `terminal`, `json`, `sarif`, `markdown`, `html`.                                           |
+| `--output <path>`       | Write report to file instead of stdout.                                                                   |
+| `--verbose`             | Show extended output in terminal format.                                                                  |
+| `--config <path>`       | Use a specific global config file path.                                                                   |
+| `--force`               | Skip interactive confirmations.                                                                           |
+| `--include-user-scope`  | Force-enable user/home AI tool config paths for this run (useful if config disables user-scope scanning). |
+| `--collect <mode>`      | Collection scope mode (`default`, `project`, `user`, `explicit`, `all`). Repeatable.                      |
+| `--strict-collection`   | Treat parse failures in collected inputs as high-severity findings.                                       |
+| `--persona <type>`      | Audit sensitivity (`regular`, `pedantic`, `auditor`).                                                     |
+| `--runtime-mode <mode>` | Runtime mode for optional online audits (`offline`, `online`, `online-no-audits`).                        |
+| `--workflow-audits`     | Enable CI/CD audit pack for GitHub workflow, action, and Dependabot inputs.                               |
+| `--reset-state`         | Clear persisted scan-state history and exit.                                                              |
 
 Examples:
 
@@ -148,7 +153,35 @@ codegate scan . --deep --force
 codegate scan . --remediate
 codegate scan . --fix-safe
 codegate scan . --remediate --dry-run --patch
+codegate scan . --workflow-audits --collect project --persona auditor --runtime-mode online
+codegate scan . --workflow-audits --strict-collection
 codegate scan . --reset-state
+```
+
+## Workflow Audit Pack
+
+CodeGate can audit GitHub Actions workflows when `--workflow-audits` is enabled.
+
+Current checks include:
+
+- Unpinned external action references (`uses: owner/repo@tag` instead of commit SHA)
+- High-risk triggers (`pull_request_target`, `workflow_run`)
+- Overly broad permissions (`write-all` and explicit write grants)
+- Template expression injection patterns in run steps and known sink inputs
+- Known vulnerable action references (online runtime mode)
+- Dependabot cooldown and execution-risk checks
+- Workflow hygiene checks (concurrency gates, obfuscation, unsafe conditional trust)
+
+Track the current workflow-audit coverage and backlog in the [workflow audit parity checklist](docs/workflow-audit-parity-checklist.md).
+Real public validation fixtures and source provenance are documented in [workflow audit real-case corpus](docs/workflow-audit-real-cases.md).
+
+Examples:
+
+```bash
+codegate scan . --workflow-audits
+codegate scan . --workflow-audits --collect project --persona auditor
+codegate scan . --workflow-audits --runtime-mode online
+codegate scan . --workflow-audits --collect-kind dependabot
 ```
 
 ## `scan-content` Command

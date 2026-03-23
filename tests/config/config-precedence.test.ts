@@ -47,6 +47,24 @@ describe("task 16 config precedence", () => {
           trusted_api_domains: ["proxy.example.com"],
           trusted_directories: ["/safe/from-global"],
           scan_user_scope: false,
+          strict_collection: true,
+          scan_collection_modes: ["project"],
+          persona: "pedantic",
+          runtime_mode: "online",
+          workflow_audits: { enabled: true },
+          rules: {
+            "workflow-unpinned-uses": {
+              disable: true,
+              ignore: ["global.yml", ".github/workflows/legacy.yml:12:3"],
+              config: {
+                shared: "global",
+                globalOnly: true,
+              },
+            },
+            "workflow-dangerous-triggers": {
+              ignore: ["global-triggers.yml:4"],
+            },
+          },
         },
         null,
         2,
@@ -68,6 +86,27 @@ describe("task 16 config precedence", () => {
           trusted_api_domains: ["project.internal"],
           trusted_directories: ["/unsafe/project-attempt"],
           scan_user_scope: true,
+          strict_collection: false,
+          scan_collection_modes: ["user", "explicit"],
+          persona: "auditor",
+          runtime_mode: "offline",
+          workflow_audits: { enabled: false },
+          rules: {
+            "workflow-unpinned-uses": {
+              disable: false,
+              ignore: [".github/workflows/project.yml:2:9"],
+              config: {
+                shared: "project",
+                projectOnly: true,
+              },
+            },
+            "workflow-template-injection": {
+              disable: true,
+              config: {
+                projectOnly: true,
+              },
+            },
+          },
         },
         null,
         2,
@@ -97,6 +136,28 @@ describe("task 16 config precedence", () => {
     );
     expect(effective.trusted_directories).toEqual(["/safe/from-global"]);
     expect(effective.scan_user_scope).toBe(true);
+    expect(effective.strict_collection).toBe(false);
+    expect(effective.scan_collection_modes).toEqual(["user", "explicit"]);
+    expect(effective.persona).toBe("auditor");
+    expect(effective.runtime_mode).toBe("offline");
+    expect(effective.workflow_audits?.enabled).toBe(false);
+    expect(effective.rules?.["workflow-unpinned-uses"]?.disable).toBe(false);
+    expect(effective.rules?.["workflow-unpinned-uses"]?.ignore).toEqual(
+      expect.arrayContaining([
+        "global.yml",
+        ".github/workflows/legacy.yml:12:3",
+        ".github/workflows/project.yml:2:9",
+      ]),
+    );
+    expect(effective.rules?.["workflow-unpinned-uses"]?.config).toMatchObject({
+      shared: "project",
+      globalOnly: true,
+      projectOnly: true,
+    });
+    expect(effective.rules?.["workflow-dangerous-triggers"]?.ignore).toEqual([
+      "global-triggers.yml:4",
+    ]);
+    expect(effective.rules?.["workflow-template-injection"]?.disable).toBe(true);
     expect(effective.blocked_commands).toEqual(
       expect.arrayContaining(["bash", "curl", "python3", "echo"]),
     );
@@ -116,5 +177,11 @@ describe("task 16 config precedence", () => {
     });
 
     expect(effective.scan_user_scope).toBe(true);
+    expect(effective.strict_collection).toBe(false);
+    expect(effective.scan_collection_modes).toEqual(["default"]);
+    expect(effective.persona).toBe("regular");
+    expect(effective.runtime_mode).toBe("offline");
+    expect(effective.workflow_audits?.enabled).toBe(false);
+    expect(effective.rules).toBeUndefined();
   });
 });
