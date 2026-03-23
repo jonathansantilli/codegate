@@ -17,8 +17,15 @@ describe("workflow parser", () => {
       permissions: "write-all",
       jobs: {
         test: {
+          if: "github.actor == 'dependabot[bot]'",
+          needs: "prepare",
           permissions: {
             contents: "write",
+          },
+          secrets: "inherit",
+          uses: "org/reusable/.github/workflows/test.yml@v1",
+          with: {
+            language: "node",
           },
           steps: [
             {
@@ -36,6 +43,11 @@ describe("workflow parser", () => {
     expect(facts?.triggers).toEqual(expect.arrayContaining(["pull_request", "workflow_dispatch"]));
     expect(facts?.workflowPermissions).toBe("write-all");
     expect(facts?.jobs).toHaveLength(1);
+    expect(facts?.jobs[0]?.if).toContain("dependabot");
+    expect(facts?.jobs[0]?.needs).toEqual(["prepare"]);
+    expect(facts?.jobs[0]?.uses).toBe("org/reusable/.github/workflows/test.yml@v1");
+    expect(facts?.jobs[0]?.with?.language).toBe("node");
+    expect(facts?.jobs[0]?.secrets).toBe("inherit");
     expect(facts?.jobs[0]?.steps[0]?.uses).toBe("actions/checkout@v4");
     expect(facts?.jobs[0]?.steps[1]?.run).toContain("${{");
   });

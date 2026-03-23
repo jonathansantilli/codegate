@@ -11,6 +11,37 @@ function asString(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+function toStringMap(value: unknown): Record<string, string> | undefined {
+  const record = asRecord(value);
+  if (!record) {
+    return undefined;
+  }
+
+  const entries: Record<string, string> = {};
+  for (const [key, entry] of Object.entries(record)) {
+    if (typeof entry === "string") {
+      entries[key] = entry;
+    }
+  }
+
+  return Object.keys(entries).length > 0 ? entries : undefined;
+}
+
+function extractNeeds(value: unknown): string[] {
+  if (typeof value === "string") {
+    const normalized = value.trim();
+    return normalized.length > 0 ? [normalized] : [];
+  }
+
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter(
+    (entry): entry is string => typeof entry === "string" && entry.trim().length > 0,
+  );
+}
+
 function normalizeWorkflowPath(value: string): string {
   return value.replaceAll("\\", "/");
 }
@@ -41,20 +72,11 @@ function extractStepFacts(step: unknown): WorkflowStepFacts | null {
     return null;
   }
 
-  const withValues = asRecord(stepRecord.with);
-  const withEntries: Record<string, string> = {};
-  if (withValues) {
-    for (const [key, value] of Object.entries(withValues)) {
-      if (typeof value === "string") {
-        withEntries[key] = value;
-      }
-    }
-  }
-
   const stepFacts: WorkflowStepFacts = {
+    if: asString(stepRecord.if),
     uses: asString(stepRecord.uses),
     run: asString(stepRecord.run),
-    with: Object.keys(withEntries).length > 0 ? withEntries : undefined,
+    with: toStringMap(stepRecord.with),
   };
 
   if (!stepFacts.uses && !stepFacts.run) {
@@ -77,6 +99,11 @@ function extractJobFacts(id: string, value: unknown): WorkflowJobFacts | null {
 
   return {
     id,
+    if: asString(jobRecord.if),
+    uses: asString(jobRecord.uses),
+    with: toStringMap(jobRecord.with),
+    needs: extractNeeds(jobRecord.needs),
+    secrets: jobRecord.secrets,
     permissions: jobRecord.permissions,
     steps,
   };
