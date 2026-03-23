@@ -41,6 +41,14 @@ import { detectDependabotExecution } from "./detectors/dependabot-execution.js";
 import { detectWorkflowHardcodedContainerCredentials } from "./detectors/workflow-hardcoded-container-credentials.js";
 import { detectWorkflowUnredactedSecrets } from "./detectors/workflow-unredacted-secrets.js";
 import { detectWorkflowBotConditions } from "./detectors/workflow-bot-conditions.js";
+import { detectWorkflowPrTargetCheckoutHead } from "./detectors/workflow-pr-target-checkout-head.js";
+import { detectWorkflowArtifactTrustChain } from "./detectors/workflow-artifact-trust-chain.js";
+import { detectWorkflowCallBoundary } from "./detectors/workflow-call-boundary.js";
+import { detectWorkflowSecretExfiltration } from "./detectors/workflow-secret-exfiltration.js";
+import { detectWorkflowOidcUntrustedContext } from "./detectors/workflow-oidc-untrusted-context.js";
+import { detectWorkflowDynamicMatrixInjection } from "./detectors/workflow-dynamic-matrix-injection.js";
+import { detectDependabotAutoMerge } from "./detectors/dependabot-auto-merge.js";
+import { detectWorkflowLocalActionMutation } from "./detectors/workflow-local-action-mutation.js";
 import { filterRegisteredAudits, type RegisteredAudit } from "./audits/registry.js";
 import type { AuditPersona, RuntimeMode } from "../config.js";
 import { FINDING_CATEGORIES, type Finding } from "../types/finding.js";
@@ -641,6 +649,95 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
       run: ({ file, input }) =>
         input.config.workflowAuditsEnabled
           ? detectDependabotExecution({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-pr-target-checkout-head",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowPrTargetCheckoutHead({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-artifact-trust-chain",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowArtifactTrustChain({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-call-boundary",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowCallBoundary({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-secret-exfiltration",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowSecretExfiltration({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              trustedApiDomains: input.config.trustedApiDomains,
+            })
+          : [],
+    },
+    {
+      id: "workflow-oidc-untrusted-context",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowOidcUntrustedContext({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-dynamic-matrix-injection",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowDynamicMatrixInjection({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "dependabot-auto-merge",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectDependabotAutoMerge({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-local-action-mutation",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowLocalActionMutation({
               filePath: file.filePath,
               parsed: file.parsed,
               textContent: file.textContent,

@@ -22,5 +22,47 @@
     "target": "RC-04-dependabot-execution",
     "expected_rule": "dependabot-execution",
     "source": "https://github.com/RoleModel/rolemodel_rails/blob/83f8c13518afd1137405b81fc4723e202f833368/lib/generators/rolemodel/github/templates/dependabot.yml"
+  },
+  {
+    "id": "RC-05-workflow-pr-target-checkout-head",
+    "target": "RC-05-workflow-pr-target-checkout-head",
+    "expected_rule": "workflow-pr-target-checkout-head",
+    "source": "https://github.com/antiwork/gumroad/blob/000969060793173ff7501038e4104794a5f842b1/.github/workflows/tests.yml"
+  },
+  {
+    "id": "RC-06-workflow-artifact-trust-chain",
+    "target": "RC-06-workflow-artifact-trust-chain",
+    "expected_rule": "workflow-artifact-trust-chain",
+    "source": "https://github.com/facebook/react/blob/3e1abcc8d7083a13adf4774feb0d67ecbe4a2bc4/.github/workflows/runtime_build_and_test.yml"
+  },
+  {
+    "id": "RC-07-workflow-call-boundary",
+    "target": "RC-07-workflow-call-boundary",
+    "expected_rule": "workflow-call-boundary",
+    "source": "https://github.com/valkey-io/valkey/blob/543a6b83dffff9d35da046ad2067a94b60cf3f38/.github/workflows/daily.yml"
+  },
+  {
+    "id": "RC-08-workflow-secret-exfiltration",
+    "target": "RC-08-workflow-secret-exfiltration",
+    "expected_rule": "workflow-secret-exfiltration",
+    "source": "https://github.com/r-dbi/odbc/blob/02f4a32cacde3b24168cf4d28a18279e22c4939f/.github/workflows/db-pro.yaml"
+  },
+  {
+    "id": "RC-09-workflow-oidc-untrusted-context",
+    "target": "RC-09-workflow-oidc-untrusted-context",
+    "expected_rule": "workflow-oidc-untrusted-context",
+    "source": "https://github.com/grafana/grafana/blob/2131a63ca06a161abcc1f46ff0352ca2ce3b06ca/.github/workflows/frontend-lint.yml"
+  },
+  {
+    "id": "RC-10-dependabot-auto-merge",
+    "target": "RC-10-dependabot-auto-merge",
+    "expected_rule": "dependabot-auto-merge",
+    "source": "https://github.com/bflad/go-module-two/blob/b34d6ff790df1dec533198da4be2f9857199d725/.github/workflows/dependabot-auto-merge.yml"
+  },
+  {
+    "id": "RC-11-workflow-local-action-mutation",
+    "target": "RC-11-workflow-local-action-mutation",
+    "expected_rule": "workflow-local-action-mutation",
+    "source": "https://github.com/grafana/grafana/blob/2131a63ca06a161abcc1f46ff0352ca2ce3b06ca/.github/workflows/frontend-lint.yml"
   }
 ]
