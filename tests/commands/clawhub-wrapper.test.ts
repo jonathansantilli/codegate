@@ -111,6 +111,17 @@ describe("clawhub wrapper parser", () => {
       "--cg-deep",
       "--cg-force",
       "--cg-no-tui",
+      "--cg-verbose",
+      "--cg-collect",
+      "project",
+      "--cg-collect-kind",
+      "workflows",
+      "--cg-strict-collection",
+      "--cg-persona",
+      "auditor",
+      "--cg-runtime-mode",
+      "online",
+      "--cg-workflow-audits",
       "--cg-format",
       "json",
       "--workdir",
@@ -120,6 +131,13 @@ describe("clawhub wrapper parser", () => {
     expect(parsed.wrapper.deep).toBe(true);
     expect(parsed.wrapper.force).toBe(true);
     expect(parsed.wrapper.noTui).toBe(true);
+    expect(parsed.wrapper.verbose).toBe(true);
+    expect(parsed.wrapper.collect).toEqual(["project"]);
+    expect(parsed.wrapper.collectKinds).toEqual(["workflows"]);
+    expect(parsed.wrapper.strictCollection).toBe(true);
+    expect(parsed.wrapper.persona).toBe("auditor");
+    expect(parsed.wrapper.runtimeMode).toBe("online");
+    expect(parsed.wrapper.workflowAudits).toBe(true);
     expect(parsed.wrapper.format).toBe("json");
     expect(parsed.passthroughArgs).toEqual(["install", "security-auditor", "--workdir", "/tmp/ws"]);
   });
@@ -155,6 +173,12 @@ describe("clawhub wrapper parser", () => {
     expect(() =>
       parseClawhubInvocation(["install", "security-auditor", "--cg-config", "--cg-force"]),
     ).toThrow("--cg-config requires a value");
+  });
+
+  it("throws for unsupported --cg-collect values", () => {
+    expect(() =>
+      parseClawhubInvocation(["install", "security-auditor", "--cg-collect", "invalid"]),
+    ).toThrow("Unsupported --cg-collect value");
   });
 
   it("detects install even when global options with values appear before subcommand", () => {
@@ -374,6 +398,43 @@ describe("clawhub wrapper execution", () => {
     expect(resolvedConfig?.skip_rules).toEqual(["rule-skip"]);
     expect(resolvedConfig?.suppress_findings).toEqual(["legacy-suppression"]);
     expect(resolvedConfig?.suppression_rules).toHaveLength(1);
+  });
+
+  it("passes scan-tuning wrapper options into resolved config for scan", async () => {
+    let resolvedConfig: CodeGateConfig | undefined;
+
+    await executeClawhubWrapper(
+      {
+        version: "0.1.0",
+        clawhubArgs: [
+          "install",
+          "security-auditor",
+          "--cg-collect",
+          "project",
+          "--cg-collect-kind",
+          "workflows",
+          "--cg-strict-collection",
+          "--cg-persona",
+          "auditor",
+          "--cg-runtime-mode",
+          "online",
+          "--cg-workflow-audits",
+        ],
+      },
+      makeDeps({
+        runScan: async (input) => {
+          resolvedConfig = input.config;
+          return report(0);
+        },
+      }),
+    );
+
+    expect(resolvedConfig?.scan_collection_modes).toEqual(["project"]);
+    expect(resolvedConfig?.scan_collection_kinds).toEqual(["workflows"]);
+    expect(resolvedConfig?.strict_collection).toBe(true);
+    expect(resolvedConfig?.persona).toBe("auditor");
+    expect(resolvedConfig?.runtime_mode).toBe("online");
+    expect(resolvedConfig?.workflow_audits?.enabled).toBe(true);
   });
 
   it("runs deep discovery when --cg-deep is set", async () => {

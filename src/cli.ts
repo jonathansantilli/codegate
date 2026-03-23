@@ -166,6 +166,27 @@ function renderExampleHelp(lines: string[]): string {
   return ["", "Examples:", ...lines.map((line) => `  ${line}`)].join("\n");
 }
 
+function renderWrapperOptionsHelp(): string {
+  return [
+    "",
+    "CodeGate wrapper options (consumed by CodeGate, not forwarded to the wrapped CLI):",
+    "  --cg-force               continue install when preflight is warning/error",
+    "  --cg-deep                enable Layer 3 deep analysis during preflight",
+    "  --cg-no-tui              disable TUI and interactive prompts for preflight",
+    "  --cg-verbose             show extended terminal output during preflight",
+    "  --cg-include-user-scope  include user/home config paths in preflight scan",
+    "  --cg-collect <mode>      preflight collection mode (repeatable): default|project|user|explicit|all",
+    "  --cg-collect-kind <kind> preflight collection kind (repeatable): workflows|actions|dependabot",
+    "  --cg-strict-collection   treat preflight parse failures as high severity",
+    "  --cg-persona <type>      preflight audit sensitivity: regular|pedantic|auditor",
+    "  --cg-runtime-mode <mode> preflight runtime mode: offline|online|online-no-audits",
+    "  --cg-workflow-audits     enable workflow audit pack during preflight",
+    "  --cg-format <type>       preflight report format: terminal|json|sarif|markdown|html",
+    "  --cg-config <path>       use a specific CodeGate config file for preflight",
+    "  --                        pass subsequent args through to wrapped CLI unchanged",
+  ].join("\n");
+}
+
 export function isDirectCliInvocation(
   importMetaUrl: string,
   argv1: string | undefined,
@@ -691,11 +712,13 @@ function addSkillsCommand(program: Command, version: string, deps: CliDeps): voi
     .description("Wrap npx skills with CodeGate preflight scanning for installs")
     .allowUnknownOption(true)
     .allowExcessArguments(true)
+    .addHelpText("after", renderWrapperOptionsHelp())
     .addHelpText(
       "after",
       renderExampleHelp([
         "codegate skills add vercel-labs/skills --skill find-skills",
         "codegate skills add https://github.com/owner/repo --skill security-review",
+        "codegate skills add owner/repo --skill demo --cg-workflow-audits --cg-collect project",
         "codegate skills add owner/repo --skill demo --cg-deep",
         "codegate skills find security",
         "codegate skills add owner/repo --skill demo --cg-force",
@@ -742,11 +765,13 @@ function addClawhubCommand(program: Command, version: string, deps: CliDeps): vo
     .description("Wrap npx clawhub with CodeGate preflight scanning for installs")
     .allowUnknownOption(true)
     .allowExcessArguments(true)
+    .addHelpText("after", renderWrapperOptionsHelp())
     .addHelpText(
       "after",
       renderExampleHelp([
         "codegate clawhub install security-auditor",
         "codegate clawhub install security-auditor --version 1.0.0",
+        "codegate clawhub install security-auditor --cg-workflow-audits --cg-collect project",
         "codegate clawhub install security-auditor --cg-deep",
         "codegate clawhub search security",
         "codegate clawhub install security-auditor --cg-force",

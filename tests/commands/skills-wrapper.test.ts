@@ -113,6 +113,17 @@ describe("skills wrapper parser", () => {
       "--cg-deep",
       "--cg-force",
       "--cg-no-tui",
+      "--cg-verbose",
+      "--cg-collect",
+      "project",
+      "--cg-collect-kind",
+      "workflows",
+      "--cg-strict-collection",
+      "--cg-persona",
+      "auditor",
+      "--cg-runtime-mode",
+      "online",
+      "--cg-workflow-audits",
       "--cg-format",
       "json",
       "--foo",
@@ -122,6 +133,13 @@ describe("skills wrapper parser", () => {
     expect(parsed.wrapper.force).toBe(true);
     expect(parsed.wrapper.deep).toBe(true);
     expect(parsed.wrapper.noTui).toBe(true);
+    expect(parsed.wrapper.verbose).toBe(true);
+    expect(parsed.wrapper.collect).toEqual(["project"]);
+    expect(parsed.wrapper.collectKinds).toEqual(["workflows"]);
+    expect(parsed.wrapper.strictCollection).toBe(true);
+    expect(parsed.wrapper.persona).toBe("auditor");
+    expect(parsed.wrapper.runtimeMode).toBe("online");
+    expect(parsed.wrapper.workflowAudits).toBe(true);
     expect(parsed.wrapper.format).toBe("json");
     expect(parsed.passthroughArgs).toEqual([
       "add",
@@ -195,6 +213,12 @@ describe("skills wrapper parser", () => {
     expect(() =>
       parseSkillsInvocation(["add", "owner/repo", "--cg-format", "--cg-no-tui"]),
     ).toThrow("--cg-format requires a value");
+  });
+
+  it("throws for unsupported --cg-collect values", () => {
+    expect(() => parseSkillsInvocation(["add", "owner/repo", "--cg-collect", "invalid"])).toThrow(
+      "Unsupported --cg-collect value",
+    );
   });
 
   it("supports --cg-deep wrapper option", () => {
@@ -547,6 +571,45 @@ describe("skills wrapper execution", () => {
     );
 
     expect(resolvedConfig?.scan_user_scope).toBe(true);
+  });
+
+  it("passes scan-tuning wrapper options into resolved config for scan", async () => {
+    let resolvedConfig: CodeGateConfig | undefined;
+
+    await executeSkillsWrapper(
+      {
+        version: "0.1.0",
+        skillsArgs: [
+          "add",
+          "https://github.com/vercel-labs/skills",
+          "--skill",
+          "find-skills",
+          "--cg-collect",
+          "project",
+          "--cg-collect-kind",
+          "workflows",
+          "--cg-strict-collection",
+          "--cg-persona",
+          "auditor",
+          "--cg-runtime-mode",
+          "online",
+          "--cg-workflow-audits",
+        ],
+      },
+      makeDeps({
+        runScan: async (input) => {
+          resolvedConfig = input.config;
+          return report(0);
+        },
+      }),
+    );
+
+    expect(resolvedConfig?.scan_collection_modes).toEqual(["project"]);
+    expect(resolvedConfig?.scan_collection_kinds).toEqual(["workflows"]);
+    expect(resolvedConfig?.strict_collection).toBe(true);
+    expect(resolvedConfig?.persona).toBe("auditor");
+    expect(resolvedConfig?.runtime_mode).toBe("online");
+    expect(resolvedConfig?.workflow_audits?.enabled).toBe(true);
   });
 
   it("passes granular policy controls into the scan config", async () => {

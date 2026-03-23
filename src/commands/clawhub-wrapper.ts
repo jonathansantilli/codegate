@@ -4,11 +4,19 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import {
+  PERSONAS,
+  RUNTIME_MODES,
+  SCAN_COLLECTION_KINDS,
+  SCAN_COLLECTION_MODES,
   OUTPUT_FORMATS,
+  type AuditPersona,
   type CliConfigOverrides,
   type CodeGateConfig,
   type OutputFormat,
   type ResolveConfigOptions,
+  type RuntimeMode,
+  type ScanCollectionKind,
+  type ScanCollectionMode,
 } from "../config.js";
 import { resolveScanTarget, type ResolvedScanTarget } from "../scan-target.js";
 import type { CodeGateReport } from "../types/report.js";
@@ -58,6 +66,50 @@ function parseOutputFormat(value: string): OutputFormat {
   if (!matched) {
     throw new Error(
       `Unsupported --cg-format value "${value}". Valid values: ${OUTPUT_FORMATS.join(", ")}.`,
+    );
+  }
+  return matched;
+}
+
+function parseCollectionMode(value: string): ScanCollectionMode {
+  const normalized = value.trim().toLowerCase();
+  const matched = SCAN_COLLECTION_MODES.find((mode) => mode === normalized);
+  if (!matched) {
+    throw new Error(
+      `Unsupported --cg-collect value "${value}". Valid values: ${SCAN_COLLECTION_MODES.join(", ")}.`,
+    );
+  }
+  return matched;
+}
+
+function parseCollectionKind(value: string): ScanCollectionKind {
+  const normalized = value.trim().toLowerCase();
+  const matched = SCAN_COLLECTION_KINDS.find((kind) => kind === normalized);
+  if (!matched) {
+    throw new Error(
+      `Unsupported --cg-collect-kind value "${value}". Valid values: ${SCAN_COLLECTION_KINDS.join(", ")}.`,
+    );
+  }
+  return matched;
+}
+
+function parsePersona(value: string): AuditPersona {
+  const normalized = value.trim().toLowerCase();
+  const matched = PERSONAS.find((persona) => persona === normalized);
+  if (!matched) {
+    throw new Error(
+      `Unsupported --cg-persona value "${value}". Valid values: ${PERSONAS.join(", ")}.`,
+    );
+  }
+  return matched;
+}
+
+function parseRuntimeMode(value: string): RuntimeMode {
+  const normalized = value.trim().toLowerCase();
+  const matched = RUNTIME_MODES.find((mode) => mode === normalized);
+  if (!matched) {
+    throw new Error(
+      `Unsupported --cg-runtime-mode value "${value}". Valid values: ${RUNTIME_MODES.join(", ")}.`,
     );
   }
   return matched;
@@ -518,7 +570,14 @@ export interface ClawhubWrapperRuntimeOptions {
   force: boolean;
   deep: boolean;
   noTui: boolean;
+  verbose: boolean;
   includeUserScope: boolean;
+  strictCollection: boolean;
+  workflowAudits: boolean;
+  collect: ScanCollectionMode[];
+  collectKinds: ScanCollectionKind[];
+  persona?: AuditPersona;
+  runtimeMode?: RuntimeMode;
   format?: OutputFormat;
   configPath?: string;
 }
@@ -592,7 +651,14 @@ export function parseClawhubInvocation(
     force: false,
     deep: false,
     noTui: false,
+    verbose: false,
     includeUserScope: false,
+    strictCollection: false,
+    workflowAudits: false,
+    collect: [],
+    collectKinds: [],
+    persona: undefined,
+    runtimeMode: undefined,
     format: undefined,
     configPath: undefined,
   };
@@ -620,8 +686,20 @@ export function parseClawhubInvocation(
       wrapper.noTui = true;
       continue;
     }
+    if (token === "--cg-verbose") {
+      wrapper.verbose = true;
+      continue;
+    }
     if (token === "--cg-include-user-scope") {
       wrapper.includeUserScope = true;
+      continue;
+    }
+    if (token === "--cg-strict-collection") {
+      wrapper.strictCollection = true;
+      continue;
+    }
+    if (token === "--cg-workflow-audits") {
+      wrapper.workflowAudits = true;
       continue;
     }
     if (token === "--cg-format" || token.startsWith("--cg-format=")) {
@@ -633,6 +711,36 @@ export function parseClawhubInvocation(
     if (token === "--cg-config" || token.startsWith("--cg-config=")) {
       const [value, consumedIndex] = parseWrapperOptionValue(rawArgs, index, "--cg-config");
       wrapper.configPath = value;
+      index = consumedIndex;
+      continue;
+    }
+    if (token === "--cg-collect" || token.startsWith("--cg-collect=")) {
+      const [value, consumedIndex] = parseWrapperOptionValue(rawArgs, index, "--cg-collect");
+      const mode = parseCollectionMode(value);
+      if (!wrapper.collect.includes(mode)) {
+        wrapper.collect.push(mode);
+      }
+      index = consumedIndex;
+      continue;
+    }
+    if (token === "--cg-collect-kind" || token.startsWith("--cg-collect-kind=")) {
+      const [value, consumedIndex] = parseWrapperOptionValue(rawArgs, index, "--cg-collect-kind");
+      const kind = parseCollectionKind(value);
+      if (!wrapper.collectKinds.includes(kind)) {
+        wrapper.collectKinds.push(kind);
+      }
+      index = consumedIndex;
+      continue;
+    }
+    if (token === "--cg-persona" || token.startsWith("--cg-persona=")) {
+      const [value, consumedIndex] = parseWrapperOptionValue(rawArgs, index, "--cg-persona");
+      wrapper.persona = parsePersona(value);
+      index = consumedIndex;
+      continue;
+    }
+    if (token === "--cg-runtime-mode" || token.startsWith("--cg-runtime-mode=")) {
+      const [value, consumedIndex] = parseWrapperOptionValue(rawArgs, index, "--cg-runtime-mode");
+      wrapper.runtimeMode = parseRuntimeMode(value);
       index = consumedIndex;
       continue;
     }
@@ -778,9 +886,29 @@ export async function executeClawhubWrapper(
       scanTarget: resolvedTarget.scanTarget,
       cli: cliConfig,
     });
-    const config = parsed.wrapper.includeUserScope
-      ? { ...baseConfig, scan_user_scope: true }
-      : baseConfig;
+    const config: CodeGateConfig = {
+      ...baseConfig,
+      scan_user_scope:
+        parsed.wrapper.includeUserScope === true ? true : (baseConfig.scan_user_scope ?? false),
+      scan_collection_modes:
+        parsed.wrapper.collect.length > 0
+          ? parsed.wrapper.collect
+          : baseConfig.scan_collection_modes,
+      scan_collection_kinds:
+        parsed.wrapper.collectKinds.length > 0
+          ? parsed.wrapper.collectKinds
+          : baseConfig.scan_collection_kinds,
+      strict_collection:
+        parsed.wrapper.strictCollection === true ? true : (baseConfig.strict_collection ?? false),
+      persona: parsed.wrapper.persona ?? baseConfig.persona,
+      runtime_mode: parsed.wrapper.runtimeMode ?? baseConfig.runtime_mode,
+      workflow_audits: {
+        enabled:
+          parsed.wrapper.workflowAudits === true
+            ? true
+            : (baseConfig.workflow_audits?.enabled ?? false),
+      },
+    };
 
     const { report, deepScanNotes } = await runScanAnalysis(
       {
@@ -792,8 +920,14 @@ export async function executeClawhubWrapper(
         options: {
           noTui,
           format: parsed.wrapper.format,
+          verbose: parsed.wrapper.verbose,
           force: parsed.wrapper.force,
           includeUserScope: parsed.wrapper.includeUserScope,
+          collect: parsed.wrapper.collect.length > 0 ? parsed.wrapper.collect : undefined,
+          strictCollection: parsed.wrapper.strictCollection,
+          persona: parsed.wrapper.persona,
+          runtimeMode: parsed.wrapper.runtimeMode,
+          workflowAudits: parsed.wrapper.workflowAudits,
           deep: parsed.wrapper.deep,
         },
       },

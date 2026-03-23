@@ -37,6 +37,26 @@ function makeDeps(overrides: Partial<CliDeps> = {}): CliDeps {
   };
 }
 
+function captureClawhubHelpOutput(): string {
+  const output: string[] = [];
+  const cli = createCli("0.1.0", makeDeps());
+  const clawhubCommand = cli.commands.find((command) => command.name() === "clawhub");
+  if (!clawhubCommand) {
+    throw new Error("clawhub command not found");
+  }
+
+  clawhubCommand.configureOutput({
+    writeOut: (message) => {
+      output.push(message);
+    },
+    writeErr: (message) => {
+      output.push(message);
+    },
+  });
+  clawhubCommand.outputHelp();
+  return output.join("");
+}
+
 describe("clawhub wrapper command", () => {
   it("forwards raw args to runClawhubWrapper without hardcoding clawhub options", async () => {
     const runClawhubWrapper = vi.fn(async () => {});
@@ -70,5 +90,21 @@ describe("clawhub wrapper command", () => {
         ],
       }),
     );
+  });
+
+  it("documents CodeGate wrapper options in clawhub help output", () => {
+    const help = captureClawhubHelpOutput();
+
+    expect(help).toContain("--cg-force");
+    expect(help).toContain("--cg-deep");
+    expect(help).toContain("--cg-no-tui");
+    expect(help).toContain("--cg-include-user-scope");
+    expect(help).toContain("--cg-collect <mode>");
+    expect(help).toContain("--cg-collect-kind <kind>");
+    expect(help).toContain("--cg-persona <type>");
+    expect(help).toContain("--cg-runtime-mode <mode>");
+    expect(help).toContain("--cg-workflow-audits");
+    expect(help).toContain("--cg-format <type>");
+    expect(help).toContain("--cg-config <path>");
   });
 });

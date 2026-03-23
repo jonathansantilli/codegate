@@ -37,6 +37,26 @@ function makeDeps(overrides: Partial<CliDeps> = {}): CliDeps {
   };
 }
 
+function captureSkillsHelpOutput(): string {
+  const output: string[] = [];
+  const cli = createCli("0.1.0", makeDeps());
+  const skillsCommand = cli.commands.find((command) => command.name() === "skills");
+  if (!skillsCommand) {
+    throw new Error("skills command not found");
+  }
+
+  skillsCommand.configureOutput({
+    writeOut: (message) => {
+      output.push(message);
+    },
+    writeErr: (message) => {
+      output.push(message);
+    },
+  });
+  skillsCommand.outputHelp();
+  return output.join("");
+}
+
 describe("skills wrapper command", () => {
   it("forwards raw args to runSkillsWrapper without hardcoding skills options", async () => {
     const runSkillsWrapper = vi.fn(async () => {});
@@ -70,5 +90,21 @@ describe("skills wrapper command", () => {
         ],
       }),
     );
+  });
+
+  it("documents CodeGate wrapper options in skills help output", () => {
+    const help = captureSkillsHelpOutput();
+
+    expect(help).toContain("--cg-force");
+    expect(help).toContain("--cg-deep");
+    expect(help).toContain("--cg-no-tui");
+    expect(help).toContain("--cg-include-user-scope");
+    expect(help).toContain("--cg-collect <mode>");
+    expect(help).toContain("--cg-collect-kind <kind>");
+    expect(help).toContain("--cg-persona <type>");
+    expect(help).toContain("--cg-runtime-mode <mode>");
+    expect(help).toContain("--cg-workflow-audits");
+    expect(help).toContain("--cg-format <type>");
+    expect(help).toContain("--cg-config <path>");
   });
 });
