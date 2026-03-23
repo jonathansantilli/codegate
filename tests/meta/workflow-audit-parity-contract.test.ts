@@ -40,6 +40,7 @@ const expectedCheckedAuditIds = [
   "hardcoded-container-credentials",
   "unredacted-secrets",
   "bot-conditions",
+  "workflow-pr-target-checkout-head",
 ] as const;
 
 function readChecklist(): string {
