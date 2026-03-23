@@ -198,4 +198,133 @@ jobs:
     const ruleIds = new Set(findings.map((finding) => finding.rule_id));
     expect(ruleIds.has("workflow-secret-exfiltration")).toBe(true);
   });
+
+  it("surfaces remaining wave-f findings through runStaticEngine", async () => {
+    const findings = await runStaticEngine({
+      projectRoot: "/tmp/project",
+      files: [
+        {
+          filePath: ".github/workflows/oidc.yml",
+          format: "yaml",
+          textContent: `on: [pull_request_target]
+jobs:
+  release:
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::123456789012:role/deploy
+`,
+          parsed: {
+            on: ["pull_request_target"],
+            jobs: {
+              release: {
+                permissions: {
+                  "id-token": "write",
+                  contents: "read",
+                },
+                steps: [
+                  {
+                    uses: "aws-actions/configure-aws-credentials@v4",
+                    with: {
+                      "role-to-assume": "arn:aws:iam::123456789012:role/deploy",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+        {
+          filePath: ".github/workflows/matrix.yml",
+          format: "yaml",
+          textContent: `on: [pull_request]
+jobs:
+  build:
+    strategy:
+      matrix: \${{ fromJSON(github.event.pull_request.title) }}
+    steps:
+      - run: echo "\${{ matrix.command }}"
+`,
+          parsed: {
+            on: ["pull_request"],
+            jobs: {
+              build: {
+                strategy: {
+                  matrix: "${{ fromJSON(github.event.pull_request.title) }}",
+                },
+                steps: [
+                  {
+                    run: 'echo "${{ matrix.command }}"',
+                  },
+                ],
+              },
+            },
+          },
+        },
+        {
+          filePath: ".github/workflows/dependabot-automerge.yml",
+          format: "yaml",
+          textContent: `on: [pull_request_target]
+jobs:
+  automerge:
+    if: github.actor == 'dependabot[bot]'
+    steps:
+      - run: gh pr merge --auto --merge "$PR_URL"
+`,
+          parsed: {
+            on: ["pull_request_target"],
+            jobs: {
+              automerge: {
+                if: "github.actor == 'dependabot[bot]'",
+                steps: [
+                  {
+                    run: 'gh pr merge --auto --merge "$PR_URL"',
+                  },
+                ],
+              },
+            },
+          },
+        },
+        {
+          filePath: ".github/workflows/local-action.yml",
+          format: "yaml",
+          textContent: `on: [pull_request_target]
+jobs:
+  release:
+    permissions:
+      contents: write
+    steps:
+      - uses: ./.github/actions/release
+`,
+          parsed: {
+            on: ["pull_request_target"],
+            jobs: {
+              release: {
+                permissions: {
+                  contents: "write",
+                },
+                steps: [
+                  {
+                    uses: "./.github/actions/release",
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      symlinkEscapes: [],
+      hooks: [],
+      config: BASE_CONFIG,
+    });
+
+    const ruleIds = new Set(findings.map((finding) => finding.rule_id));
+    expect(ruleIds.has("workflow-oidc-untrusted-context")).toBe(true);
+    expect(ruleIds.has("workflow-dynamic-matrix-injection")).toBe(true);
+    expect(ruleIds.has("dependabot-auto-merge")).toBe(true);
+    expect(ruleIds.has("workflow-local-action-mutation")).toBe(true);
+  });
 });
