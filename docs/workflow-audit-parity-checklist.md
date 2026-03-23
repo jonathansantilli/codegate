@@ -54,7 +54,8 @@ Use this checklist to track the workflow-audit detectors implemented in CodeGate
 ## Wave F (Planned)
 
 - [ ] `workflow-call-boundary`
-- [ ] `workflow-artifact-trust-chain`
+- [x] `workflow-call-boundary`
+- [x] `workflow-artifact-trust-chain`
 - [ ] `workflow-oidc-untrusted-context`
 - [x] `workflow-pr-target-checkout-head`
 - [ ] `workflow-dynamic-matrix-injection`
