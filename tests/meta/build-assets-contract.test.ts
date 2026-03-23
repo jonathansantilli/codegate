@@ -12,4 +12,9 @@ describe("build asset contract", () => {
     expect(packageJson.scripts?.build).toContain("copy-assets");
     expect(existsSync(resolve(root, "scripts/copy-assets.mjs"))).toBe(true);
   });
+
+  it("copies bundled layer2 static rules into dist", () => {
+    const script = readFileSync(resolve(root, "scripts/copy-assets.mjs"), "utf8");
+    expect(script).toContain('["src/layer2-static/rules", "dist/layer2-static/rules"]');
+  });
 });
