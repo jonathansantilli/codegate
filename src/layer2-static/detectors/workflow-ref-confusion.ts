@@ -47,6 +47,39 @@ export function detectWorkflowRefConfusion(input: WorkflowRefConfusionInput): Fi
   const findings: Finding[] = [];
 
   for (const [jobIndex, job] of facts.jobs.entries()) {
+    const jobUses = job.uses?.trim();
+    if (jobUses) {
+      const parsedJobUses = parseRepositoryUses(jobUses);
+      if (parsedJobUses && !isHashPinned(parsedJobUses.ref)) {
+        const evidence = buildFindingEvidence({
+          textContent: input.textContent,
+          searchTerms: [jobUses],
+          fallbackValue: `uses: ${jobUses}`,
+        });
+
+        findings.push({
+          rule_id: "workflow-ref-confusion",
+          finding_id: `WORKFLOW_REF_CONFUSION-JOB-${input.filePath}-${jobIndex}`,
+          severity: "HIGH",
+          category: "CI_VULNERABLE_ACTION",
+          layer: "L2",
+          file_path: input.filePath,
+          location: { field: `jobs.${job.id}.uses` },
+          description:
+            "Workflow action is pinned to a symbolic ref instead of an immutable commit hash",
+          affected_tools: ["github-actions"],
+          cve: null,
+          owasp: ["ASI02"],
+          cwe: "CWE-829",
+          confidence: "HIGH",
+          fixable: false,
+          remediation_actions: ["Pin external actions to a full commit SHA"],
+          evidence: evidence?.evidence ?? null,
+          suppressed: false,
+        });
+      }
+    }
+
     for (const [stepIndex, step] of job.steps.entries()) {
       const uses = step.uses?.trim();
       if (!uses) {

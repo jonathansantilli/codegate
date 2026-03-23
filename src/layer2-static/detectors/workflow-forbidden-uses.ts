@@ -150,6 +150,42 @@ export function detectWorkflowForbiddenUses(input: WorkflowForbiddenUsesInput): 
   const findings: Finding[] = [];
 
   facts.jobs.forEach((job, jobIndex) => {
+    const jobUses = job.uses?.trim();
+    if (jobUses && isForbidden(jobUses, policy)) {
+      const evidence = buildFindingEvidence({
+        textContent: input.textContent,
+        searchTerms: [jobUses],
+        fallbackValue: `uses: ${jobUses}`,
+      });
+
+      findings.push({
+        rule_id: "workflow-forbidden-uses",
+        finding_id: `WORKFLOW_FORBIDDEN_USES-JOB-${input.filePath}-${jobIndex}`,
+        severity: "HIGH",
+        category: "CI_SUPPLY_CHAIN",
+        layer: "L2",
+        file_path: input.filePath,
+        location: { field: `jobs.${job.id}.uses` },
+        description:
+          policy.mode === "allow"
+            ? "Workflow uses repository action outside the configured allowlist"
+            : "Workflow uses repository action matching the configured denylist",
+        affected_tools: ["github-actions"],
+        cve: null,
+        owasp: ["ASI02"],
+        cwe: "CWE-829",
+        confidence: "HIGH",
+        fixable: false,
+        remediation_actions: [
+          policy.mode === "allow"
+            ? "Add the action to the allowlist only if it is explicitly trusted"
+            : "Remove the action or move it to an allowlist-only policy if it is trusted",
+        ],
+        evidence: evidence?.evidence ?? null,
+        suppressed: false,
+      });
+    }
+
     job.steps.forEach((step, stepIndex) => {
       const uses = step.uses?.trim();
       if (!uses) {
