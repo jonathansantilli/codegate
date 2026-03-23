@@ -1,3 +1,12 @@
+# [0.10.0](https://github.com/jonathansantilli/codegate/compare/v0.9.1...v0.10.0) (2026-03-23)
+
+### Features
+
+- **workflow:** add artifact trust-chain and call-boundary audits ([203bc43](https://github.com/jonathansantilli/codegate/commit/203bc431c0c0cfd17e6ef7d8620715b6b56c25f9))
+- **workflow:** add secret exfiltration workflow audit ([25bf6f8](https://github.com/jonathansantilli/codegate/commit/25bf6f8aeb0807d8c21449e9c4b7de91ec62650f))
+- **workflow:** add wave-f foundations and pr-target checkout detector ([ebb3c68](https://github.com/jonathansantilli/codegate/commit/ebb3c68f4a0b477da85fe4f92fc211ad684f916e))
+- **workflow:** complete wave-f detector set ([7e5775e](https://github.com/jonathansantilli/codegate/commit/7e5775e4e048a689c3102380809cd3f486fc8dbe))
+
 ## [0.9.1](https://github.com/jonathansantilli/codegate/compare/v0.9.0...v0.9.1) (2026-03-23)
 
 ### Bug Fixes
