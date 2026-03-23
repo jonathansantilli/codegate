@@ -16,6 +16,21 @@ function normalizeAdvisoryMap(value: Record<string, string[]>): Record<string, s
   return normalized;
 }
 
+function mergeAdvisoryMaps(
+  bundled: Record<string, string[]>,
+  cached: Record<string, string[]>,
+): Record<string, string[]> {
+  const merged: Record<string, string[]> = {};
+  const allKeys = new Set([...Object.keys(bundled), ...Object.keys(cached)]);
+
+  for (const key of allKeys) {
+    const versions = new Set<string>([...(bundled[key] ?? []), ...(cached[key] ?? [])]);
+    merged[key] = Array.from(versions);
+  }
+
+  return merged;
+}
+
 export interface GithubMetadataClientOptions {
   runtimeMode?: RuntimeMode;
   cacheDir?: string;
@@ -58,7 +73,10 @@ export function createGithubMetadataClient(
 
       const cached = loadCachedAdvisoryPayload(cacheDir, cacheMaxAgeMs, now);
       if (cached) {
-        return cached;
+        return {
+          generatedAt: Math.max(payload.generatedAt, cached.generatedAt),
+          advisories: mergeAdvisoryMaps(payload.advisories, cached.advisories),
+        };
       }
 
       saveCachedAdvisoryPayload(cacheDir, payload);

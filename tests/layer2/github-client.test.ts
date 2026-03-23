@@ -20,7 +20,7 @@ describe("github metadata client", () => {
     expect(client.isOnlineEnabled()).toBe(false);
   });
 
-  it("returns a fresh cached payload in online mode", () => {
+  it("merges cached and bundled advisories in online mode", () => {
     const cacheDir = mkdtempSync(join(tmpdir(), "codegate-github-client-cache-"));
     const now = 1_000_000;
     const payload = {
@@ -39,10 +39,11 @@ describe("github metadata client", () => {
       cacheMaxAgeMs: 60_000,
     });
 
-    expect(
-      client.loadKnownVulnerableActions({
-        "actions/checkout": ["v4"],
-      }),
-    ).toEqual(payload);
+    expect(client.loadKnownVulnerableActions({ "actions/checkout": ["v4"] })).toEqual({
+      generatedAt: now,
+      advisories: {
+        "actions/checkout": ["v4", "v3"],
+      },
+    });
   });
 });

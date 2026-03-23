@@ -83,6 +83,41 @@ describe("workflow template injection detector", () => {
     );
   });
 
+  it("flags untrusted event expressions passed through generic action inputs", async () => {
+    const findings = await runStaticEngine({
+      projectRoot: "/tmp/project",
+      files: [
+        {
+          filePath: ".github/workflows/pr.yml",
+          format: "yaml",
+          textContent: "",
+          parsed: {
+            on: ["pull_request"],
+            jobs: {
+              test: {
+                steps: [
+                  {
+                    uses: "org/custom-action@v1",
+                    with: {
+                      command: "${{ github.event.pull_request.body }}",
+                    },
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      symlinkEscapes: [],
+      hooks: [],
+      config: BASE_CONFIG,
+    });
+
+    expect(findings.some((finding) => finding.rule_id === "workflow-template-injection")).toBe(
+      true,
+    );
+  });
+
   it("does not flag template expansion in trusted push-only workflows", async () => {
     const findings = await runStaticEngine({
       projectRoot: "/tmp/project",
@@ -98,6 +133,71 @@ describe("workflow template injection detector", () => {
                 steps: [
                   {
                     run: "echo ${{ github.ref }}",
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      symlinkEscapes: [],
+      hooks: [],
+      config: BASE_CONFIG,
+    });
+
+    expect(findings.some((finding) => finding.rule_id === "workflow-template-injection")).toBe(
+      false,
+    );
+  });
+
+  it("flags privileged step conditions that trust issue or comment body content", async () => {
+    const findings = await runStaticEngine({
+      projectRoot: "/tmp/project",
+      files: [
+        {
+          filePath: ".github/workflows/comment-release.yml",
+          format: "yaml",
+          textContent: "",
+          parsed: {
+            on: ["issue_comment"],
+            jobs: {
+              release: {
+                steps: [
+                  {
+                    if: "contains(github.event.comment.body, '/release')",
+                    run: "gh release create v1.2.3",
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      symlinkEscapes: [],
+      hooks: [],
+      config: BASE_CONFIG,
+    });
+
+    expect(findings.some((finding) => finding.rule_id === "workflow-template-injection")).toBe(
+      true,
+    );
+  });
+
+  it("does not flag benign template values that are not attacker-controlled event fields", async () => {
+    const findings = await runStaticEngine({
+      projectRoot: "/tmp/project",
+      files: [
+        {
+          filePath: ".github/workflows/pr.yml",
+          format: "yaml",
+          textContent: "",
+          parsed: {
+            on: ["pull_request"],
+            jobs: {
+              test: {
+                steps: [
+                  {
+                    run: "echo ${{ github.repository }}",
                   },
                 ],
               },

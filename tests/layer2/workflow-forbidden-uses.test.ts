@@ -75,4 +75,31 @@ jobs:
     expect(findings[0]?.rule_id).toBe("workflow-forbidden-uses");
     expect(findings[0]?.evidence).toContain("actions/checkout@v4");
   });
+
+  it("applies allowlist policy to reusable workflow references at job level", () => {
+    const findings = detectWorkflowForbiddenUses({
+      filePath: ".github/workflows/release.yml",
+      textContent: `name: release
+on: workflow_dispatch
+jobs:
+  publish:
+    uses: org/repo/.github/workflows/release.yml@v2
+`,
+      parsed: {
+        on: ["workflow_dispatch"],
+        jobs: {
+          publish: {
+            uses: "org/repo/.github/workflows/release.yml@v2",
+          },
+        },
+      },
+      config: {
+        allow: ["github/codeql-action/*"],
+      },
+    });
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.rule_id).toBe("workflow-forbidden-uses");
+    expect(findings[0]?.location.field).toBe("jobs.publish.uses");
+  });
 });

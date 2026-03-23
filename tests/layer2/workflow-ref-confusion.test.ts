@@ -67,4 +67,28 @@ jobs:
 
     expect(findings).toHaveLength(0);
   });
+
+  it("flags reusable workflow refs pinned to symbolic tags at job level", () => {
+    const findings = detectWorkflowRefConfusion({
+      filePath: ".github/workflows/release.yml",
+      textContent: `name: release
+on: workflow_dispatch
+jobs:
+  publish:
+    uses: org/repo/.github/workflows/release.yml@v2
+`,
+      parsed: {
+        on: ["workflow_dispatch"],
+        jobs: {
+          publish: {
+            uses: "org/repo/.github/workflows/release.yml@v2",
+          },
+        },
+      },
+    });
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.rule_id).toBe("workflow-ref-confusion");
+    expect(findings[0]?.location.field).toBe("jobs.publish.uses");
+  });
 });

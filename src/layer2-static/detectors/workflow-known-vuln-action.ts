@@ -29,6 +29,88 @@ function parseRepositoryUses(value: string): { slug: string; ref: string } | nul
   return { slug, ref };
 }
 
+function parseSemverLike(value: string): [number, number, number] | null {
+  const match = value.trim().match(/^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:[-+].*)?$/iu);
+  if (!match?.[1]) {
+    return null;
+  }
+
+  return [
+    Number.parseInt(match[1], 10),
+    Number.parseInt(match[2] ?? "0", 10),
+    Number.parseInt(match[3] ?? "0", 10),
+  ];
+}
+
+function compareSemverLike(
+  left: [number, number, number],
+  right: [number, number, number],
+): number {
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] < right[index]) {
+      return -1;
+    }
+    if (left[index] > right[index]) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+function matchesComparator(ref: string, comparator: string): boolean {
+  const match = comparator.trim().match(/^(<=|>=|<|>|=)\s*(v?\d+(?:\.\d+){0,2})$/iu);
+  if (!match?.[1] || !match[2]) {
+    return false;
+  }
+
+  const refVersion = parseSemverLike(ref);
+  const comparatorVersion = parseSemverLike(match[2]);
+  if (!refVersion || !comparatorVersion) {
+    return false;
+  }
+
+  const comparison = compareSemverLike(refVersion, comparatorVersion);
+  switch (match[1]) {
+    case "<":
+      return comparison < 0;
+    case "<=":
+      return comparison <= 0;
+    case ">":
+      return comparison > 0;
+    case ">=":
+      return comparison >= 0;
+    case "=":
+      return comparison === 0;
+    default:
+      return false;
+  }
+}
+
+function matchesVulnerablePattern(ref: string, pattern: string): boolean {
+  const normalizedRef = ref.trim().toLowerCase();
+  const normalizedPattern = pattern.trim().toLowerCase();
+  if (normalizedPattern.length === 0) {
+    return false;
+  }
+
+  if (normalizedPattern.includes("*")) {
+    return normalizedPattern.endsWith("*")
+      ? normalizedRef.startsWith(normalizedPattern.slice(0, -1))
+      : normalizedRef === normalizedPattern;
+  }
+
+  if (/^(?:<=|>=|<|>|=)/u.test(normalizedPattern)) {
+    const comparators = normalizedPattern.split(/\s+/u).filter((token) => token.length > 0);
+    return comparators.every((comparator) => matchesComparator(normalizedRef, comparator));
+  }
+
+  return normalizedRef === normalizedPattern;
+}
+
+function isKnownVulnerableRef(ref: string, patterns: string[]): boolean {
+  return patterns.some((pattern) => matchesVulnerablePattern(ref, pattern));
+}
+
 export function detectWorkflowKnownVulnAction(input: WorkflowKnownVulnActionInput): Finding[] {
   if (input.runtimeMode !== "online") {
     return [];
@@ -46,6 +128,37 @@ export function detectWorkflowKnownVulnAction(input: WorkflowKnownVulnActionInpu
   const findings: Finding[] = [];
 
   facts.jobs.forEach((job, jobIndex) => {
+    const jobUses = job.uses;
+    if (jobUses) {
+      const parsedJobUses = parseRepositoryUses(jobUses);
+      if (parsedJobUses) {
+        const vulnerableVersions = advisories[parsedJobUses.slug];
+        if (vulnerableVersions && isKnownVulnerableRef(parsedJobUses.ref, vulnerableVersions)) {
+          findings.push({
+            rule_id: "workflow-known-vuln-action",
+            finding_id: `WORKFLOW_KNOWN_VULN_ACTION-JOB-${input.filePath}-${jobIndex}`,
+            severity: "HIGH",
+            category: "CI_VULNERABLE_ACTION",
+            layer: "L2",
+            file_path: input.filePath,
+            location: { field: `jobs.${job.id}.uses` },
+            description: `Action ${parsedJobUses.slug}@${parsedJobUses.ref} is listed in known vulnerable references`,
+            affected_tools: ["github-actions"],
+            cve: null,
+            owasp: ["ASI02"],
+            cwe: "CWE-937",
+            confidence: "HIGH",
+            fixable: false,
+            remediation_actions: [
+              "Upgrade to a non-vulnerable action release and pin to a reviewed commit SHA",
+            ],
+            evidence: jobUses,
+            suppressed: false,
+          });
+        }
+      }
+    }
+
     job.steps.forEach((step, stepIndex) => {
       const uses = step.uses;
       if (!uses) {
@@ -57,7 +170,7 @@ export function detectWorkflowKnownVulnAction(input: WorkflowKnownVulnActionInpu
       }
 
       const vulnerableVersions = advisories[parsedUses.slug];
-      if (!vulnerableVersions || !vulnerableVersions.includes(parsedUses.ref)) {
+      if (!vulnerableVersions || !isKnownVulnerableRef(parsedUses.ref, vulnerableVersions)) {
         return;
       }
 

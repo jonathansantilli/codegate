@@ -15,6 +15,7 @@ import { detectWorkflowUnpinnedUses } from "./detectors/workflow-unpinned-uses.j
 import { detectWorkflowArtipacked } from "./detectors/workflow-artipacked.js";
 import { detectWorkflowCachePoisoning } from "./detectors/workflow-cache-poisoning.js";
 import { detectWorkflowGithubEnv } from "./detectors/workflow-github-env.js";
+import { detectWorkflowRunUntrustedArtifact } from "./detectors/workflow-run-untrusted-artifact.js";
 import { detectWorkflowInsecureCommands } from "./detectors/workflow-insecure-commands.js";
 import { detectWorkflowSelfHostedRunner } from "./detectors/workflow-self-hosted-runner.js";
 import { detectWorkflowOverprovisionedSecrets } from "./detectors/workflow-overprovisioned-secrets.js";
@@ -28,7 +29,9 @@ import { detectWorkflowForbiddenUses } from "./detectors/workflow-forbidden-uses
 import { detectWorkflowRefConfusion } from "./detectors/workflow-ref-confusion.js";
 import { detectWorkflowRefVersionMismatch } from "./detectors/workflow-ref-version-mismatch.js";
 import { detectWorkflowImpostorCommit } from "./detectors/workflow-impostor-commit.js";
+import { detectWorkflowUnsafeCheckoutRef } from "./detectors/workflow-unsafe-checkout-ref.js";
 import { detectWorkflowUnpinnedImages } from "./detectors/workflow-unpinned-images.js";
+import { detectWorkflowFloatingActionVersion } from "./detectors/workflow-floating-action-version.js";
 import { detectWorkflowAnonymousDefinition } from "./detectors/workflow-anonymous-definition.js";
 import { detectWorkflowConcurrencyLimits } from "./detectors/workflow-concurrency-limits.js";
 import { detectWorkflowSuperfluousActions } from "./detectors/workflow-superfluous-actions.js";
@@ -396,6 +399,17 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
           : [],
     },
     {
+      id: "workflow-run-untrusted-artifact",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowRunUntrustedArtifact({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
       id: "workflow-insecure-commands",
       run: ({ file, input }) =>
         input.config.workflowAuditsEnabled
@@ -529,6 +543,28 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
               parsed: file.parsed,
               textContent: file.textContent,
               runtimeMode: input.config.runtimeMode,
+            })
+          : [],
+    },
+    {
+      id: "workflow-unsafe-checkout-ref",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowUnsafeCheckoutRef({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "workflow-floating-action-version",
+      run: ({ file, input }) =>
+        input.config.workflowAuditsEnabled
+          ? detectWorkflowFloatingActionVersion({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
             })
           : [],
     },

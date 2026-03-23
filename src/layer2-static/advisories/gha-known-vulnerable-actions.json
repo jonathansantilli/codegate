@@ -1,4 +1,6 @@
 {
   "actions/checkout": ["v3"],
-  "tj-actions/changed-files": ["v39"]
+  "tj-actions/changed-files": ["v39"],
+  "aquasecurity/trivy-action": ["<0.35.0"],
+  "aquasecurity/setup-trivy": [">=0.1.0 <0.2.7"]
 }
