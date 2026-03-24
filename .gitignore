@@ -4,15 +4,17 @@ node_modules/
 /coverage/
 /.nyc_output/
 
+# Docs policy: default deny, explicit allowlist only
+/docs/**
+!/docs/
+!/docs/assets/
+!/docs/assets/codegate-logo.png
+!/docs/deep-scan.md
+!/docs/public-evidence-map.md
+!/docs/remediation.md
+!/docs/why-codegate.md
+
 # Internal/private assets kept out of the public repo
-/docs/plans/
-/docs/showcase/
-/docs/release/
-/docs/CodeGate-PRD-v3.md
-/docs/CodeGate-PRD-Addendum-AgentScan.md
-/docs/feature-evidence-ledger.md
-/docs/workflow-audit-parity-checklist.md
-/docs/workflow-audit-real-cases.md
 /showcase/
 /scripts/showcase/
 /fixes.patch
