@@ -10,6 +10,9 @@ node_modules/
 /docs/release/
 /docs/CodeGate-PRD-v3.md
 /docs/CodeGate-PRD-Addendum-AgentScan.md
+/docs/feature-evidence-ledger.md
+/docs/workflow-audit-parity-checklist.md
+/docs/workflow-audit-real-cases.md
 /showcase/
 /scripts/showcase/
 /fixes.patch
