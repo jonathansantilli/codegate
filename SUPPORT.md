@@ -20,4 +20,4 @@ Follow [SECURITY.md](./SECURITY.md).
 
 ## Maintainer Contact
 
-General maintainer contact: `maintainers@codegate.dev`
+General maintainer contact: `jonathansantilli@gmail.com`
