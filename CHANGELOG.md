@@ -1,3 +1,5 @@
+## [0.12.3](https://github.com/jonathansantilli/codegate/compare/v0.12.2...v0.12.3) (2026-03-24)
+
 ## [0.12.2](https://github.com/jonathansantilli/codegate/compare/v0.12.1...v0.12.2) (2026-03-24)
 
 ## [0.12.1](https://github.com/jonathansantilli/codegate/compare/v0.12.0...v0.12.1) (2026-03-24)
