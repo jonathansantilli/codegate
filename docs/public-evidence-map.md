@@ -2,8 +2,6 @@
 
 This document summarizes public incident patterns that motivated CodeGate and maps them to the defensive checks CodeGate provides.
 
-For the full feature-by-feature ledger with status and links, see [feature-evidence-ledger.md](./feature-evidence-ledger.md).
-
 ## Evidence Themes
 
 1. Repository files can become execution paths.

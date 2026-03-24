@@ -28,7 +28,6 @@ Public background documents:
 
 - [Why CodeGate Exists](docs/why-codegate.md)
 - [Public Evidence Map](docs/public-evidence-map.md)
-- [Feature Evidence Ledger](docs/feature-evidence-ledger.md)
 
 ## What CodeGate Is
 
@@ -175,9 +174,6 @@ Current checks include:
 - Known vulnerable action references (online runtime mode)
 - Dependabot cooldown and execution-risk checks
 - Workflow hygiene checks (concurrency gates, obfuscation, unsafe conditional trust)
-
-Track the current workflow-audit coverage and backlog in the [workflow audit parity checklist](docs/workflow-audit-parity-checklist.md).
-Real public validation fixtures and source provenance are documented in [workflow audit real-case corpus](docs/workflow-audit-real-cases.md).
 
 Examples:
 
