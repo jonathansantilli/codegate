@@ -1,3 +1,9 @@
+# [0.13.0](https://github.com/jonathansantilli/codegate/compare/v0.12.4...v0.13.0) (2026-04-21)
+
+### Features
+
+- **knowledge-base:** recognize Anthropic Skills layout for claude-code ([#49](https://github.com/jonathansantilli/codegate/issues/49)) ([8762adf](https://github.com/jonathansantilli/codegate/commit/8762adf7da9b0302f0891a8614863511f8107a12))
+
 ## [0.12.4](https://github.com/jonathansantilli/codegate/compare/v0.12.3...v0.12.4) (2026-03-24)
 
 ## [0.12.3](https://github.com/jonathansantilli/codegate/compare/v0.12.2...v0.12.3) (2026-03-24)
