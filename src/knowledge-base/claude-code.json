@@ -133,6 +133,18 @@
       "scope": "user",
       "type": "custom_command",
       "risk_surface": ["prompt_injection"]
+    },
+    {
+      "path": ".claude/skills/*/SKILL.md",
+      "scope": "project",
+      "type": "anthropic_skill",
+      "risk_surface": ["prompt_injection", "unicode_backdoor", "command_exec", "mcp_config"]
+    },
+    {
+      "path": ".claude/skills/*/SKILL.md",
+      "scope": "user",
+      "type": "anthropic_skill",
+      "risk_surface": ["prompt_injection", "unicode_backdoor", "command_exec", "mcp_config"]
     }
   ],
   "extension_mechanisms": [
