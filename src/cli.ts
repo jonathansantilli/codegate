@@ -46,6 +46,7 @@ import {
   type RemediationRunnerResult,
 } from "./layer4-remediation/remediation-runner.js";
 import { undoLatestSession } from "./commands/undo.js";
+import { runInventory, type InventorySummary } from "./commands/inventory-command.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
   executeScanContentCommand,
@@ -873,6 +874,102 @@ function addInitCommand(program: Command, deps: CliDeps): void {
     });
 }
 
+const INVENTORY_SCOPES = ["user", "project", "all"] as const;
+const INVENTORY_KINDS = ["skills", "configs", "all"] as const;
+
+type InventoryScope = (typeof INVENTORY_SCOPES)[number];
+type InventoryKind = (typeof INVENTORY_KINDS)[number];
+
+interface InventoryCliOptions {
+  scope?: InventoryScope;
+  kind?: InventoryKind;
+  onlyExisting?: boolean;
+  workspace?: string[];
+  format?: "text" | "json";
+}
+
+function addInventoryCommand(program: Command, deps: CliDeps): void {
+  program
+    .command("inventory")
+    .description(
+      "List the AI-tool config + skill artifacts the knowledge base knows about, resolved against this machine.",
+    )
+    .addOption(
+      new Option("--scope <scope>", "scope filter")
+        .choices(INVENTORY_SCOPES as unknown as string[])
+        .default("all"),
+    )
+    .addOption(
+      new Option("--kind <kind>", "artifact kind filter")
+        .choices(INVENTORY_KINDS as unknown as string[])
+        .default("all"),
+    )
+    .option("--only-existing", "return only items that currently exist on disk")
+    .option(
+      "--workspace <path>",
+      "additional project-scope root (repeatable); defaults to cwd when omitted",
+      collectRepeatable,
+      [] as string[],
+    )
+    .addOption(
+      new Option("--format <format>", "output format").choices(["text", "json"]).default("text"),
+    )
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate inventory",
+        "codegate inventory --format json --kind skills --only-existing",
+        "codegate inventory --scope user --format json",
+        "codegate inventory --workspace . --workspace /path/to/other/repo",
+      ]),
+    )
+    .action((options: InventoryCliOptions) => {
+      try {
+        const home = deps.homeDir?.() ?? homedir();
+        const explicitWorkspaces = options.workspace ?? [];
+        const workspaces =
+          explicitWorkspaces.length > 0
+            ? explicitWorkspaces.map((w) => resolve(deps.cwd(), w))
+            : [deps.cwd()];
+
+        const summary: InventorySummary = runInventory({
+          scope: options.scope ?? "all",
+          kind: options.kind ?? "all",
+          onlyExisting: options.onlyExisting === true,
+          workspaces,
+          homeDir: home,
+        });
+
+        if (options.format === "json") {
+          deps.stdout(JSON.stringify(summary, null, 2));
+        } else {
+          renderInventoryText(summary, deps.stdout);
+        }
+        deps.setExitCode(0);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`Inventory failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
+function collectRepeatable(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function renderInventoryText(summary: InventorySummary, stdout: (line: string) => void): void {
+  stdout(`Knowledge base v${summary.kb_version}`);
+  stdout(`Tools: ${summary.tools.map((t) => t.name).join(", ")}`);
+  stdout(`Items: ${summary.items.length}`);
+  stdout("");
+  for (const item of summary.items) {
+    const mark = item.exists ? "✓" : "·";
+    const tag = item.kind === "skill" ? `${item.kind}:${item.type ?? "?"}` : item.kind;
+    stdout(`  ${mark} [${item.tool}] ${tag} (${item.scope}) ${item.path}`);
+  }
+}
+
 function addUpdateCommands(program: Command, deps: CliDeps): void {
   const guidance = [
     "Updates are bundled with CodeGate releases in v1/v2.",
@@ -944,6 +1041,7 @@ export function createCli(
   addRunCommand(program, version, deps);
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
+  addInventoryCommand(program, deps);
   addUpdateCommands(program, deps);
   return program;
 }
