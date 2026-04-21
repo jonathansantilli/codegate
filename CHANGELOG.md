@@ -1,3 +1,9 @@
+# [0.14.0](https://github.com/jonathansantilli/codegate/compare/v0.13.0...v0.14.0) (2026-04-21)
+
+### Features
+
+- **cli:** add `inventory` subcommand to enumerate KB-known AI artifacts ([#51](https://github.com/jonathansantilli/codegate/issues/51)) ([620b112](https://github.com/jonathansantilli/codegate/commit/620b1127e14200273e9fe899da5487d1c4cd5d2b))
+
 # [0.13.0](https://github.com/jonathansantilli/codegate/compare/v0.12.4...v0.13.0) (2026-04-21)
 
 ### Features
