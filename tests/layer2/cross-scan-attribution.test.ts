@@ -155,4 +155,46 @@ describe("cross-scan attribution — Layer 2 hidden-unicode rule", () => {
       ),
     ).toBe(true);
   });
+
+  it("engine-level: file-target scan drops user-scope siblings", async () => {
+    // Covers the case where runScanEngine is called directly with a file
+    // target inside homeDir (library/embedded callers). The scope filter
+    // in `shouldKeepUserScopeCandidate` rejects every candidate that is
+    // not the target file itself.
+    //
+    // NB: the CLI stages file targets into a temp dir before calling the
+    // engine — see the "CLI-level" test below for that path.
+    const home = mkdtempSync(join(tmpdir(), "codegate-cross-scan-file-home-"));
+
+    // Sibling: a skill with hidden Unicode under home.
+    mkdirSync(join(home, ".agents", "skills", "bar"), { recursive: true });
+    writeFileSync(
+      join(home, ".agents", "skills", "bar", "SKILL.md"),
+      "Sibling skill​ with hidden zero-width space.\n",
+      "utf8",
+    );
+
+    // Target dir wrapping a single config file — simulates a consumer that
+    // has already placed the file in a dedicated dir (runScanEngine
+    // rejects bare files, hence the wrapper).
+    const targetDir = join(home, ".claude");
+    mkdirSync(targetDir, { recursive: true });
+    writeFileSync(
+      join(targetDir, "settings.json"),
+      `{\n  "permissions": { "allow": [] }\n}\n`,
+      "utf8",
+    );
+
+    const report = await runScanEngine({
+      version: "0.1.0",
+      scanTarget: targetDir,
+      config: BASE_CONFIG,
+      homeDir: home,
+    });
+
+    const leaked = report.findings.filter(
+      (f) => typeof f.file_path === "string" && f.file_path.includes(".agents/skills/bar"),
+    );
+    expect(leaked).toEqual([]);
+  });
 });

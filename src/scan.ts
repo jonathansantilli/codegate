@@ -260,22 +260,53 @@ function isPathInside(root: string, candidatePath: string): boolean {
  * User-scope patterns (e.g. `~/.agents/skills/&ast;/SKILL.md`) walk the whole
  * home directory, so they can match files belonging to completely unrelated
  * skills or agents. When the scan target is itself a specific location
- * **inside** the user's home — e.g. scanning a single skill directory — any
- * user-scope match outside that scan target belongs to a different scan and
- * must not be attributed here.
+ * **inside** the user's home — e.g. scanning a single skill directory or a
+ * single config file like `~/.claude/settings.json` — any user-scope match
+ * that does not belong to that target is a cross-scan leak and must be
+ * dropped.
  *
- * When the scan target lives outside the home directory (for example a
- * project root in a workspace), user-scope matches are accepted as legitimate
- * host-wide context for that scan.
+ * Three cases:
+ * - `scanTarget` is a directory inside `homeDir`: only keep candidates inside
+ *   that directory (existing PR #53 behavior).
+ * - `scanTarget` is a file inside `homeDir`: only keep candidates that resolve
+ *   to that exact file. "Inside" semantics do not apply to files, so the
+ *   previous check let every sibling through.
+ * - `scanTarget` lives outside the home directory (or cannot be stat'd,
+ *   e.g. a URL or a staged path that has been cleaned up): user-scope
+ *   matches are accepted as legitimate host-wide context.
  */
 function shouldKeepUserScopeCandidate(
   scanTarget: string,
   homeDir: string,
   candidatePath: string,
 ): boolean {
-  if (isPathInside(homeDir, scanTarget)) {
+  if (!isPathInside(homeDir, scanTarget)) {
+    return true;
+  }
+
+  // Follow symlinks the same way the rest of the scan code does (walker,
+  // wildcard-base check, `isRegularFile`): `statSync` resolves them. If the
+  // target cannot be stat'd (missing / permission denied / URL that was never
+  // a local path), fall through to the pre-PR-#53 outside-home behavior so
+  // we do not over-filter project-scope scans on unusual inputs.
+  let targetStat;
+  try {
+    targetStat = statSync(scanTarget);
+  } catch {
+    return true;
+  }
+
+  if (targetStat.isFile()) {
+    // Nothing is "inside" a file. The only user-scope candidate that can
+    // legitimately belong to a file-target scan is the file itself.
+    return resolve(candidatePath) === resolve(scanTarget);
+  }
+
+  if (targetStat.isDirectory()) {
     return isPathInside(scanTarget, candidatePath);
   }
+
+  // Sockets, devices, etc. — behave like the outside-home case.
   return true;
 }
 
