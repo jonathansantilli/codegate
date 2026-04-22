@@ -493,17 +493,23 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
                 ? true
                 : (baseConfig.workflow_audits?.enabled ?? false),
           },
-          // When the target was a single local file that got staged into a
-          // temp dir (explicitCandidates set), walking the full user-scope
-          // tree is off-target: the user asked to scan one file, not their
-          // whole home. Leaving user-scope on here let sibling findings
-          // (e.g. `~/.agents/skills/*/SKILL.md`) leak into single-file
-          // scans of configs like `.claude/settings.json`. Explicit opt-in
-          // via `--include-user-scope` still forces it on.
+          // When the raw input was a single local file (now staged into a
+          // temp dir), walking the full user-scope tree is off-target — the
+          // user asked to scan one file, not their whole home. Without
+          // this guard, sibling findings (e.g. `~/.agents/skills/*/SKILL.md`)
+          // leak into scans of files like `.claude/settings.json` or
+          // `.idea/workspace.xml`.
+          //
+          // Earlier we gated on `explicitCandidates.length > 0`, but that
+          // falsely passed for files whose extension is not in the
+          // text-like format list (XML, binary-ish configs, etc.) — those
+          // produce zero explicit candidates and the guard never fired.
+          // Using `stagedFromLocalFile` is the reliable signal.
+          // Explicit opt-in via `--include-user-scope` still forces it on.
           scan_user_scope:
             options.includeUserScope === true
               ? true
-              : resolvedTarget.explicitCandidates && resolvedTarget.explicitCandidates.length > 0
+              : resolvedTarget.stagedFromLocalFile === true
                 ? false
                 : (baseConfig.scan_user_scope ?? false),
         };
