@@ -1,3 +1,9 @@
+## [0.14.4](https://github.com/jonathansantilli/codegate/compare/v0.14.3...v0.14.4) (2026-04-22)
+
+### Bug Fixes
+
+- **scan:** close cross-scan leak for single-file targets of any format ([#55](https://github.com/jonathansantilli/codegate/issues/55)) ([46e2148](https://github.com/jonathansantilli/codegate/commit/46e2148e6fc57d27a0b47a63ebbc095ed9fd83a7)), closes [#54](https://github.com/jonathansantilli/codegate/issues/54) [#54](https://github.com/jonathansantilli/codegate/issues/54)
+
 ## [0.14.3](https://github.com/jonathansantilli/codegate/compare/v0.14.2...v0.14.3) (2026-04-22)
 
 ### Bug Fixes
