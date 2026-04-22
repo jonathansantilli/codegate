@@ -1,3 +1,9 @@
+## [0.14.3](https://github.com/jonathansantilli/codegate/compare/v0.14.2...v0.14.3) (2026-04-22)
+
+### Bug Fixes
+
+- **scan:** disable user-scope walk when CLI scans a single file ([#54](https://github.com/jonathansantilli/codegate/issues/54)) ([6799651](https://github.com/jonathansantilli/codegate/commit/67996514e24aaef3ff39a7c171f9bb34b5b56ace))
+
 ## [0.14.2](https://github.com/jonathansantilli/codegate/compare/v0.14.1...v0.14.2) (2026-04-22)
 
 ### Bug Fixes
