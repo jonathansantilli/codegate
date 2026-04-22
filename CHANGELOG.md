@@ -1,3 +1,9 @@
+## [0.14.2](https://github.com/jonathansantilli/codegate/compare/v0.14.1...v0.14.2) (2026-04-22)
+
+### Bug Fixes
+
+- **scan:** stop attributing host-wide findings to per-target scans ([#53](https://github.com/jonathansantilli/codegate/issues/53)) ([77f9627](https://github.com/jonathansantilli/codegate/commit/77f962761c35a96fb6e8d8ec074781591785d593))
+
 ## [0.14.1](https://github.com/jonathansantilli/codegate/compare/v0.14.0...v0.14.1) (2026-04-22)
 
 ### Bug Fixes
