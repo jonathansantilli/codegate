@@ -1,3 +1,9 @@
+## [0.14.1](https://github.com/jonathansantilli/codegate/compare/v0.14.0...v0.14.1) (2026-04-22)
+
+### Bug Fixes
+
+- **layer3:** clean remote-resource URLs + configurable timeout & byte-size guards ([#52](https://github.com/jonathansantilli/codegate/issues/52)) ([750c422](https://github.com/jonathansantilli/codegate/commit/750c4229d6c08f7fa4fc58e3922394bce5b66647))
+
 # [0.14.0](https://github.com/jonathansantilli/codegate/compare/v0.13.0...v0.14.0) (2026-04-21)
 
 ### Features
