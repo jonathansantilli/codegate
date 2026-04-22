@@ -76,6 +76,22 @@ export interface CodeGateConfig {
   workflow_audits?: WorkflowAuditConfig;
   suppress_findings: string[];
   suppression_rules?: SuppressionRule[];
+  /**
+   * Timeout (in milliseconds) applied to Layer 3 remote resource fetches
+   * (npm/PyPI registry lookups, git ls-remote, and any http/sse MCP probes).
+   * Kept deliberately low so a slow or deliberately stalling host cannot
+   * hang a scan. Overridable via `CODEGATE_LAYER3_REMOTE_FETCH_TIMEOUT_MS`.
+   */
+  layer3_remote_fetch_timeout_ms: number;
+  /**
+   * Maximum response size (in bytes) accepted from a Layer 3 remote fetch.
+   * A declared `Content-Length` above this value is rejected immediately,
+   * and the streaming reader aborts once the running byte count exceeds
+   * this limit (defends against servers that lie about or omit
+   * `Content-Length`). Overridable via
+   * `CODEGATE_LAYER3_REMOTE_FETCH_MAX_BYTES`.
+   */
+  layer3_remote_fetch_max_bytes: number;
 }
 
 interface PartialTuiConfig {
@@ -122,6 +138,8 @@ interface PartialCodeGateConfig {
   };
   suppress_findings?: string[];
   suppression_rules?: SuppressionRule[];
+  layer3_remote_fetch_timeout_ms?: number;
+  layer3_remote_fetch_max_bytes?: number;
 }
 
 export interface CliConfigOverrides {
@@ -175,7 +193,35 @@ export const DEFAULT_CONFIG: CodeGateConfig = {
   workflow_audits: { enabled: false },
   suppress_findings: [],
   suppression_rules: [],
+  layer3_remote_fetch_timeout_ms: 5000,
+  layer3_remote_fetch_max_bytes: 1_048_576,
 };
+
+/** Env var name that overrides `layer3_remote_fetch_timeout_ms`. */
+export const LAYER3_REMOTE_FETCH_TIMEOUT_ENV = "CODEGATE_LAYER3_REMOTE_FETCH_TIMEOUT_MS";
+/** Env var name that overrides `layer3_remote_fetch_max_bytes`. */
+export const LAYER3_REMOTE_FETCH_MAX_BYTES_ENV = "CODEGATE_LAYER3_REMOTE_FETCH_MAX_BYTES";
+
+function normalizePositiveInteger(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return Math.floor(parsed);
+    }
+  }
+  return undefined;
+}
+
+function readEnvOverride(name: string): number | undefined {
+  const raw = process.env[name];
+  if (raw === undefined) {
+    return undefined;
+  }
+  return normalizePositiveInteger(raw);
+}
 
 interface PartialRulePolicyConfig {
   disable?: boolean;
@@ -627,6 +673,20 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
       ...(globalConfig.suppression_rules ?? []),
       ...(projectConfig.suppression_rules ?? []),
     ],
+    layer3_remote_fetch_timeout_ms:
+      pickFirst(
+        readEnvOverride(LAYER3_REMOTE_FETCH_TIMEOUT_ENV),
+        normalizePositiveInteger(projectConfig.layer3_remote_fetch_timeout_ms),
+        normalizePositiveInteger(globalConfig.layer3_remote_fetch_timeout_ms),
+        DEFAULT_CONFIG.layer3_remote_fetch_timeout_ms,
+      ) ?? DEFAULT_CONFIG.layer3_remote_fetch_timeout_ms,
+    layer3_remote_fetch_max_bytes:
+      pickFirst(
+        readEnvOverride(LAYER3_REMOTE_FETCH_MAX_BYTES_ENV),
+        normalizePositiveInteger(projectConfig.layer3_remote_fetch_max_bytes),
+        normalizePositiveInteger(globalConfig.layer3_remote_fetch_max_bytes),
+        DEFAULT_CONFIG.layer3_remote_fetch_max_bytes,
+      ) ?? DEFAULT_CONFIG.layer3_remote_fetch_max_bytes,
   };
 }
 
