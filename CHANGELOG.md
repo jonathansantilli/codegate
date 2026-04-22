@@ -1,3 +1,9 @@
+# [0.15.0](https://github.com/jonathansantilli/codegate/compare/v0.14.4...v0.15.0) (2026-04-22)
+
+### Features
+
+- **kb:** add OpenClaw — messaging-channel gateway for LLM agents ([#56](https://github.com/jonathansantilli/codegate/issues/56)) ([854505f](https://github.com/jonathansantilli/codegate/commit/854505f28bd2e86534e6a1ece615dea27f50ee47))
+
 ## [0.14.4](https://github.com/jonathansantilli/codegate/compare/v0.14.3...v0.14.4) (2026-04-22)
 
 ### Bug Fixes
