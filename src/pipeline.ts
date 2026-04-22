@@ -314,12 +314,6 @@ function layer3ErrorFinding(
   });
 }
 
-function isRegistryMetadataResource(resourceId: string): boolean {
-  return (
-    resourceId.startsWith("npm:") || resourceId.startsWith("pypi:") || resourceId.startsWith("git:")
-  );
-}
-
 export function layer3OutcomesToFindings(
   outcomes: DeepScanOutcome[],
   options: { unicodeAnalysis?: boolean } = {},
@@ -353,17 +347,17 @@ export function layer3OutcomesToFindings(
     const derived = deriveLayer3ToolFindings(outcome.resourceId, outcome.result.metadata, options);
     const combined = [...parsed, ...derived];
 
+    // If a Layer 3 resource was fetched successfully but carries no
+    // actionable metadata (no `findings[]`, no `tools[]`), that is not an
+    // issue with the scan target itself — it usually means the default
+    // no-outbound-call resource executor recorded only a URL stub, or that
+    // a host-configured MCP endpoint simply returned an unrecognised
+    // payload. Previously we emitted a LOW `layer3-network_error`
+    // "schema mismatch" finding whose `file_path` was the remote URL,
+    // which leaked host-level noise into every per-target scan report.
+    // Fetch-level anomalies that are unrelated to the scan target are now
+    // dropped silently for all resource kinds.
     if (combined.length === 0) {
-      if (isRegistryMetadataResource(outcome.resourceId)) {
-        continue;
-      }
-      findings.push(
-        layer3ErrorFinding(
-          outcome.resourceId,
-          "network_error",
-          "Deep scan response schema mismatch: expected metadata.findings[] or metadata.tools[]",
-        ),
-      );
       continue;
     }
     findings.push(...combined);

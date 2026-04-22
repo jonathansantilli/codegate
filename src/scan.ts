@@ -232,6 +232,53 @@ function isRegularFile(path: string): boolean {
   }
 }
 
+/** True when `candidatePath` resolves at or below `root`. */
+function isPathInside(root: string, candidatePath: string): boolean {
+  const resolvedCandidate = resolve(candidatePath);
+  const resolvedRoot = resolve(root);
+  if (resolvedCandidate === resolvedRoot) {
+    return true;
+  }
+  const rel = relative(resolvedRoot, resolvedCandidate);
+  if (rel === "" || rel === ".") {
+    return true;
+  }
+  if (rel.startsWith("..")) {
+    return false;
+  }
+  // On Windows, relative() may return an absolute path across drives.
+  if (rel.includes(":")) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Decide whether a user-scope candidate at `candidatePath` should be attached
+ * to a scan of `scanTarget` rooted at `homeDir`.
+ *
+ * User-scope patterns (e.g. `~/.agents/skills/&ast;/SKILL.md`) walk the whole
+ * home directory, so they can match files belonging to completely unrelated
+ * skills or agents. When the scan target is itself a specific location
+ * **inside** the user's home — e.g. scanning a single skill directory — any
+ * user-scope match outside that scan target belongs to a different scan and
+ * must not be attributed here.
+ *
+ * When the scan target lives outside the home directory (for example a
+ * project root in a workspace), user-scope matches are accepted as legitimate
+ * host-wide context for that scan.
+ */
+function shouldKeepUserScopeCandidate(
+  scanTarget: string,
+  homeDir: string,
+  candidatePath: string,
+): boolean {
+  if (isPathInside(homeDir, scanTarget)) {
+    return isPathInside(scanTarget, candidatePath);
+  }
+  return true;
+}
+
 function toUserReportPath(pattern: string): string {
   const normalized = normalizeUserScopePattern(pattern);
   return `~/${normalized}`;
@@ -411,6 +458,14 @@ function collectSelectedCandidates(
       const userPattern = normalizeUserScopePattern(candidate.pattern);
       if (userPattern.includes("*")) {
         for (const match of collectUserScopeWildcardMatches(options.homeDir, userPattern)) {
+          // A scan whose target itself lives under the user's home directory
+          // (e.g. a single skill at `~/.codex/skills/foo`) must only report
+          // findings about files inside that target. User-scope wildcards
+          // walk the whole home tree, so they can match sibling skills or
+          // other agents that belong to different scans; drop those here.
+          if (!shouldKeepUserScopeCandidate(absoluteTarget, options.homeDir, match.absolutePath)) {
+            continue;
+          }
           const reportPath = toUserReportPath(match.relativePath);
           if (!matchesCollectionKinds(reportPath, options.collectKinds)) {
             continue;
@@ -428,6 +483,9 @@ function collectSelectedCandidates(
       }
       const absolutePath = resolve(options.homeDir, userPattern);
       if (!existsSync(absolutePath) || !isRegularFile(absolutePath)) {
+        continue;
+      }
+      if (!shouldKeepUserScopeCandidate(absoluteTarget, options.homeDir, absolutePath)) {
         continue;
       }
       const reportPath = toUserReportPath(userPattern);

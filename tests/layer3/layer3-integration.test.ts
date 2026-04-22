@@ -8,7 +8,7 @@ import { createEmptyReport } from "../../src/types/report";
 import { planRemediation } from "../../src/layer4-remediation/remediator";
 
 describe("task 28 layer3 integration", () => {
-  it("emits parse-style findings for consent refusal, timeout, and schema mismatch", () => {
+  it("emits parse-style findings for consent refusal and timeout, but not for schema mismatch", () => {
     const outcomes: DeepScanOutcome[] = [
       {
         resourceId: "npm:@org/a",
@@ -39,11 +39,15 @@ describe("task 28 layer3 integration", () => {
       },
     ];
 
+    // Schema-mismatch outcomes are no longer surfaced as findings: they
+    // describe a host-configured endpoint's behavior, not an issue with
+    // the scan target, and previously caused `layer3-network_error`
+    // findings to appear on every per-target scan report.
     const findings = layer3OutcomesToFindings(outcomes);
-    expect(findings).toHaveLength(3);
+    expect(findings).toHaveLength(2);
     expect(findings[0]?.finding_id).toContain("skipped_without_consent");
     expect(findings[1]?.severity).toBe("MEDIUM");
-    expect(findings[2]?.description).toContain("schema mismatch");
+    expect(findings.some((finding) => finding.rule_id === "layer3-network_error")).toBe(false);
   });
 
   it("merges valid layer3 findings into report summary and supports source-config remediation", () => {
