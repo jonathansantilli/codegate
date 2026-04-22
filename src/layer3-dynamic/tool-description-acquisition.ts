@@ -1,6 +1,7 @@
 import {
   fetchResourceMetadata,
   type ResourceFetchResult,
+  type ResourceFetcherOptions,
   type ResourceKind,
   type ResourceRequest,
 } from "./resource-fetcher.js";
@@ -37,9 +38,16 @@ export interface ToolDescriptionAcquisitionDeps {
   fetchMetadata: (request: ResourceRequest) => Promise<ResourceFetchResult>;
 }
 
-function defaultDeps(): ToolDescriptionAcquisitionDeps {
+export interface ToolDescriptionAcquisitionOptions {
+  fetchOptions?: ResourceFetcherOptions;
+}
+
+function defaultDeps(
+  options: ToolDescriptionAcquisitionOptions = {},
+): ToolDescriptionAcquisitionDeps {
   return {
-    fetchMetadata: async (request) => fetchResourceMetadata(request),
+    fetchMetadata: async (request) =>
+      fetchResourceMetadata(request, undefined, options.fetchOptions),
   };
 }
 

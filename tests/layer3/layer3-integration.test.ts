@@ -27,7 +27,7 @@ describe("task 28 layer3 integration", () => {
         },
       },
       {
-        resourceId: "http:https://example.invalid/schema",
+        resourceId: "https://example.invalid/schema",
         approved: true,
         status: "ok",
         result: {
@@ -121,7 +121,7 @@ describe("task 28 layer3 integration", () => {
   it("derives tool-description and toxic-flow findings from metadata tools", () => {
     const outcomes: DeepScanOutcome[] = [
       {
-        resourceId: "http:https://mcp.example/tools",
+        resourceId: "https://mcp.example/tools",
         approved: true,
         status: "ok",
         result: {

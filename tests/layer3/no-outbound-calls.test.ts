@@ -37,11 +37,11 @@ describe("deep scan makes no outbound HTTP calls", () => {
 
     const testCases = [
       {
-        id: "http:https://mcp.evil.com/tools",
+        id: "https://mcp.evil.com/tools",
         request: { kind: "http", locator: "https://mcp.evil.com/tools" },
       },
       {
-        id: "sse:https://mcp.evil.com/sse",
+        id: "https://mcp.evil.com/sse",
         request: { kind: "sse", locator: "https://mcp.evil.com/sse" },
       },
       { id: "npm:@evil/backdoor", request: { kind: "npm", locator: "@evil/backdoor" } },

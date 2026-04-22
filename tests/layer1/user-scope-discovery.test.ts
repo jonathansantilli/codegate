@@ -100,7 +100,7 @@ describe("user-scope discovery", () => {
       includeUserScope: true,
       homeDir: home,
     });
-    expect(resources.map((resource) => resource.id)).toEqual(["sse:https://example.com/sse"]);
+    expect(resources.map((resource) => resource.id)).toEqual(["https://example.com/sse"]);
   });
 
   it("includes user-scope paths for additional tools (roo)", async () => {

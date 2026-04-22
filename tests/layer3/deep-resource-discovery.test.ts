@@ -36,10 +36,10 @@ describe("deep resource discovery", () => {
 
     const resources = discoverDeepScanResources(root);
     expect(resources.map((resource) => resource.id)).toEqual([
-      "http:https://example.com/mcp/tools",
+      "https://example.com/mcp/tools",
+      "https://example.com/sse",
       "npm:@example/local-mcp",
       "pypi:example-python-mcp",
-      "sse:https://example.com/sse",
     ]);
     expect(
       resources.every(
@@ -80,8 +80,8 @@ describe("deep resource discovery", () => {
 
     const resources = discoverDeepScanResources(root);
     expect(resources.map((resource) => resource.id)).toEqual([
+      "https://example.com/eventstream",
       "npm:@example/alias-mcp",
-      "sse:https://example.com/eventstream",
     ]);
   });
 
@@ -117,8 +117,8 @@ describe("deep resource discovery", () => {
     });
 
     expect(resources.map((resource) => resource.id)).toEqual([
-      "http:https://internal.example.com/mcp",
-      "sse:https://internal.example.com/eventstream",
+      "https://internal.example.com/eventstream",
+      "https://internal.example.com/mcp",
     ]);
   });
 });
