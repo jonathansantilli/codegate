@@ -456,9 +456,9 @@ describe("clawhub wrapper execution", () => {
   it("does not invoke deep consent callbacks in non-interactive mode", async () => {
     const discoverDeepResources = vi.fn(async () => [
       {
-        id: "http:https://mcp.example/tools",
+        id: "https://mcp.example/tools",
         request: {
-          id: "http:https://mcp.example/tools",
+          id: "https://mcp.example/tools",
           kind: "http",
           locator: "https://mcp.example/tools",
         },

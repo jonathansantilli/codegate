@@ -5,6 +5,7 @@ import {
   collectLocalTextAnalysisTargets,
   type LocalTextAnalysisTarget,
 } from "./layer3-dynamic/local-text-analysis.js";
+import { buildResourceId, normalizeRemoteUrl } from "./layer3-dynamic/url-validation.js";
 import { runStaticPipeline } from "./pipeline.js";
 import type { StaticFileInput } from "./layer2-static/engine.js";
 import { applyReportSummary } from "./report-summary.js";
@@ -690,18 +691,21 @@ function collectDeepScanResourcesFromParsed(
       }
 
       if (typeof config.url === "string" && isHttpLikeUrl(config.url)) {
-        const kind = inferHttpKind(config.url);
-        const id = `${kind}:${config.url}`;
-        if (!resources.has(id)) {
-          resources.set(id, {
-            id,
-            request: {
+        const normalized = normalizeRemoteUrl(config.url);
+        if (normalized.ok) {
+          const kind = inferHttpKind(normalized.url);
+          const id = buildResourceId(kind, normalized.url);
+          if (!resources.has(id)) {
+            resources.set(id, {
               id,
-              kind,
-              locator: config.url,
-            },
-            commandPreview: `GET ${config.url}  (from ${filePath} -> ${container.key}.${serverName}.url)`,
-          });
+              request: {
+                id,
+                kind,
+                locator: normalized.url,
+              },
+              commandPreview: `GET ${normalized.url}  (from ${filePath} -> ${container.key}.${serverName}.url)`,
+            });
+          }
         }
       }
 
@@ -733,8 +737,12 @@ function collectDeepScanResourcesFromParsed(
       if (typeof config.url !== "string" || !isHttpLikeUrl(config.url)) {
         return;
       }
-      const kind = inferHttpKind(config.url);
-      const id = `${kind}:${config.url}`;
+      const normalized = normalizeRemoteUrl(config.url);
+      if (!normalized.ok) {
+        return;
+      }
+      const kind = inferHttpKind(normalized.url);
+      const id = buildResourceId(kind, normalized.url);
       if (resources.has(id)) {
         return;
       }
@@ -743,9 +751,9 @@ function collectDeepScanResourcesFromParsed(
         request: {
           id,
           kind,
-          locator: config.url,
+          locator: normalized.url,
         },
-        commandPreview: `GET ${config.url}  (from ${filePath} -> ${remoteArray.key}.${index}.url)`,
+        commandPreview: `GET ${normalized.url}  (from ${filePath} -> ${remoteArray.key}.${index}.url)`,
       });
     });
   }

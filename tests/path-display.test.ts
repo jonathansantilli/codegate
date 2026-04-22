@@ -9,8 +9,8 @@ describe("path display", () => {
   });
 
   it("keeps URI-like resource identifiers unchanged", () => {
-    expect(toAbsoluteDisplayPath("/tmp/codegate-case3", "http:https://mcp.linear.app/mcp")).toBe(
-      "http:https://mcp.linear.app/mcp",
+    expect(toAbsoluteDisplayPath("/tmp/codegate-case3", "https://mcp.linear.app/mcp")).toBe(
+      "https://mcp.linear.app/mcp",
     );
   });
 });
