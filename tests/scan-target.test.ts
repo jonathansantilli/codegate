@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createScanDiscoveryContext } from "../src/scan";
-import { cloneGitRepo } from "../src/scan-target/staging";
+import { cloneGitRepo, stageLocalFile } from "../src/scan-target/staging";
 
 const { cloneMock } = vi.hoisted(() => ({
   cloneMock: vi.fn((_: string, args: string[]) => {
@@ -280,5 +281,42 @@ describe("scan target resolver", () => {
     ).rejects.toThrow("sparse checkout not supported");
     expect(destination).toBeDefined();
     expect(existsSync(destination ?? "")).toBe(false);
+  });
+});
+
+describe("stageLocalFile — stagedFromLocalFile flag", () => {
+  // Regression: PR #54 gated the CLI's user-scope guard on
+  // `explicitCandidates.length > 0`. For file types not in
+  // `inferTextLikeFormat` (e.g. `.xml`, `.idea/workspace.xml`), that
+  // list is empty and the guard never fired → sibling findings leaked
+  // into single-file scans. `stagedFromLocalFile` is the reliable
+  // signal regardless of what the file contains.
+  it("flags staged local files even when the extension is unsupported for explicit-candidate inference", () => {
+    const home = mkdtempSync(join(tmpdir(), "codegate-stage-home-"));
+    const xmlPath = join(home, ".idea", "workspace.xml");
+    mkdirSync(join(home, ".idea"), { recursive: true });
+    writeFileSync(xmlPath, `<?xml version="1.0"?>\n<project/>\n`, "utf8");
+
+    const resolved = stageLocalFile(xmlPath);
+
+    expect(resolved.stagedFromLocalFile).toBe(true);
+    expect(resolved.displayTarget).toBe(xmlPath);
+    expect(resolved.scanTarget).not.toBe(xmlPath);
+    // .xml is not in the text-like format list; this used to silently
+    // return [] and defeat PR #54's scope guard.
+    expect(resolved.explicitCandidates ?? []).toEqual([]);
+  });
+
+  it("flags staged local files for known formats too (no regression in the supported path)", () => {
+    const home = mkdtempSync(join(tmpdir(), "codegate-stage-home-json-"));
+    const jsonPath = join(home, ".claude", "settings.json");
+    mkdirSync(join(home, ".claude"), { recursive: true });
+    writeFileSync(jsonPath, `{"hooks": {}}\n`, "utf8");
+
+    const resolved = stageLocalFile(jsonPath);
+
+    expect(resolved.stagedFromLocalFile).toBe(true);
+    expect(resolved.displayTarget).toBe(jsonPath);
+    expect(resolved.explicitCandidates?.length ?? 0).toBeGreaterThan(0);
   });
 });
