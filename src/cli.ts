@@ -493,8 +493,19 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
                 ? true
                 : (baseConfig.workflow_audits?.enabled ?? false),
           },
+          // When the target was a single local file that got staged into a
+          // temp dir (explicitCandidates set), walking the full user-scope
+          // tree is off-target: the user asked to scan one file, not their
+          // whole home. Leaving user-scope on here let sibling findings
+          // (e.g. `~/.agents/skills/*/SKILL.md`) leak into single-file
+          // scans of configs like `.claude/settings.json`. Explicit opt-in
+          // via `--include-user-scope` still forces it on.
           scan_user_scope:
-            options.includeUserScope === true ? true : (baseConfig.scan_user_scope ?? false),
+            options.includeUserScope === true
+              ? true
+              : resolvedTarget.explicitCandidates && resolvedTarget.explicitCandidates.length > 0
+                ? false
+                : (baseConfig.scan_user_scope ?? false),
         };
 
         if (options.resetState) {
