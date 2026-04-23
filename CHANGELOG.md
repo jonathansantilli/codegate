@@ -1,3 +1,9 @@
+# [0.16.0](https://github.com/jonathansantilli/codegate/compare/v0.15.2...v0.16.0) (2026-04-23)
+
+### Features
+
+- **layer3:** run Claude meta-agent via Agent SDK instead of CLI spawn ([#58](https://github.com/jonathansantilli/codegate/issues/58)) ([5e3c6c8](https://github.com/jonathansantilli/codegate/commit/5e3c6c81a0ae7f44c0d9be1ca3b9e3ee72b059de)), closes [openai/codex#7144](https://github.com/openai/codex/issues/7144)
+
 ## [0.15.2](https://github.com/jonathansantilli/codegate/compare/v0.15.1...v0.15.2) (2026-04-23)
 
 ## [0.15.1](https://github.com/jonathansantilli/codegate/compare/v0.15.0...v0.15.1) (2026-04-23)
