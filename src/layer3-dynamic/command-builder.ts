@@ -17,6 +17,13 @@ export interface MetaAgentCommand {
   cwd: string;
   preview: string;
   timeoutMs?: number;
+  /** Original prompt before CLI shell-escaping — used by SDK-based
+   *  runners (e.g. claude-sdk-provider) that call the model directly
+   *  rather than spawning the binary. */
+  prompt: string;
+  /** Read-only flag preserved so SDK runners can set the equivalent
+   *  permission mode without re-parsing argv. */
+  readOnly: boolean;
 }
 
 const INVISIBLE_UNICODE = /[\u200B-\u200D\u2060\uFEFF]/gu;
@@ -75,6 +82,8 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
       args,
       cwd: input.workingDirectory,
       preview: `${command} ${args.map(shellEscape).join(" ")}`,
+      prompt,
+      readOnly,
     };
   }
 
@@ -88,6 +97,8 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
       args,
       cwd: input.workingDirectory,
       preview: `${command} ${args.map(shellEscape).join(" ")}`,
+      prompt,
+      readOnly,
     };
   }
 
@@ -103,5 +114,7 @@ export function buildMetaAgentCommand(input: MetaAgentCommandInput): MetaAgentCo
     args: ["-lc", pipeCommand],
     cwd: input.workingDirectory,
     preview: `${command} ${shellEscape("-lc")} ${shellEscape(pipeCommand)}`,
+    prompt,
+    readOnly,
   };
 }
