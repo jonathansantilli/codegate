@@ -24,6 +24,7 @@ import { APP_NAME } from "./index.js";
 import type { ResourceFetchResult } from "./layer3-dynamic/resource-fetcher.js";
 import type { LocalTextAnalysisTarget } from "./layer3-dynamic/local-text-analysis.js";
 import { runSandboxCommand } from "./layer3-dynamic/sandbox.js";
+import { runClaudeViaSdk } from "./layer3-dynamic/claude-sdk-provider.js";
 import { loadKnowledgeBase } from "./layer1-discovery/knowledge-base.js";
 import { type DeepScanResource } from "./pipeline.js";
 import {
@@ -214,6 +215,27 @@ export function isDirectCliInvocation(
 async function runMetaAgentCommandWithSandbox(
   context: MetaAgentCommandConsentContext,
 ): Promise<MetaAgentCommandRunResult> {
+  // Claude runs through the Agent SDK so we get structured message
+  // iteration and reuse the user's `claude login` session without
+  // having to shell-escape prompts or parse stdout JSON envelopes.
+  // Codex and generic/OpenCode still spawn their CLIs — swap those
+  // once the Codex SDK auth story (see openai/codex#7144) is
+  // dependable enough to adopt.
+  if (context.agent.metaTool === "claude") {
+    const sdkResult = await runClaudeViaSdk({
+      prompt: context.command.prompt,
+      cwd: context.command.cwd,
+      readOnly: context.command.readOnly,
+      timeoutMs: context.command.timeoutMs,
+    });
+    return {
+      command: context.command,
+      code: sdkResult.code,
+      stdout: sdkResult.stdout,
+      stderr: sdkResult.stderr,
+    };
+  }
+
   const commandResult = await runSandboxCommand({
     command: context.command.command,
     args: context.command.args,

@@ -63,6 +63,7 @@
     ]
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "^0.2.118",
     "ajv": "^8.18.0",
     "commander": "^14.0.3",
     "dotenv": "^17.3.1",
