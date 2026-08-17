@@ -1,3 +1,5 @@
+## [0.16.1](https://github.com/jonathansantilli/codegate/compare/v0.16.0...v0.16.1) (2026-08-17)
+
 # [0.16.0](https://github.com/jonathansantilli/codegate/compare/v0.15.2...v0.16.0) (2026-04-23)
 
 ### Features
