@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stripHiddenCharacters } from "../layer2-static/text/unicode.js";
 
 const templatesRoot = join(dirname(fileURLToPath(import.meta.url)), "prompt-templates");
 
@@ -25,7 +26,7 @@ function readTemplate(name: string): string {
 }
 
 function normalize(value: string): string {
-  return value.replace(/[\u200B-\u200D\u2060\uFEFF]/gu, "").trim();
+  return stripHiddenCharacters(value).trim();
 }
 
 export function buildSecurityAnalysisPrompt(input: SecurityAnalysisPromptInput): string {

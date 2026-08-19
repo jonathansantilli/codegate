@@ -1,4 +1,13 @@
 import type { Finding } from "../types/finding.js";
+import { scanEncodedPayloads } from "../layer2-static/text/encoded-payloads.js";
+import { normalizeForMatching } from "../layer2-static/text/normalize.js";
+import {
+  COMMAND_EXECUTION_PATTERN,
+  EXFIL_PATTERN,
+  SENSITIVE_FILE_PATTERN,
+  findOverridePhrase,
+} from "../layer2-static/text/threat-patterns.js";
+import { HIDDEN_UNICODE_CLASS, findHiddenUnicode } from "../layer2-static/text/unicode.js";
 
 export interface ToolDescription {
   name: string;
@@ -10,12 +19,6 @@ export interface ToolDescriptionScannerInput {
   tools: ToolDescription[];
   unicodeAnalysis?: boolean;
 }
-
-const HIDDEN_UNICODE = /[\u200B-\u200D\u2060\uFEFF]/u;
-const SENSITIVE_FILE_PATTERN = /(~\/\.ssh|~\/\.aws|id_rsa|\.env|credentials|\.git-credentials)/iu;
-const EXFIL_PATTERN = /(send .*https?:\/\/|upload|webhook|post to|exfiltrat)/iu;
-const OVERRIDE_PATTERN = /(ignore previous instructions|bypass safety|disable guardrails)/iu;
-const EXEC_PATTERN = /(run command|execute shell|bash -c|sh -c|powershell)/iu;
 
 function makeFinding(
   input: ToolDescriptionScannerInput,
@@ -49,11 +52,16 @@ export function scanToolDescriptions(input: ToolDescriptionScannerInput): Findin
 
   for (const tool of input.tools) {
     const text = tool.description;
-    const hasSensitive = SENSITIVE_FILE_PATTERN.test(text);
-    const hasExfil = EXFIL_PATTERN.test(text);
-    const hasOverride = OVERRIDE_PATTERN.test(text);
-    const hasExec = EXEC_PATTERN.test(text);
-    const hasUnicode = input.unicodeAnalysis === false ? false : HIDDEN_UNICODE.test(text);
+    const normalized = normalizeForMatching(text);
+    const hasSensitive = SENSITIVE_FILE_PATTERN.test(normalized);
+    const hasExfil = EXFIL_PATTERN.test(normalized);
+    const overrideMatch = findOverridePhrase(normalized);
+    const hasExec = COMMAND_EXECUTION_PATTERN.test(normalized);
+    const hiddenMatches = input.unicodeAnalysis === false ? [] : findHiddenUnicode(text);
+    const tagMatches = hiddenMatches.filter((match) => match.class === HIDDEN_UNICODE_CLASS.Tags);
+    const otherHiddenMatches = hiddenMatches.filter(
+      (match) => match.class !== HIDDEN_UNICODE_CLASS.Tags,
+    );
     const isLong = text.length > 1000;
 
     if (hasSensitive && hasExfil) {
@@ -68,14 +76,14 @@ export function scanToolDescriptions(input: ToolDescriptionScannerInput): Findin
       );
     }
 
-    if (hasOverride) {
+    if (overrideMatch) {
       findings.push(
         makeFinding(
           input,
           tool,
           "tool-description-instruction-override",
           "HIGH",
-          `Tool description contains instruction-override language: ${tool.name}`,
+          `Tool description contains instruction-override language ("${overrideMatch.phrase}"): ${tool.name}`,
         ),
       );
     }
@@ -92,7 +100,7 @@ export function scanToolDescriptions(input: ToolDescriptionScannerInput): Findin
       );
     }
 
-    if (hasUnicode) {
+    if (otherHiddenMatches.length > 0) {
       findings.push(
         makeFinding(
           input,
@@ -100,6 +108,31 @@ export function scanToolDescriptions(input: ToolDescriptionScannerInput): Findin
           "tool-description-hidden-unicode",
           "MEDIUM",
           `Tool description includes hidden Unicode characters: ${tool.name}`,
+        ),
+      );
+    }
+
+    if (tagMatches.length > 0) {
+      findings.push(
+        makeFinding(
+          input,
+          tool,
+          "tool-description-hidden-unicode-tags",
+          "HIGH",
+          `Tool description includes ${tagMatches.length} Unicode tag character(s) ` +
+            `(U+E0000-U+E007F, ASCII smuggling): ${tool.name}`,
+        ),
+      );
+    }
+
+    for (const payload of scanEncodedPayloads(text)) {
+      findings.push(
+        makeFinding(
+          input,
+          tool,
+          "tool-description-encoded-payload",
+          payload.matchesRemoteShell ? "CRITICAL" : "HIGH",
+          `Tool description contains a ${payload.kind}-encoded payload with hidden instructions: ${tool.name}`,
         ),
       );
     }

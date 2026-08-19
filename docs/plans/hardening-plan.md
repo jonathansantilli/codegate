@@ -12,7 +12,7 @@ Update the checkboxes and status lines in the same PR that lands the work.
 | ----- | -------- | ------ |
 | 0 | Hygiene & performance quick wins | done (47b72dd) |
 | 1 | Trust boundary: scanned content cannot weaken the scan | done |
-| 2 | Text normalization, hidden-Unicode coverage, encoded payloads | pending |
+| 2 | Text normalization, hidden-Unicode coverage, encoded payloads | done |
 | 3 | Skill-directory coverage | pending |
 | 4 | Layer 3 capability | pending |
 | 5 | Signed content feed (mechanism; feed repo + key pending owner decisions) | pending |
@@ -44,13 +44,13 @@ Open owner decisions (do not block implementation, block feed launch):
 
 ## Phase 2 — Normalization & obfuscation resistance
 
-- [ ] `src/layer2-static/text/unicode.ts`: ZERO_WIDTH, BIDI_CONTROLS, TAG_CHARACTERS (U+E0000–E007F), VARIATION_SELECTORS, `findHiddenUnicode`
-- [ ] `src/layer2-static/text/normalize.ts`: NFKC + strip + confusables fold (data: `confusables.json`)
-- [ ] Shared `src/layer2-static/text/threat-patterns.ts`; rule-file + tool-description scanners consume it over normalized text
-- [ ] Tag-character rule `hidden-unicode-tag-smuggling` (HIGH)
-- [ ] `src/layer2-static/text/encoded-payloads.ts`: bounded base64/hex decode-and-rescan; `rule-file-encoded-payload`
-- [ ] Phrase lists moved to data (`override-phrases.json`) with non-English seeds
-- [ ] Evasion regression tests (zero-width-split phrase, homoglyphs, b64 curl|bash); no new findings on benign fixtures
+- [x] `src/layer2-static/text/unicode.ts`: ZERO_WIDTH, BIDI_CONTROLS, TAG_CHARACTERS (U+E0000–E007F), clustered VARIATION_SELECTORS, `findHiddenUnicode` (escape sequences only — no literal hidden chars in source)
+- [x] `src/layer2-static/text/normalize.ts`: NFKC + strip + confusables fold (data module `confusables.ts`; TS `as const` instead of JSON to avoid build-asset copying)
+- [x] Shared `src/layer2-static/text/threat-patterns.ts`; rule-file + tool-description scanners match over normalized lines, evidence quotes originals
+- [x] Tag-character rules `rule-file-hidden-unicode-tags` / `tool-description-hidden-unicode-tags` (HIGH)
+- [x] `src/layer2-static/text/encoded-payloads.ts`: bounded base64/hex decode-and-rescan; `rule-file-encoded-payload` (CRITICAL when decoded remote shell) + `tool-description-encoded-payload`
+- [x] Phrase lists moved to data (`override-phrases.ts`) with es/pt/fr/de/ru/zh/ja seeds
+- [x] Evasion regression tests in tests/layer2/text-analysis.test.ts (zero-width split, homoglyphs, fullwidth, b64 curl|bash, hex override, benign clean)
 
 ## Phase 3 — Skill-directory coverage
 

@@ -1,5 +1,25 @@
 import type { Finding } from "../../types/finding.js";
 import { buildFindingEvidence, type FindingEvidence } from "../evidence.js";
+import { scanEncodedPayloads, type EncodedPayloadMatch } from "../text/encoded-payloads.js";
+import { normalizeForMatching } from "../text/normalize.js";
+import {
+  AGENT_CONTROL_POINT_PATTERN,
+  BOOTSTRAP_INSTALL_PATTERN,
+  COMMENT_PAYLOAD_PATTERN,
+  COOKIE_EXPORT_PATTERN,
+  HTML_COMMENT_PATTERN,
+  NEGATION_PATTERN,
+  OUTBOUND_TRANSFER_PATTERN,
+  PROFILE_SYNC_PATTERN,
+  REMOTE_SHELL_PATTERN,
+  RESTART_LOAD_PATTERN,
+  SENSITIVE_READ_PATTERN,
+  SESSION_SHARE_PATTERN,
+  SUSPICIOUS_LONG_LINE_PATTERN,
+  findOverridePhrase,
+  hasNegationBefore,
+} from "../text/threat-patterns.js";
+import { HIDDEN_UNICODE_CLASS, findHiddenUnicode } from "../text/unicode.js";
 
 export interface RuleFileInput {
   filePath: string;
@@ -16,33 +36,10 @@ interface FindingNarrative {
   incidentPrimary?: boolean;
 }
 
-const DIRECT_OVERRIDE_PHRASES = [
-  "ignore previous instructions",
-  "skip permissions",
-  "bypass permissions",
-] as const;
-const NEGATION_PATTERN = /\b(?:must not|should not|do not|don't|never)\b/iu;
-const SENSITIVE_READ_PATTERN =
-  /\b(?:read|cat)\s+(?:~\/\.ssh(?:\/[^\s]+)?|\.env\b|~\/\.[a-z0-9._-]+(?:\/[^\s]+)*)/iu;
-const OUTBOUND_TRANSFER_PATTERN =
-  /\b(?:upload externally|send to (?:an |a )?(?:external )?(?:webhook|endpoint|server)|curl\b|wget\b|invoke-webrequest\b|post to\b|https?:\/\/|exfiltrat(?:e|ion|ing))\b/iu;
-const SUSPICIOUS_LONG_LINE_PATTERN =
-  /\b(?:ignore previous instructions|skip permissions|bypass permissions|upload externally|curl\b|wget\b|https?:\/\/|bash\s+-lc|sh\s+-c|powershell\b|base64\b|~\/\.ssh|\.env\b)\b/iu;
-const REMOTE_SHELL_PATTERN =
-  /\b(?:curl|wget)\b[^\n|]{0,240}\|\s*(?:bash|sh)\b|\b(?:invoke-webrequest|iwr)\b[^\n|]{0,240}\|\s*(?:iex|invoke-expression)\b/iu;
-const HTML_COMMENT_PATTERN = /<!--([\s\S]*?)-->/gu;
-const COMMENT_PAYLOAD_PATTERN =
-  /\b(?:secret instructions|ignore previous instructions|curl\b|wget\b|invoke-webrequest\b|bash\b|powershell\b|session share\b|profile sync\b)\b/iu;
-const COOKIE_EXPORT_PATTERN = /\bcookies?\s+(?:export|import|get)\b/iu;
-const SESSION_SHARE_PATTERN = /\bsession\s+share\b|\blive url\b/iu;
-const PROFILE_SYNC_PATTERN =
-  /\bprofile\s+sync\b|\breal chrome\b|\blogin sessions\b|\bsession tokens?\b|--profile\b/iu;
-const BOOTSTRAP_INSTALL_PATTERN =
-  /\b(?:npm|pnpm|yarn|bun)\s+install\s+-g\b|\bbrew\s+install\b|\bpipx\s+install\b|\bgo\s+install\b|\b(?:npx|pnpx|uvx)\b[^\n`]{0,160}@latest\b/iu;
-const AGENT_CONTROL_POINT_PATTERN =
-  /\.claude\/hooks\/|\.claude\/settings\.json|\.claude\/agents\/|\bclaude\.md\b|\bagents\.md\b|\bmcp configuration\b/iu;
-const RESTART_LOAD_PATTERN =
-  /\brestart\b.*\b(?:load|take effect|activate|reload|work)\b|\bonly load after restart\b|\bafter restarting\b/iu;
+interface NormalizedLines {
+  original: string[];
+  normalized: string[];
+}
 
 function makeFinding(
   filePath: string,
@@ -120,64 +117,55 @@ function buildMultilineEvidence(lines: string[], lineNumbers: number[]): Finding
   };
 }
 
-function hasNearbyNegation(line: string, matchIndex: number): boolean {
-  const prefix = line.slice(Math.max(0, matchIndex - 24), matchIndex);
-  return NEGATION_PATTERN.test(prefix);
-}
-
 function detectSuspiciousInstruction(
-  lines: string[],
+  lines: NormalizedLines,
 ): { phrase: string; evidence: FindingEvidence } | null {
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const lower = line.toLowerCase();
+  for (let index = 0; index < lines.normalized.length; index += 1) {
+    const normalized = lines.normalized[index] ?? "";
+    const original = lines.original[index] ?? "";
 
-    for (const phrase of DIRECT_OVERRIDE_PHRASES) {
-      const matchIndex = lower.indexOf(phrase);
-      if (matchIndex < 0 || hasNearbyNegation(lower, matchIndex)) {
-        continue;
-      }
+    const overrideMatch = findOverridePhrase(normalized);
+    if (overrideMatch) {
       return {
-        phrase,
-        evidence: buildLineEvidence(line, index + 1, matchIndex + 1),
+        phrase: overrideMatch.phrase,
+        evidence: buildLineEvidence(original, index + 1, overrideMatch.index + 1),
       };
     }
 
-    const sensitiveReadMatch = line.match(SENSITIVE_READ_PATTERN);
-    const outboundMatch = line.match(OUTBOUND_TRANSFER_PATTERN);
+    const sensitiveReadMatch = normalized.match(SENSITIVE_READ_PATTERN);
+    const outboundMatch = normalized.match(OUTBOUND_TRANSFER_PATTERN);
     if (!sensitiveReadMatch || !outboundMatch) {
       continue;
     }
 
-    const outboundIndex = outboundMatch.index ?? line.length;
-    if (hasNearbyNegation(lower, outboundIndex)) {
+    const outboundIndex = outboundMatch.index ?? normalized.length;
+    if (hasNegationBefore(normalized, outboundIndex)) {
       continue;
     }
 
-    const phrase = outboundMatch[0].toLowerCase();
     return {
-      phrase,
-      evidence: buildLineEvidence(line, index + 1, outboundIndex + 1),
+      phrase: outboundMatch[0].toLowerCase(),
+      evidence: buildLineEvidence(original, index + 1, outboundIndex + 1),
     };
   }
 
   return null;
 }
 
-function detectRemoteShell(lines: string[]): FindingEvidence | null {
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const match = line.match(REMOTE_SHELL_PATTERN);
+function detectRemoteShell(lines: NormalizedLines): FindingEvidence | null {
+  for (let index = 0; index < lines.normalized.length; index += 1) {
+    const normalized = lines.normalized[index] ?? "";
+    const match = normalized.match(REMOTE_SHELL_PATTERN);
     if (!match) {
       continue;
     }
 
     const matchIndex = match.index ?? 0;
-    if (hasNearbyNegation(line.toLowerCase(), matchIndex)) {
+    if (hasNegationBefore(normalized, matchIndex)) {
       continue;
     }
 
-    return buildLineEvidence(line, index + 1, matchIndex + 1);
+    return buildLineEvidence(lines.original[index] ?? "", index + 1, matchIndex + 1);
   }
 
   return null;
@@ -198,12 +186,12 @@ function shellLabelFromEvidence(evidence: FindingEvidence | null): string {
 }
 
 function detectHiddenCommentPayload(input: RuleFileInput, lines: string[]): FindingEvidence | null {
-  HTML_COMMENT_PATTERN.lastIndex = 0;
-  let match = HTML_COMMENT_PATTERN.exec(input.textContent);
+  const commentRegex = new RegExp(HTML_COMMENT_PATTERN.source, "gu");
+  let match = commentRegex.exec(input.textContent);
   while (match) {
-    const commentBody = match[1] ?? "";
+    const commentBody = normalizeForMatching(match[1] ?? "");
     if (!COMMENT_PAYLOAD_PATTERN.test(commentBody)) {
-      match = HTML_COMMENT_PATTERN.exec(input.textContent);
+      match = commentRegex.exec(input.textContent);
       continue;
     }
 
@@ -219,27 +207,26 @@ function detectHiddenCommentPayload(input: RuleFileInput, lines: string[]): Find
   return null;
 }
 
-function detectSessionTransfer(lines: string[]): FindingEvidence | null {
+function detectSessionTransfer(lines: NormalizedLines): FindingEvidence | null {
   const matchedLines: number[] = [];
   const categories = new Set<string>();
 
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    const lower = line.toLowerCase();
-    if (NEGATION_PATTERN.test(lower)) {
+  for (let index = 0; index < lines.normalized.length; index += 1) {
+    const normalized = lines.normalized[index] ?? "";
+    if (NEGATION_PATTERN.test(normalized)) {
       continue;
     }
 
     let matched = false;
-    if (COOKIE_EXPORT_PATTERN.test(line)) {
+    if (COOKIE_EXPORT_PATTERN.test(normalized)) {
       categories.add("cookies");
       matched = true;
     }
-    if (SESSION_SHARE_PATTERN.test(line)) {
+    if (SESSION_SHARE_PATTERN.test(normalized)) {
       categories.add("session_share");
       matched = true;
     }
-    if (PROFILE_SYNC_PATTERN.test(line)) {
+    if (PROFILE_SYNC_PATTERN.test(normalized)) {
       categories.add("profile");
       matched = true;
     }
@@ -253,27 +240,27 @@ function detectSessionTransfer(lines: string[]): FindingEvidence | null {
     return null;
   }
 
-  return buildMultilineEvidence(lines, matchedLines.slice(0, 4));
+  return buildMultilineEvidence(lines.original, matchedLines.slice(0, 4));
 }
 
-function detectBootstrapControlPoints(lines: string[]): FindingEvidence | null {
+function detectBootstrapControlPoints(lines: NormalizedLines): FindingEvidence | null {
   const installLines: number[] = [];
   const controlPointLines: number[] = [];
   const restartLines: number[] = [];
 
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
+  for (let index = 0; index < lines.normalized.length; index += 1) {
+    const normalized = lines.normalized[index] ?? "";
     const lineNumber = index + 1;
 
-    if (BOOTSTRAP_INSTALL_PATTERN.test(line)) {
+    if (BOOTSTRAP_INSTALL_PATTERN.test(normalized)) {
       installLines.push(lineNumber);
     }
 
-    if (AGENT_CONTROL_POINT_PATTERN.test(line)) {
+    if (AGENT_CONTROL_POINT_PATTERN.test(normalized)) {
       controlPointLines.push(lineNumber);
     }
 
-    if (RESTART_LOAD_PATTERN.test(line)) {
+    if (RESTART_LOAD_PATTERN.test(normalized)) {
       restartLines.push(lineNumber);
     }
   }
@@ -282,27 +269,32 @@ function detectBootstrapControlPoints(lines: string[]): FindingEvidence | null {
     return null;
   }
 
-  return buildMultilineEvidence(lines, [
+  return buildMultilineEvidence(lines.original, [
     ...installLines.slice(0, 2),
     ...controlPointLines.slice(0, 2),
     restartLines[0],
   ]);
 }
 
-export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
-  const findings: Finding[] = [];
-  const hiddenUnicodeRegex = /(?:\u200B|\u200C|\u200D|\u2060|\uFEFF|[\u202A-\u202E])/u;
-  const hiddenRemoteShellIncident: FindingNarrative = {
-    incidentId: "hidden-remote-shell-payload",
-    incidentTitle: "Hidden remote shell payload in skill file",
-  };
+function hiddenUnicodeFindings(input: RuleFileInput): Finding[] {
+  if (input.unicodeAnalysis === false) {
+    return [];
+  }
 
-  const hiddenMatch =
-    input.unicodeAnalysis === false ? null : input.textContent.match(hiddenUnicodeRegex);
-  if (hiddenMatch?.[0]) {
+  const matches = findHiddenUnicode(input.textContent);
+  if (matches.length === 0) {
+    return [];
+  }
+
+  const findings: Finding[] = [];
+  const tagMatches = matches.filter((match) => match.class === HIDDEN_UNICODE_CLASS.Tags);
+  const otherMatches = matches.filter((match) => match.class !== HIDDEN_UNICODE_CLASS.Tags);
+
+  if (otherMatches.length > 0) {
+    const firstChar = String.fromCodePoint(otherMatches[0]?.codePoint ?? 0x200b);
     const evidence = buildFindingEvidence({
       textContent: input.textContent,
-      searchTerms: [hiddenMatch[0]],
+      searchTerms: [firstChar],
       fallbackValue: "hidden Unicode character detected",
     });
     findings.push(
@@ -316,8 +308,90 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
     );
   }
 
-  const lines = input.textContent.split(/\r?\n/u);
-  const hiddenCommentPayload = detectHiddenCommentPayload(input, lines);
+  if (tagMatches.length > 0) {
+    const lineNumber = input.textContent.slice(0, tagMatches[0]?.index ?? 0).split(/\r?\n/u).length;
+    findings.push(
+      makeFinding(
+        input.filePath,
+        "hidden_unicode_tags",
+        "rule-file-hidden-unicode-tags",
+        `Rule file contains ${tagMatches.length} Unicode tag character(s) (U+E0000-U+E007F), ` +
+          "an ASCII-smuggling channel that hides instructions from human reviewers",
+        { evidence: `line ${lineNumber}: ${tagMatches.length} tag character(s)`, line: lineNumber },
+        "HIGH",
+        {
+          observed: [
+            "The file embeds Unicode tag characters that render as nothing in editors and diffs.",
+            "Tag characters encode invisible ASCII that still reaches models that read the file.",
+          ],
+          inference:
+            "Invisible tag-character content is a known prompt-injection smuggling technique.",
+          notVerified: ["CodeGate did not decode or follow any smuggled instruction."],
+        },
+      ),
+    );
+  }
+
+  return findings;
+}
+
+function encodedPayloadFindings(input: RuleFileInput, lines: string[]): Finding[] {
+  return scanEncodedPayloads(input.textContent).map((match: EncodedPayloadMatch) => {
+    const severity: Finding["severity"] = match.matchesRemoteShell ? "CRITICAL" : "HIGH";
+    const behaviors = [
+      match.matchesRemoteShell ? "remote shell execution" : null,
+      match.matchesOverridePhrase ? "instruction override" : null,
+      match.matchesSensitiveExfil ? "sensitive-data exfiltration" : null,
+      match.matchesCommandExecution ? "command execution" : null,
+    ].filter((entry): entry is string => entry !== null);
+
+    const sourceLine = lines[match.line - 1] ?? "";
+    const evidence: FindingEvidence = {
+      evidence:
+        `line ${match.line}\n${match.line} | ${sourceLine.slice(0, 200)}\n` +
+        `decoded (${match.kind}): ${match.decodedExcerpt}`,
+      line: match.line,
+      column: 1,
+    };
+
+    return makeFinding(
+      input.filePath,
+      `encoded_payload:${match.line}`,
+      "rule-file-encoded-payload",
+      `Rule file contains a ${match.kind}-encoded payload that decodes to ${behaviors.join(", ")}`,
+      evidence,
+      severity,
+      {
+        observed: [
+          `An encoded ${match.kind} blob decodes to readable instructions.`,
+          `The decoded content matches: ${behaviors.join(", ")}.`,
+        ],
+        inference: "Encoding hides the payload from human review while keeping it machine-usable.",
+        notVerified: [
+          "CodeGate did not execute any decoded instruction.",
+          "CodeGate did not fetch any URL referenced by the decoded content.",
+        ],
+      },
+    );
+  });
+}
+
+export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
+  const findings: Finding[] = [];
+  const hiddenRemoteShellIncident: FindingNarrative = {
+    incidentId: "hidden-remote-shell-payload",
+    incidentTitle: "Hidden remote shell payload in skill file",
+  };
+
+  findings.push(...hiddenUnicodeFindings(input));
+
+  const originalLines = input.textContent.split(/\r?\n/u);
+  const lines: NormalizedLines = {
+    original: originalLines,
+    normalized: originalLines.map((line) => normalizeForMatching(line)),
+  };
+
+  const hiddenCommentPayload = detectHiddenCommentPayload(input, lines.original);
   if (hiddenCommentPayload) {
     findings.push(
       makeFinding(
@@ -430,14 +504,18 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
     );
   }
 
-  const longLineIndex = lines.findIndex(
-    (line) =>
-      line.length > 300 && SUSPICIOUS_LONG_LINE_PATTERN.test(line) && !NEGATION_PATTERN.test(line),
+  findings.push(...encodedPayloadFindings(input, lines.original));
+
+  const longLineIndex = lines.normalized.findIndex(
+    (normalized, index) =>
+      (lines.original[index] ?? "").length > 300 &&
+      SUSPICIOUS_LONG_LINE_PATTERN.test(normalized) &&
+      !NEGATION_PATTERN.test(normalized),
   );
   if (longLineIndex >= 0) {
     const lineNumber = longLineIndex + 1;
     const evidence: FindingEvidence = {
-      evidence: `line ${lineNumber}\n${lineNumber} | ${lines[longLineIndex]}`,
+      evidence: `line ${lineNumber}\n${lineNumber} | ${lines.original[longLineIndex]}`,
       line: lineNumber,
       column: 1,
     };
