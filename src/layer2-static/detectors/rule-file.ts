@@ -11,6 +11,7 @@ import {
   NEGATION_PATTERN,
   OUTBOUND_TRANSFER_PATTERN,
   PROFILE_SYNC_PATTERN,
+  REMOTE_INSTRUCTION_INDIRECTION_PATTERN,
   REMOTE_SHELL_PATTERN,
   RESTART_LOAD_PATTERN,
   SENSITIVE_READ_PATTERN,
@@ -502,6 +503,33 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
         },
       ),
     );
+  }
+
+  for (let index = 0; index < lines.normalized.length; index += 1) {
+    const normalized = lines.normalized[index] ?? "";
+    const match = normalized.match(REMOTE_INSTRUCTION_INDIRECTION_PATTERN);
+    if (!match || hasNegationBefore(normalized, match.index ?? 0)) {
+      continue;
+    }
+    findings.push(
+      makeFinding(
+        input.filePath,
+        "remote_instruction_indirection",
+        "rule-file-remote-instruction-indirection",
+        "Rule file directs the agent to fetch and follow instructions from a remote URL",
+        buildLineEvidence(lines.original[index] ?? "", index + 1, (match.index ?? 0) + 1),
+        "HIGH",
+        {
+          observed: [
+            "The file tells the agent to read or follow instructions hosted at an external URL.",
+          ],
+          inference:
+            "Remote instructions can change at any time after review, so the effective behavior is not what was audited.",
+          notVerified: ["CodeGate did not fetch the referenced URL."],
+        },
+      ),
+    );
+    break;
   }
 
   findings.push(...encodedPayloadFindings(input, lines.original));

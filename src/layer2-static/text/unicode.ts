@@ -25,9 +25,10 @@ export const VARIATION_SELECTOR_PATTERN = /[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/u;
 // runs of them, while a single selector legitimately follows an emoji.
 const CLUSTERED_VARIATION_SELECTOR_PATTERN = /[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]{2,}/u;
 
-// eslint-disable-next-line no-misleading-character-class -- matching the combining/invisible characters themselves is the point
+/* eslint-disable no-misleading-character-class -- matching the combining/invisible characters themselves is the point */
 const STRIP_FOR_MATCHING_PATTERN =
   /[\u200B-\u200D\u2060\uFEFF\u202A-\u202E\u2066-\u2069\uFE00-\uFE0F\u{E0000}-\u{E007F}\u{E0100}-\u{E01EF}]/gu;
+/* eslint-enable no-misleading-character-class */
 
 export interface HiddenUnicodeMatch {
   index: number;

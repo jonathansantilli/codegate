@@ -6,6 +6,7 @@ import { detectGitHookIssues, type GitHookEntry } from "./detectors/git-hooks.js
 import { detectIdeSettingsIssues } from "./detectors/ide-settings.js";
 import { detectPluginManifestIssues } from "./detectors/plugin-manifest.js";
 import { detectRuleFileIssues } from "./detectors/rule-file.js";
+import { detectSkillFrontmatterIssues } from "./detectors/skill-frontmatter.js";
 import { detectSymlinkEscapes, type SymlinkEscapeEntry } from "./detectors/symlink.js";
 import { detectWorkflowExcessivePermissions } from "./detectors/workflow-excessive-permissions.js";
 import { detectWorkflowDangerousTriggers } from "./detectors/workflow-dangerous-triggers.js";
@@ -304,6 +305,16 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
               filePath: file.filePath,
               textContent: file.textContent,
               unicodeAnalysis: input.config.unicodeAnalysis,
+            })
+          : [],
+    },
+    {
+      id: "skill-frontmatter",
+      run: ({ file }) =>
+        file.format === "markdown"
+          ? detectSkillFrontmatterIssues({
+              filePath: file.filePath,
+              textContent: file.textContent,
             })
           : [],
     },

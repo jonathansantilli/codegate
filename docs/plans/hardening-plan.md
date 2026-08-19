@@ -13,7 +13,7 @@ Update the checkboxes and status lines in the same PR that lands the work.
 | 0 | Hygiene & performance quick wins | done (47b72dd) |
 | 1 | Trust boundary: scanned content cannot weaken the scan | done |
 | 2 | Text normalization, hidden-Unicode coverage, encoded payloads | done |
-| 3 | Skill-directory coverage | pending |
+| 3 | Skill-directory coverage | done |
 | 4 | Layer 3 capability | pending |
 | 5 | Signed content feed (mechanism; feed repo + key pending owner decisions) | pending |
 | 6 | Known-bad indicators + first-scan review | pending |
@@ -54,11 +54,11 @@ Open owner decisions (do not block implementation, block feed launch):
 
 ## Phase 3 — Skill-directory coverage
 
-- [ ] Sibling collection for skill candidates in src/scan.ts (depth ≤ 3, ≤ 200 files, text-like extensions + shebang)
-- [ ] Binary payload findings `skill-binary-payload` (NUL sniff; ELF/Mach-O/PE or executable ⇒ HIGH)
-- [ ] `src/layer2-static/detectors/skill-frontmatter.ts`: `skill-allowed-tools-broad`, `skill-frontmatter-hidden-instructions`, `skill-frontmatter-mismatch`
-- [ ] Remote-instruction indirection rule + URL registered as deep-scan resource
-- [ ] Malicious + benign skill fixtures; walk-cap test; skills-wrapper e2e
+- [x] Sibling collection for skill candidates in src/scan.ts (depth ≤ 3, ≤ 200 files, text-like extensions + shebang)
+- [x] Binary payload findings `skill-binary-payload` (NUL sniff; ELF/Mach-O/PE or executable ⇒ HIGH)
+- [x] `src/layer2-static/detectors/skill-frontmatter.ts`: `skill-allowed-tools-broad`, `skill-frontmatter-hidden-instructions`, `skill-frontmatter-mismatch`
+- [x] `rule-file-remote-instruction-indirection` rule + URL registered as deep-scan resource (`collectIndirectionUrlResources`)
+- [x] Malicious + benign skill fixtures and walk-cap test (tests/layer2/skill-coverage.test.ts); skills-wrapper reuses runScanEngine so coverage flows through
 
 ## Phase 4 — Layer 3 capability
 
