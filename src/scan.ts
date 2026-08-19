@@ -136,12 +136,20 @@ function escapeRegex(value: string): string {
   return value.replace(/[|\\{}()[\]^$+?.*]/g, "\\$&");
 }
 
+const wildcardRegexCache = new Map<string, RegExp>();
+
 function wildcardToRegex(pattern: string): RegExp {
+  const cached = wildcardRegexCache.get(pattern);
+  if (cached) {
+    return cached;
+  }
   let escaped = escapeRegex(pattern);
   escaped = escaped.replace(/\\\*\\\*\//g, "(?:[^/]+/)*");
   escaped = escaped.replace(/\\\*\\\*/g, ".*");
   escaped = escaped.replace(/\\\*/g, "[^/]*");
-  return new RegExp(`^${escaped}$`, "u");
+  const regex = new RegExp(`^${escaped}$`, "u");
+  wildcardRegexCache.set(pattern, regex);
+  return regex;
 }
 
 function normalizePathForMatch(path: string): string {
@@ -354,15 +362,16 @@ function collectSelectedCandidates(
     }))
     .filter((entry) => !entry.relativePath.startsWith(".."));
 
+  const projectPatterns = patterns
+    .filter((candidate) => candidate.scope === "project")
+    .map((candidate) => ({ candidate, regex: wildcardToRegex(candidate.pattern) }));
+
   for (const file of filesByRelativePath) {
     if (!includeProject) {
       continue;
     }
-    for (const candidate of patterns) {
-      if (candidate.scope !== "project") {
-        continue;
-      }
-      if (!wildcardToRegex(candidate.pattern).test(file.relativePath)) {
+    for (const { candidate, regex } of projectPatterns) {
+      if (!regex.test(file.relativePath)) {
         continue;
       }
       if (!matchesCollectionKinds(file.relativePath, options.collectKinds)) {

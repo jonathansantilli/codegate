@@ -193,13 +193,8 @@ function findingFromRulePackMatch(file: StaticFileInput, rule: DetectionRule): F
   };
 }
 
-function hasEquivalentFinding(findings: Finding[], candidate: Finding): boolean {
-  return findings.some(
-    (finding) =>
-      finding.rule_id === candidate.rule_id &&
-      finding.file_path === candidate.file_path &&
-      (finding.location.field ?? "") === (candidate.location.field ?? ""),
-  );
+function findingEquivalenceKey(finding: Finding): string {
+  return `${finding.rule_id} ${finding.file_path} ${finding.location.field ?? ""}`;
 }
 
 function dedupeFindings(findings: Finding[]): Finding[] {
@@ -832,6 +827,13 @@ function buildGlobalAudits(): Array<RegisteredAudit<GlobalAuditContext>> {
 
 export async function runStaticEngine(input: StaticEngineInput): Promise<Finding[]> {
   const findings: Finding[] = [];
+  const seenEquivalenceKeys = new Set<string>();
+  const pushFindings = (batch: Finding[]): void => {
+    for (const finding of batch) {
+      findings.push(finding);
+      seenEquivalenceKeys.add(findingEquivalenceKey(finding));
+    }
+  };
   const runtimeSelection = {
     persona: input.config.persona,
     runtimeMode: input.config.runtimeMode,
@@ -847,7 +849,7 @@ export async function runStaticEngine(input: StaticEngineInput): Promise<Finding
 
   for (const file of input.files) {
     for (const audit of activeFileAudits) {
-      findings.push(...(await audit.run({ file, input })));
+      pushFindings(await audit.run({ file, input }));
     }
 
     for (const rule of rulePackRules) {
@@ -863,14 +865,14 @@ export async function runStaticEngine(input: StaticEngineInput): Promise<Finding
       }
 
       const candidate = findingFromRulePackMatch(file, rule);
-      if (!hasEquivalentFinding(findings, candidate)) {
-        findings.push(candidate);
+      if (!seenEquivalenceKeys.has(findingEquivalenceKey(candidate))) {
+        pushFindings([candidate]);
       }
     }
   }
 
   for (const audit of activeGlobalAudits) {
-    findings.push(...(await audit.run({ input })));
+    pushFindings(await audit.run({ input }));
   }
 
   return dedupeFindings(findings);

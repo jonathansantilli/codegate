@@ -10,6 +10,7 @@ export default tseslint.config(
       "coverage/**",
       "docs/plans/**",
       "docs/showcase/**",
+      "reports/**",
       "showcase/**",
       "scripts/showcase/**",
       "~/**",

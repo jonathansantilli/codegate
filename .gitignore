@@ -10,6 +10,8 @@ node_modules/
 !/docs/assets/
 !/docs/assets/codegate-logo.png
 !/docs/deep-scan.md
+!/docs/plans/
+!/docs/plans/hardening-plan.md
 !/docs/public-evidence-map.md
 !/docs/remediation.md
 !/docs/why-codegate.md
@@ -22,6 +24,7 @@ node_modules/
 # Runtime state and scan artifacts
 /.codegate/
 /.codegate-backup/
+/reports/
 /~/
 *.sarif
 
