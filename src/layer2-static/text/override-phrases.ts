@@ -1,8 +1,10 @@
+import { loadActiveContentBundle } from "../../content/content-store.js";
+
 /**
  * Instruction-override phrases matched against normalized (NFKC, hidden
  * characters stripped, confusable-folded, lowercased) text. This is the
  * high-signal literal tier; semantic analysis belongs to the Layer 3
- * meta-agent. Data-driven so a content feed can extend it.
+ * meta-agent. Data-driven so the content feed can extend it.
  */
 export interface OverridePhrase {
   phrase: string;
@@ -35,3 +37,30 @@ export const OVERRIDE_PHRASES: readonly OverridePhrase[] = [
   { phrase: "以前の指示を無視して", language: "ja" },
   { phrase: "これまでの指示を無視", language: "ja" },
 ] as const;
+
+let cachedActivePhrases: readonly OverridePhrase[] | null = null;
+
+export function resetActiveOverridePhrasesCache(): void {
+  cachedActivePhrases = null;
+}
+
+/** Bundled phrases plus any extras delivered by the verified content feed. */
+export function activeOverridePhrases(): readonly OverridePhrase[] {
+  if (cachedActivePhrases) {
+    return cachedActivePhrases;
+  }
+  let feedPhrases: OverridePhrase[];
+  try {
+    const bundle = loadActiveContentBundle();
+    feedPhrases = (bundle?.override_phrases ?? []).filter(
+      (entry): entry is OverridePhrase =>
+        typeof entry?.phrase === "string" &&
+        entry.phrase.length > 0 &&
+        typeof entry?.language === "string",
+    );
+  } catch {
+    feedPhrases = [];
+  }
+  cachedActivePhrases = [...OVERRIDE_PHRASES, ...feedPhrases];
+  return cachedActivePhrases;
+}

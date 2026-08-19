@@ -9,6 +9,7 @@ node_modules/
 !/docs/
 !/docs/assets/
 !/docs/assets/codegate-logo.png
+!/docs/content-feed.md
 !/docs/deep-scan.md
 !/docs/plans/
 !/docs/plans/hardening-plan.md

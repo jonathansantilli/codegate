@@ -55,6 +55,7 @@ import {
   listTrustedDirectories,
   removeTrustedDirectory,
 } from "./commands/trust.js";
+import { checkContentUpdate, rollbackContent, updateContent } from "./content/content-updater.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
   executeScanContentCommand,
@@ -985,35 +986,71 @@ function addInitCommand(program: Command, deps: CliDeps): void {
 }
 
 function addUpdateCommands(program: Command, deps: CliDeps): void {
-  const guidance = [
-    "Updates are bundled with CodeGate releases in v1/v2.",
-    "Run: npm update -g codegate-ai",
-    "Or run latest directly: npx codegate-ai@latest scan .",
-  ];
+  const registerUpdateCommand = (name: string, description: string): void => {
+    program
+      .command(name)
+      .description(description)
+      .option("--check", "check for a newer signed content bundle without installing")
+      .option("--rollback", "switch back to the previously installed content version")
+      .option(
+        "--url <baseUrl>",
+        "override the content download base URL (the signature is still required to verify)",
+      )
+      .addHelpText(
+        "after",
+        renderExampleHelp([
+          `codegate ${name}`,
+          `codegate ${name} --check`,
+          `codegate ${name} --rollback`,
+        ]),
+      )
+      .action(async (options: { check?: boolean; rollback?: boolean; url?: string }) => {
+        try {
+          if (options.rollback) {
+            const rolledBack = rollbackContent();
+            deps.stdout(`Rolled back to content version ${rolledBack.version}.`);
+            deps.setExitCode(0);
+            return;
+          }
 
-  program
-    .command("update-kb")
-    .description("Check for newer knowledge-base content")
-    .addHelpText("after", renderExampleHelp(["codegate update-kb"]))
-    .action(() => {
-      deps.stdout("update-kb:");
-      for (const line of guidance) {
-        deps.stdout(line);
-      }
-      deps.setExitCode(0);
-    });
+          if (options.check) {
+            const checked = await checkContentUpdate({}, { baseUrl: options.url });
+            deps.stdout(`Installed content: ${checked.currentVersion ?? "bundled only"}`);
+            deps.stdout(`Latest published:  ${checked.remoteVersion}`);
+            deps.stdout(
+              checked.updateAvailable
+                ? `Update available. Run: codegate ${name}`
+                : "Content is up to date.",
+            );
+            deps.setExitCode(0);
+            return;
+          }
 
-  program
-    .command("update-rules")
-    .description("Check for newer rules content")
-    .addHelpText("after", renderExampleHelp(["codegate update-rules"]))
-    .action(() => {
-      deps.stdout("update-rules:");
-      for (const line of guidance) {
-        deps.stdout(line);
-      }
-      deps.setExitCode(0);
-    });
+          const updated = await updateContent({}, { baseUrl: options.url });
+          if (updated.changed) {
+            deps.stdout(
+              `Updated content: ${updated.previousVersion ?? "bundled only"} -> ${updated.version}`,
+            );
+            if (updated.pruned.length > 0) {
+              deps.stdout(`Pruned old versions: ${updated.pruned.join(", ")}`);
+            }
+          } else {
+            deps.stdout(`Content already up to date (${updated.version}).`);
+          }
+          deps.setExitCode(0);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          deps.stderr(`${name} failed: ${message}`);
+          deps.setExitCode(3);
+        }
+      });
+  };
+
+  registerUpdateCommand(
+    "update-kb",
+    "Fetch and verify the signed content bundle (knowledge base, rules, phrase lists)",
+  );
+  registerUpdateCommand("update-rules", "Alias of update-kb: content ships as one signed bundle");
 }
 
 function resolveKnowledgeBaseVersion(): string {

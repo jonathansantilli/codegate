@@ -1,5 +1,5 @@
 import type { Finding } from "../../types/finding.js";
-import { POPULAR_MCP_PACKAGES } from "../data/popular-mcp-packages.js";
+import { activePopularMcpPackages } from "../data/popular-mcp-packages.js";
 import { damerauLevenshtein } from "../text/edit-distance.js";
 
 export interface McpPackageHygieneInput {
@@ -76,7 +76,7 @@ function typosquatThreshold(name: string): number {
 }
 
 export function findLikelyTyposquatTarget(registry: PackageRegistry, name: string): string | null {
-  const popular = POPULAR_MCP_PACKAGES[registry];
+  const popular = activePopularMcpPackages()[registry];
   const normalized = name.toLowerCase();
   if (normalized.length < MIN_TYPOSQUAT_NAME_LENGTH || popular.includes(normalized)) {
     return null;

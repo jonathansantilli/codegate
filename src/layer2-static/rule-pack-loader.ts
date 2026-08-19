@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type ErrorObject } from "ajv";
+import { loadActiveContentBundle } from "../content/content-store.js";
 import type { DetectionRule } from "./rule-engine.js";
 
 export interface RulePackLoaderOptions {
@@ -226,15 +227,37 @@ function normalizeOptions(arg?: string | RulePackLoaderOptions): LoadRulePackOpt
   };
 }
 
+function loadContentFeedRules(): DetectionRule[] {
+  try {
+    const bundle = loadActiveContentBundle();
+    const rules = bundle?.rules ?? [];
+    const validated: DetectionRule[] = [];
+    for (const candidate of rules) {
+      if (!ruleValidator(candidate)) {
+        // One invalid feed rule disqualifies the feed's rule set; bundled
+        // rules remain the safe baseline.
+        return [];
+      }
+      validated.push(candidate as DetectionRule);
+    }
+    return validated;
+  } catch {
+    return [];
+  }
+}
+
 export function loadRulePacks(): DetectionRule[];
 export function loadRulePacks(baseDir: string): DetectionRule[];
 export function loadRulePacks(options: RulePackLoaderOptions): DetectionRule[];
 export function loadRulePacks(arg?: string | RulePackLoaderOptions): DetectionRule[] {
   const options = normalizeOptions(arg);
   const bundledRules = collectRulesFromPaths([options.baseDir]);
+  const feedRules = loadContentFeedRules();
   const externalRules = collectRulesFromPaths(options.rulePackPaths);
+  // Later entries win in dedupe: user packs override feed rules, which
+  // override bundled rules.
   return filterRules(
-    dedupeByRuleId([...bundledRules, ...externalRules]),
+    dedupeByRuleId([...bundledRules, ...feedRules, ...externalRules]),
     options.allowedRules,
     options.skipRules,
   );

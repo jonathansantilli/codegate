@@ -1,3 +1,6 @@
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { createCli, type CliDeps } from "../../src/cli";
 import type { CodeGateConfig } from "../../src/config";
@@ -54,45 +57,58 @@ function makeDeps(overrides: Partial<CliDeps>): CliDeps {
 }
 
 describe("update commands", () => {
-  it("prints update guidance for update-kb", async () => {
-    let output = "";
-    let exitCode = -1;
-    const cli = createCli(
-      "0.2.2",
-      makeDeps({
-        stdout: (message) => {
-          output += `${message}\n`;
-        },
-        setExitCode: (value) => {
-          exitCode = value;
-        },
-      }),
-    );
+  function withTempHome<T>(run: () => Promise<T>): Promise<T> {
+    const previousHome = process.env.HOME;
+    process.env.HOME = mkdtempSync(join(tmpdir(), "codegate-update-cli-"));
+    return run().finally(() => {
+      process.env.HOME = previousHome;
+    });
+  }
 
-    await cli.parseAsync(["node", "codegate", "update-kb"]);
-    expect(output).toContain("update-kb");
-    expect(output).toContain("npm update -g codegate-ai");
-    expect(exitCode).toBe(0);
+  it("fails closed when no publisher key is configured (update-kb and update-rules)", async () => {
+    for (const command of ["update-kb", "update-rules"]) {
+      await withTempHome(async () => {
+        let errors = "";
+        let exitCode = -1;
+        const cli = createCli(
+          "0.2.2",
+          makeDeps({
+            stderr: (message) => {
+              errors += `${message}\n`;
+            },
+            setExitCode: (value) => {
+              exitCode = value;
+            },
+          }),
+        );
+
+        await cli.parseAsync(["node", "codegate", command]);
+        expect(errors).toContain(command);
+        expect(errors).toContain("publisher key");
+        expect(exitCode).toBe(3);
+      });
+    }
   });
 
-  it("prints update guidance for update-rules", async () => {
-    let output = "";
-    let exitCode = -1;
-    const cli = createCli(
-      "0.2.2",
-      makeDeps({
-        stdout: (message) => {
-          output += `${message}\n`;
-        },
-        setExitCode: (value) => {
-          exitCode = value;
-        },
-      }),
-    );
+  it("reports when there is nothing to roll back to", async () => {
+    await withTempHome(async () => {
+      let errors = "";
+      let exitCode = -1;
+      const cli = createCli(
+        "0.2.2",
+        makeDeps({
+          stderr: (message) => {
+            errors += `${message}\n`;
+          },
+          setExitCode: (value) => {
+            exitCode = value;
+          },
+        }),
+      );
 
-    await cli.parseAsync(["node", "codegate", "update-rules"]);
-    expect(output).toContain("update-rules");
-    expect(output).toContain("npm update -g codegate-ai");
-    expect(exitCode).toBe(0);
+      await cli.parseAsync(["node", "codegate", "update-kb", "--rollback"]);
+      expect(errors).toContain("No previous content version");
+      expect(exitCode).toBe(3);
+    });
   });
 });

@@ -1,4 +1,4 @@
-import { OVERRIDE_PHRASES } from "./override-phrases.js";
+import { activeOverridePhrases } from "./override-phrases.js";
 
 /**
  * Shared threat patterns for instruction/rule-file text and MCP tool
@@ -65,7 +65,7 @@ function hasNearbyNegation(normalizedLine: string, matchIndex: number): boolean 
  * matches preceded by nearby negation ("never bypass permissions").
  */
 export function findOverridePhrase(normalizedLine: string): OverridePhraseMatch | null {
-  for (const { phrase } of OVERRIDE_PHRASES) {
+  for (const { phrase } of activeOverridePhrases()) {
     const matchIndex = normalizedLine.indexOf(phrase);
     if (matchIndex < 0 || hasNearbyNegation(normalizedLine, matchIndex)) {
       continue;

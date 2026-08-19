@@ -3,6 +3,7 @@ import { createRequire } from "node:module";
 import { dirname, extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { type ErrorObject } from "ajv";
+import { loadActiveContentBundle } from "../content/content-store.js";
 
 export interface KnowledgeBasePathEntry {
   path: string;
@@ -89,7 +90,38 @@ export function validateKnowledgeBaseEntry(
   };
 }
 
-export function loadKnowledgeBase(baseDir = defaultKnowledgeBaseDir): KnowledgeBaseLoadResult {
+function loadKnowledgeBaseFromContentFeed(): KnowledgeBaseLoadResult | null {
+  try {
+    const bundle = loadActiveContentBundle();
+    if (!bundle?.kb_entries || bundle.kb_entries.length === 0) {
+      return null;
+    }
+    const validator = createValidator(schemaPath);
+    for (const entry of bundle.kb_entries) {
+      if (!validator(entry)) {
+        // One invalid feed entry disqualifies the whole feed KB; bundled
+        // content is the safe fallback.
+        return null;
+      }
+    }
+    return {
+      schemaVersion: bundle.kb_schema_version ?? `feed-${bundle.content_version}`,
+      entries: bundle.kb_entries,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function loadKnowledgeBase(baseDir?: string): KnowledgeBaseLoadResult {
+  // An explicit baseDir bypasses the content feed (tests, custom setups).
+  if (baseDir === undefined) {
+    const fromFeed = loadKnowledgeBaseFromContentFeed();
+    if (fromFeed) {
+      return fromFeed;
+    }
+    baseDir = defaultKnowledgeBaseDir;
+  }
   const schema = loadSchema(join(baseDir, "schema.json"));
   const validator = createValidator(join(baseDir, "schema.json"));
 

@@ -15,7 +15,7 @@ Update the checkboxes and status lines in the same PR that lands the work.
 | 2 | Text normalization, hidden-Unicode coverage, encoded payloads | done |
 | 3 | Skill-directory coverage | done |
 | 4 | Layer 3 capability | done |
-| 5 | Signed content feed (mechanism; feed repo + key pending owner decisions) | pending |
+| 5 | Signed content feed (mechanism; feed repo + key pending owner decisions) | done (inert until key set) |
 | 6 | Known-bad indicators + first-scan review | pending |
 
 Open owner decisions (do not block implementation, block feed launch):
@@ -72,12 +72,12 @@ Open owner decisions (do not block implementation, block feed launch):
 
 ## Phase 5 — Signed content feed
 
-- [ ] Bundle format + Ed25519 verification (`src/content/`), publisher key placeholder until owner decision
-- [ ] `content-updater.ts`: verify-before-parse, `~/.codegate/content/<version>/`, keep 2, atomic
-- [ ] Loader resolution order: verified feed → bundled (knowledge base, rule packs, phrase lists, popular packages)
-- [ ] Real `update-kb` / `update-rules` (+ `--check`, `--rollback`)
-- [ ] `docs/content-feed.md` incl. key-custody guidance
-- [ ] Tamper/wrong-key/truncation tests; cold-start fallback test
+- [x] Bundle format + Ed25519 verification (`src/content/content-bundle.ts`), publisher key placeholder (`publisher-key.ts` = null → fail closed) until owner decision
+- [x] `content-updater.ts`: verify-before-parse, https-only, size/time caps, `~/.codegate/content/<version>/`, keep 2, prune
+- [x] Loader resolution order: verified feed → bundled (knowledge base, rule packs via feed `rules`, override phrases, popular packages); signatures re-verified on load; any failure degrades to bundled
+- [x] Real `update-kb` / `update-rules` (+ `--check`, `--rollback`, `--url` override)
+- [x] `docs/content-feed.md` incl. key-custody guidance + `scripts/content-feed/` keygen and signing scripts
+- [x] Tamper/wrong-key/no-key/non-https tests, prune/rollback, cold-start fallback, KB resolution-order tests (tests/content/content-feed.test.ts)
 
 ## Phase 6 — Known-bad indicators & first-scan review
 
