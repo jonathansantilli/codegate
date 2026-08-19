@@ -3,7 +3,8 @@ import {
   applyInlineIgnoreDirectives,
   collectInlineIgnoreDirectives,
 } from "../../src/config/inline-ignore";
-import type { Finding } from "../../src/types/finding";
+import { computeExitCode, summarizeFindings } from "../../src/report-summary";
+import { SUPPRESSION_SOURCE, type Finding } from "../../src/types/finding";
 
 function makeFinding(overrides: Partial<Finding> = {}): Finding {
   return {
@@ -68,6 +69,50 @@ describe("inline ignore directives", () => {
     );
 
     expect(suppressed?.suppressed).toBe(true);
+    expect(suppressed?.suppression_source).toBe(SUPPRESSION_SOURCE.Inline);
     expect(active?.suppressed).toBe(false);
+  });
+
+  it("tags inline suppressions from untrusted targets and keeps them gating", () => {
+    const directives = collectInlineIgnoreDirectives([
+      {
+        filePath: ".github/workflows/ci.yml",
+        textContent: "# codegate: ignore[workflow-unpinned-uses]",
+      },
+    ]);
+
+    const findings = applyInlineIgnoreDirectives([makeFinding()], directives, {
+      trustedTarget: false,
+    });
+
+    expect(findings[0]?.suppressed).toBe(true);
+    expect(findings[0]?.suppression_source).toBe(SUPPRESSION_SOURCE.InlineUntrusted);
+    expect(computeExitCode(findings)).toBe(2);
+
+    const summary = summarizeFindings(findings);
+    expect(summary.suppressed).toBe(1);
+    expect(summary.suppressed_untrusted).toBe(1);
+    expect(summary.exit_code).toBe(2);
+  });
+
+  it("honors inline suppressions from trusted targets for gating", () => {
+    const directives = collectInlineIgnoreDirectives([
+      {
+        filePath: ".github/workflows/ci.yml",
+        textContent: "# codegate: ignore[workflow-unpinned-uses]",
+      },
+    ]);
+
+    const findings = applyInlineIgnoreDirectives([makeFinding()], directives, {
+      trustedTarget: true,
+    });
+
+    expect(findings[0]?.suppression_source).toBe(SUPPRESSION_SOURCE.Inline);
+    expect(computeExitCode(findings)).toBe(0);
+
+    const summary = summarizeFindings(findings);
+    expect(summary.suppressed).toBe(1);
+    expect(summary.suppressed_untrusted).toBeUndefined();
+    expect(summary.exit_code).toBe(0);
   });
 });

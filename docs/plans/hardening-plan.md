@@ -10,8 +10,8 @@ Update the checkboxes and status lines in the same PR that lands the work.
 
 | Phase | Delivers | Status |
 | ----- | -------- | ------ |
-| 0 | Hygiene & performance quick wins | in progress |
-| 1 | Trust boundary: scanned content cannot weaken the scan | pending |
+| 0 | Hygiene & performance quick wins | done (47b72dd) |
+| 1 | Trust boundary: scanned content cannot weaken the scan | done |
 | 2 | Text normalization, hidden-Unicode coverage, encoded payloads | pending |
 | 3 | Skill-directory coverage | pending |
 | 4 | Layer 3 capability | pending |
@@ -25,22 +25,22 @@ Open owner decisions (do not block implementation, block feed launch):
 
 ## Phase 0 — Hygiene & performance
 
-- [ ] Remove stray `--no-cone` file from repo root
-- [ ] Add `reports/` to `.gitignore` (`.devcontainer/` deliberately left untracked for now)
-- [ ] Precompile candidate-pattern regexes in `collectSelectedCandidates` (src/scan.ts); memoize `wildcardToRegex`
-- [ ] Replace O(n²) `hasEquivalentFinding` with a keyed `Set` in `runStaticEngine` (src/layer2-static/engine.ts)
-- [ ] Acceptance: full suite green; JSON report on fixtures unchanged
+- [x] Remove stray `--no-cone` file from repo root
+- [x] Add `reports/` to `.gitignore` (`.devcontainer/` deliberately left untracked for now)
+- [x] Precompile candidate-pattern regexes in `collectSelectedCandidates` (src/scan.ts); memoize `wildcardToRegex`
+- [x] Replace O(n²) `hasEquivalentFinding` with a keyed `Set` in `runStaticEngine` (src/layer2-static/engine.ts)
+- [x] Acceptance: full suite green; JSON report on fixtures unchanged
 
 ## Phase 1 — Trust boundary (security fix)
 
-- [ ] Split project-config merge into cosmetic vs policy fields (src/config.ts)
-- [ ] Shared trust helper `src/config/trust.ts` (extracted from wrapper.ts); gate policy fields on global-config `trusted_directories`
-- [ ] `ignored_project_settings` surfaced as INFO finding `untrusted-project-config` + stderr notice
-- [ ] `suppression_source` provenance on findings (inline / project-config / global-config)
-- [ ] `computeExitCode` + run-policy gating ignore untrusted suppressions; summary splits suppressed counts by source
-- [ ] `codegate trust` command (add / --list / --remove)
-- [ ] Fixture: malicious repo with self-allowlisting `.codegate.json` + inline ignores still exits 2 and blocks `codegate run`
-- [ ] Docs: what project config can and cannot do
+- [x] Split project-config merge into cosmetic vs policy fields (src/config.ts, `PROJECT_COSMETIC_KEYS` / `PROJECT_FORBIDDEN_KEYS` + predicates)
+- [x] Shared trust helper `src/config/trust.ts` (extracted from wrapper.ts); gate policy fields on global-config `trusted_directories`
+- [x] `ignored_project_settings` surfaced as INFO finding `untrusted-project-config` (reaches terminal/JSON/SARIF via the report)
+- [x] `suppression_source` provenance on findings (`SUPPRESSION_SOURCE` enum-style constants: inline / inline-untrusted / config)
+- [x] `computeExitCode` counts untrusted inline suppressions; summary exposes `suppressed_untrusted`
+- [x] `codegate trust` command (add / --list / --remove / --yes, confirmation prompt)
+- [x] Fixture: malicious repo with self-allowlisting `.codegate.json` + inline ignores still exits 2 (tests/config/trust-boundary.test.ts)
+- [x] Docs: docs/trust-model.md
 
 ## Phase 2 — Normalization & obfuscation resistance
 

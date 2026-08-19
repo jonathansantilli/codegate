@@ -1,9 +1,9 @@
 import { spawnSync } from "node:child_process";
 import { readFileSync, statSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { homedir } from "node:os";
-import { isAbsolute, relative, resolve, sep } from "node:path";
+import { resolve } from "node:path";
 import { applyConfigPolicy, type CodeGateConfig } from "./config.js";
+import { isTrustedDirectory } from "./config/trust.js";
 import { evaluatePostScanGuard, evaluatePreLaunchGuard } from "./commands/run-policy.js";
 import { detectTools, type ToolDetection } from "./layer1-discovery/tool-detector.js";
 import { renderTerminalReport } from "./reporter/terminal.js";
@@ -142,26 +142,6 @@ function snapshotsEqual(before: Map<string, string>, after: Map<string, string>)
     }
   }
   return true;
-}
-
-function expandHomePath(path: string): string {
-  if (path === "~") {
-    return homedir();
-  }
-  if (path.startsWith(`~${sep}`) || path.startsWith("~/")) {
-    return resolve(homedir(), path.slice(2));
-  }
-  return path;
-}
-
-function isTrustedDirectory(cwd: string, trustedDirectories: string[]): boolean {
-  const resolvedCwd = resolve(cwd);
-
-  return trustedDirectories.some((trustedPath) => {
-    const resolvedTrusted = resolve(expandHomePath(trustedPath));
-    const rel = relative(resolvedTrusted, resolvedCwd);
-    return rel === "" || (!rel.startsWith("..") && !isAbsolute(rel));
-  });
 }
 
 const defaultWrapperDeps: WrapperDeps = {

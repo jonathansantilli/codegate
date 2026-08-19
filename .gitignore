@@ -14,6 +14,7 @@ node_modules/
 !/docs/plans/hardening-plan.md
 !/docs/public-evidence-map.md
 !/docs/remediation.md
+!/docs/trust-model.md
 !/docs/why-codegate.md
 
 # Internal/private assets kept out of the public repo

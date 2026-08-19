@@ -25,7 +25,7 @@ afterEach(() => {
 });
 
 describe("task 16 config precedence", () => {
-  it("merges list fields and applies scalar precedence (cli > project > global > defaults)", () => {
+  it("merges list fields and applies scalar precedence for a trusted project (cli > project > global > defaults)", () => {
     const workspace = makeTempDir("codegate-config-");
     const homeDir = join(workspace, "home");
     const projectDir = join(workspace, "project");
@@ -45,7 +45,7 @@ describe("task 16 config precedence", () => {
           known_safe_mcp_servers: ["global-safe-server"],
           suppress_findings: ["GLOBAL-SUPPRESSION"],
           trusted_api_domains: ["proxy.example.com"],
-          trusted_directories: ["/safe/from-global"],
+          trusted_directories: ["/safe/from-global", projectDir],
           scan_user_scope: false,
           strict_collection: true,
           scan_collection_modes: ["project"],
@@ -134,7 +134,9 @@ describe("task 16 config precedence", () => {
     expect(effective.trusted_api_domains).toEqual(
       expect.arrayContaining(["proxy.example.com", "project.internal"]),
     );
-    expect(effective.trusted_directories).toEqual(["/safe/from-global"]);
+    expect(effective.trusted_directories).toEqual(["/safe/from-global", projectDir]);
+    expect(effective.project_config_trusted).toBe(true);
+    expect(effective.ignored_project_settings).toEqual(["trusted_directories"]);
     expect(effective.scan_user_scope).toBe(true);
     expect(effective.strict_collection).toBe(false);
     expect(effective.scan_collection_modes).toEqual(["user", "explicit"]);
@@ -161,6 +163,84 @@ describe("task 16 config precedence", () => {
     expect(effective.blocked_commands).toEqual(
       expect.arrayContaining(["bash", "curl", "python3", "echo"]),
     );
+  });
+
+  it("ignores policy settings from untrusted project config and reports them", () => {
+    const workspace = makeTempDir("codegate-config-untrusted-");
+    const homeDir = join(workspace, "home");
+    const projectDir = join(workspace, "project");
+    mkdirSync(homeDir, { recursive: true });
+    mkdirSync(projectDir, { recursive: true });
+
+    const globalConfigPath = join(homeDir, ".codegate", "config.json");
+    mkdirSync(join(homeDir, ".codegate"), { recursive: true });
+    writeFileSync(
+      globalConfigPath,
+      JSON.stringify(
+        {
+          severity_threshold: "medium",
+          persona: "pedantic",
+          known_safe_mcp_servers: ["global-safe-server"],
+          trusted_directories: ["/safe/from-global"],
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    writeFileSync(
+      join(projectDir, ".codegate.json"),
+      JSON.stringify(
+        {
+          severity_threshold: "critical",
+          output_format: "html",
+          owasp_mapping: false,
+          tui: { enabled: false },
+          auto_proceed_below_threshold: true,
+          known_safe_mcp_servers: ["attacker-server"],
+          suppress_findings: ["PROJECT-SUPPRESSION"],
+          skip_rules: ["rule-file-remote-shell"],
+          unicode_analysis: false,
+          persona: "regular",
+          trusted_directories: ["/unsafe/project-attempt"],
+          tool_discovery: { agent_paths: { claude: "/tmp/evil-binary" } },
+        },
+        null,
+        2,
+      ),
+      "utf8",
+    );
+
+    const effective = resolveEffectiveConfig({
+      scanTarget: projectDir,
+      homeDir,
+      cli: {},
+    });
+
+    expect(effective.project_config_trusted).toBe(false);
+    expect(effective.output_format).toBe("html");
+    expect(effective.owasp_mapping).toBe(false);
+    expect(effective.tui.enabled).toBe(false);
+    expect(effective.severity_threshold).toBe("medium");
+    expect(effective.persona).toBe("pedantic");
+    expect(effective.unicode_analysis).toBe(true);
+    expect(effective.known_safe_mcp_servers).not.toContain("attacker-server");
+    expect(effective.suppress_findings).not.toContain("PROJECT-SUPPRESSION");
+    expect(effective.skip_rules).not.toContain("rule-file-remote-shell");
+    expect(effective.tool_discovery.agent_paths).toEqual({});
+    expect(effective.trusted_directories).toEqual(["/safe/from-global"]);
+    expect(effective.ignored_project_settings).toEqual([
+      "auto_proceed_below_threshold",
+      "known_safe_mcp_servers",
+      "persona",
+      "severity_threshold",
+      "skip_rules",
+      "suppress_findings",
+      "tool_discovery",
+      "trusted_directories",
+      "unicode_analysis",
+    ]);
   });
 
   it("defaults scan_user_scope to true when not configured", () => {

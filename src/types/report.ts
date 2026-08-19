@@ -5,6 +5,8 @@ export interface ReportSummary {
   by_severity: Record<string, number>;
   fixable: number;
   suppressed: number;
+  /** Suppressions requested by untrusted content; these still count toward exit_code. */
+  suppressed_untrusted?: number;
   exit_code: number;
 }
 

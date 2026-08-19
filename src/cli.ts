@@ -46,6 +46,11 @@ import {
   type RemediationRunnerResult,
 } from "./layer4-remediation/remediation-runner.js";
 import { undoLatestSession } from "./commands/undo.js";
+import {
+  addTrustedDirectory,
+  listTrustedDirectories,
+  removeTrustedDirectory,
+} from "./commands/trust.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
   executeScanContentCommand,
@@ -142,6 +147,7 @@ export interface CliDeps {
   ) => Promise<MetaAgentCommandRunResult> | MetaAgentCommandRunResult;
   requestRemediationConsent?: (context: RemediationConsentContext) => Promise<boolean> | boolean;
   requestRunWarningConsent?: (context: RunWarningConsentContext) => Promise<boolean> | boolean;
+  requestTrustConsent?: (directory: string) => Promise<boolean> | boolean;
   requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
   executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
   launchSkills?: (args: string[], cwd: string) => SkillsWrapperLaunchResult;
@@ -811,6 +817,117 @@ function addClawhubCommand(program: Command, version: string, deps: CliDeps): vo
     });
 }
 
+async function promptTrustConsent(directory: string): Promise<boolean> {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const prompt = [
+    `Trusting ${directory} lets its .codegate.json set scanner policy`,
+    "(allowlists, rule skips, suppressions) and relaxes launch gating for it.",
+    "Only trust directories whose contents you control.",
+    "Proceed? [y/N]: ",
+  ].join("\n");
+
+  try {
+    const answer = await rl.question(prompt);
+    return /^y(es)?$/iu.test(answer.trim());
+  } finally {
+    rl.close();
+  }
+}
+
+function addTrustCommand(program: Command, deps: CliDeps): void {
+  program
+    .command("trust [dir]")
+    .description("Manage trusted directories where project config policy is honored")
+    .option("--list", "list trusted directories")
+    .option("--remove <dir>", "remove a directory from the trusted list")
+    .option("--config <path>", "use a specific global config file")
+    .option("--yes", "skip the confirmation prompt")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate trust",
+        "codegate trust ./project --yes",
+        "codegate trust --list",
+        "codegate trust --remove ./project",
+      ]),
+    )
+    .action(
+      async (
+        dir: string | undefined,
+        options: { list?: boolean; remove?: string; config?: string; yes?: boolean },
+      ) => {
+        try {
+          if (options.list) {
+            const listed = listTrustedDirectories({ configPath: options.config });
+            if (listed.trustedDirectories.length === 0) {
+              deps.stdout(`No trusted directories configured (${listed.configPath}).`);
+            } else {
+              deps.stdout(`Trusted directories (${listed.configPath}):`);
+              for (const entry of listed.trustedDirectories) {
+                deps.stdout(`  ${entry}`);
+              }
+            }
+            deps.setExitCode(0);
+            return;
+          }
+
+          if (options.remove) {
+            const removed = removeTrustedDirectory({
+              dir: options.remove,
+              cwd: deps.cwd(),
+              configPath: options.config,
+            });
+            deps.stdout(
+              removed.changed
+                ? `Removed ${removed.directory} from trusted directories.`
+                : `${removed.directory} was not in the trusted list.`,
+            );
+            deps.setExitCode(0);
+            return;
+          }
+
+          const targetDir = dir ?? ".";
+          const resolvedPreview = resolve(deps.cwd(), targetDir);
+          if (!options.yes) {
+            const requestConsent =
+              deps.requestTrustConsent ?? (deps.isTTY() ? promptTrustConsent : undefined);
+            if (!requestConsent) {
+              deps.stderr("Confirmation required. Re-run with --yes to trust non-interactively.");
+              deps.setExitCode(3);
+              return;
+            }
+            const approved = await requestConsent(resolvedPreview);
+            if (!approved) {
+              deps.stdout("Trust not granted.");
+              deps.setExitCode(1);
+              return;
+            }
+          }
+
+          const added = addTrustedDirectory({
+            dir: targetDir,
+            cwd: deps.cwd(),
+            configPath: options.config,
+          });
+          deps.stdout(
+            added.changed
+              ? `Trusted ${added.directory} (${added.configPath}).`
+              : `${added.directory} is already trusted.`,
+          );
+          deps.setExitCode(0);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          deps.stderr(`Trust failed: ${message}`);
+          deps.setExitCode(3);
+        }
+      },
+    );
+}
+
 function addUndoCommand(program: Command, deps: CliDeps): void {
   program
     .command("undo [dir]")
@@ -942,6 +1059,7 @@ export function createCli(
   addSkillsCommand(program, version, deps);
   addClawhubCommand(program, version, deps);
   addRunCommand(program, version, deps);
+  addTrustCommand(program, deps);
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
   addUpdateCommands(program, deps);

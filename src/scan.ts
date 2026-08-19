@@ -29,6 +29,8 @@ import {
   applyInlineIgnoreDirectives,
   collectInlineIgnoreDirectives,
 } from "./config/inline-ignore.js";
+import { isTrustedDirectory } from "./config/trust.js";
+import { withFindingFingerprint } from "./report/finding-fingerprint.js";
 import { isGitHubDependabotPath } from "./layer2-static/dependabot/parser.js";
 import type { DiscoveryFormat } from "./types/discovery.js";
 import type { Finding } from "./types/finding.js";
@@ -549,6 +551,30 @@ function ensureParsedCandidates(context: ScanDiscoveryContext): ParsedScanDiscov
   return context.parsedCandidates;
 }
 
+function makeUntrustedProjectConfigFinding(ignoredSettings: string[]): Finding {
+  return {
+    rule_id: "untrusted-project-config",
+    finding_id: "UNTRUSTED_PROJECT_CONFIG-.codegate.json",
+    severity: "INFO",
+    category: "CONFIG_CHANGE",
+    layer: "L1",
+    file_path: ".codegate.json",
+    location: { field: ignoredSettings.join(", ") },
+    description:
+      `Ignored ${ignoredSettings.length} policy setting(s) from untrusted project config: ` +
+      `${ignoredSettings.join(", ")}. Project config in untrusted directories may only set ` +
+      "presentation options. Run `codegate trust <dir>` to honor its policy settings.",
+    affected_tools: [],
+    cve: null,
+    owasp: [],
+    cwe: "CWE-807",
+    confidence: "HIGH",
+    fixable: false,
+    remediation_actions: [],
+    suppressed: false,
+  };
+}
+
 function makeParseErrorFinding(
   filePath: string,
   tool: string,
@@ -966,15 +992,24 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
   });
   saveScanState(stateResult.nextState, input.scanStatePath);
 
+  const trustedTarget =
+    input.config.project_config_trusted ??
+    isTrustedDirectory(absoluteTarget, input.config.trusted_directories);
   const inlineIgnores = collectInlineIgnoreDirectives(
     staticFiles.map((file) => ({
       filePath: file.filePath,
       textContent: file.textContent,
     })),
   );
+  const ignoredProjectSettings = input.config.ignored_project_settings ?? [];
+  const configNoticeFindings =
+    ignoredProjectSettings.length > 0
+      ? [withFindingFingerprint(makeUntrustedProjectConfigFinding(ignoredProjectSettings))]
+      : [];
   const findings = applyInlineIgnoreDirectives(
-    [...report.findings, ...parseErrors, ...stateResult.findings],
+    [...report.findings, ...parseErrors, ...stateResult.findings, ...configNoticeFindings],
     inlineIgnores,
+    { trustedTarget },
   );
   return applyReportSummary({
     ...report,

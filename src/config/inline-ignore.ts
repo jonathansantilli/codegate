@@ -1,4 +1,4 @@
-import type { Finding } from "../types/finding.js";
+import { SUPPRESSION_SOURCE, type Finding } from "../types/finding.js";
 
 export interface InlineIgnoreDirectiveSet {
   rules: Set<string>;
@@ -65,9 +65,19 @@ export function collectInlineIgnoreDirectives(
   return directives;
 }
 
+export interface ApplyInlineIgnoreOptions {
+  /**
+   * Whether the scanned target is trusted. Inline directives in untrusted
+   * content are recorded but must not weaken gating, so they are tagged
+   * "inline-untrusted" and still count toward the exit code.
+   */
+  trustedTarget: boolean;
+}
+
 export function applyInlineIgnoreDirectives<T extends Finding>(
   findings: T[],
   directives: InlineIgnoreMap,
+  options: ApplyInlineIgnoreOptions = { trustedTarget: true },
 ): T[] {
   return findings.map((finding) => {
     const set = directives.get(finding.file_path);
@@ -78,6 +88,9 @@ export function applyInlineIgnoreDirectives<T extends Finding>(
     return {
       ...finding,
       suppressed: true,
+      suppression_source: options.trustedTarget
+        ? SUPPRESSION_SOURCE.Inline
+        : SUPPRESSION_SOURCE.InlineUntrusted,
     };
   });
 }

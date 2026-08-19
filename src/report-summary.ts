@@ -1,4 +1,4 @@
-import type { Finding } from "./types/finding.js";
+import { isUntrustedInlineSuppression, type Finding } from "./types/finding.js";
 import type { CodeGateReport, ReportSummary } from "./types/report.js";
 
 export type ReportThreshold = "critical" | "high" | "medium" | "low" | "info";
@@ -19,8 +19,14 @@ const THRESHOLD_LEVEL: Record<ReportThreshold, number> = {
   info: 0,
 };
 
+function countsTowardExitCode(finding: Finding): boolean {
+  // Inline suppressions from untrusted content stay visible as suppressed
+  // but must not weaken gating.
+  return !finding.suppressed || isUntrustedInlineSuppression(finding);
+}
+
 export function computeExitCode(findings: Finding[], threshold: ReportThreshold = "high"): number {
-  const unsuppressed = findings.filter((finding) => !finding.suppressed);
+  const unsuppressed = findings.filter(countsTowardExitCode);
   if (unsuppressed.length === 0) {
     return 0;
   }
@@ -48,11 +54,14 @@ export function summarizeFindings(
     bySeverity[finding.severity] = (bySeverity[finding.severity] ?? 0) + 1;
   }
 
+  const suppressedUntrusted = findings.filter(isUntrustedInlineSuppression).length;
+
   return {
     total: findings.length,
     by_severity: bySeverity,
     fixable: findings.filter((finding) => finding.fixable).length,
     suppressed: findings.filter((finding) => finding.suppressed).length,
+    ...(suppressedUntrusted > 0 ? { suppressed_untrusted: suppressedUntrusted } : {}),
     exit_code: computeExitCode(findings, threshold),
   };
 }
