@@ -5,6 +5,7 @@ import { detectEnvOverrides } from "./detectors/env-override.js";
 import { detectGitHookIssues, type GitHookEntry } from "./detectors/git-hooks.js";
 import { detectIdeSettingsIssues } from "./detectors/ide-settings.js";
 import { detectPluginManifestIssues } from "./detectors/plugin-manifest.js";
+import { detectMcpPackageHygiene } from "./detectors/mcp-package-hygiene.js";
 import { detectRuleFileIssues } from "./detectors/rule-file.js";
 import { detectSkillFrontmatterIssues } from "./detectors/skill-frontmatter.js";
 import { detectSymlinkEscapes, type SymlinkEscapeEntry } from "./detectors/symlink.js";
@@ -317,6 +318,15 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
               textContent: file.textContent,
             })
           : [],
+    },
+    {
+      id: "mcp-package-hygiene",
+      run: ({ file, input }) =>
+        detectMcpPackageHygiene({
+          filePath: file.filePath,
+          parsed: file.parsed,
+          knownSafeMcpServers: input.config.knownSafeMcpServers,
+        }),
     },
     {
       id: "workflow-unpinned-uses",

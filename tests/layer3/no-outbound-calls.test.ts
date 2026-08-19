@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import { createDeepResourceExecutor } from "../../src/layer3-dynamic/deep-resource-executor";
+import type { DeepScanResource } from "../../src/pipeline";
 
-describe("deep scan makes no outbound HTTP calls", () => {
+function resource(kind: DeepScanResource["request"]["kind"], locator: string): DeepScanResource {
+  return {
+    id: `${kind}:${locator}`,
+    request: { id: `${kind}:${locator}`, kind, locator },
+    commandPreview: "",
+  };
+}
+
+describe("deep scan outbound-call policy", () => {
   it("CLI source does not call acquireToolDescriptions or fetchResourceMetadata", () => {
     const cliSource = readFileSync("src/cli.ts", "utf8");
 
@@ -13,52 +23,74 @@ describe("deep scan makes no outbound HTTP calls", () => {
     expect(invocations).toBeNull();
   });
 
-  it("CLI source contains the no-outbound-connection guard", () => {
-    const cliSource = readFileSync("src/cli.ts", "utf8");
-    expect(cliSource).toContain("URL recorded for analysis without making outbound connections");
+  it("executor source keeps the no-outbound-connection guard for URL resources", () => {
+    const executorSource = readFileSync("src/layer3-dynamic/deep-resource-executor.ts", "utf8");
+    expect(executorSource).toContain(
+      "URL recorded for analysis without making outbound connections",
+    );
   });
 
-  it("executeDeepResource returns metadata with zero attempts (no network call)", () => {
-    // Replicate the exact logic from cli.ts executeDeepResource
-    const executeDeepResource = (resource: {
-      id: string;
-      request: { kind: string; locator: string };
-    }) => ({
-      status: "ok" as const,
-      attempts: 0,
-      elapsedMs: 0,
-      metadata: {
-        resource_id: resource.id,
-        resource_kind: resource.request.kind,
-        resource_url: resource.request.locator,
-        note: "URL recorded for analysis without making outbound connections.",
-      },
-    });
+  it("records every resource without network calls in offline mode (the default)", async () => {
+    const fetchSpy = vi.fn();
+    const execute = createDeepResourceExecutor({ fetchImpl: fetchSpy as unknown as typeof fetch });
 
-    const testCases = [
-      {
-        id: "http:https://mcp.evil.com/tools",
-        request: { kind: "http", locator: "https://mcp.evil.com/tools" },
-      },
-      {
-        id: "sse:https://mcp.evil.com/sse",
-        request: { kind: "sse", locator: "https://mcp.evil.com/sse" },
-      },
-      { id: "npm:@evil/backdoor", request: { kind: "npm", locator: "@evil/backdoor" } },
-      {
-        id: "git:https://github.com/evil/repo",
-        request: { kind: "git", locator: "https://github.com/evil/repo" },
-      },
+    const testCases: DeepScanResource[] = [
+      resource("http", "https://mcp.evil.com/tools"),
+      resource("sse", "https://mcp.evil.com/sse"),
+      resource("npm", "@evil/backdoor"),
+      resource("pypi", "evil-package"),
+      resource("git", "https://github.com/evil/repo"),
     ];
 
-    for (const tc of testCases) {
-      const result = executeDeepResource(tc);
-      expect(result.status).toBe("ok");
-      expect(result.attempts).toBe(0);
-      expect(result.elapsedMs).toBe(0);
-      const meta = result.metadata;
-      expect(meta.resource_url).toBe(tc.request.locator);
-      expect(meta.note).toContain("without making outbound connections");
+    for (const testCase of testCases) {
+      const offline = await execute(testCase, { runtimeMode: "offline" });
+      const noContext = await execute(testCase);
+      for (const result of [offline, noContext]) {
+        expect(result.status).toBe("ok");
+        expect(result.attempts).toBe(0);
+        expect(result.elapsedMs).toBe(0);
+        const metadata = result.metadata as Record<string, unknown>;
+        expect(metadata.resource_url).toBe(testCase.request.locator);
+        expect(String(metadata.note)).toContain("without making outbound connections");
+      }
     }
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("never fetches URL resources even in online mode", async () => {
+    const fetchSpy = vi.fn();
+    const execute = createDeepResourceExecutor({ fetchImpl: fetchSpy as unknown as typeof fetch });
+
+    for (const testCase of [
+      resource("http", "https://mcp.evil.com/tools"),
+      resource("sse", "https://mcp.evil.com/sse"),
+      resource("git", "https://github.com/evil/repo"),
+    ]) {
+      const result = await execute(testCase, { runtimeMode: "online" });
+      expect(result.attempts).toBe(0);
+    }
+
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("fetches only pinned registry hosts for packages in online mode", async () => {
+    const fetchSpy = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ "dist-tags": { latest: "1.0.0" }, versions: {}, time: {} }), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    const execute = createDeepResourceExecutor({ fetchImpl: fetchSpy as unknown as typeof fetch });
+
+    const result = await execute(resource("npm", "@evil/backdoor"), { runtimeMode: "online" });
+
+    expect(result.status).toBe("ok");
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    const requestedUrl = String(fetchSpy.mock.calls[0]?.[0]);
+    expect(requestedUrl.startsWith("https://registry.npmjs.org/")).toBe(true);
+    const requestInit = fetchSpy.mock.calls[0]?.[1] as RequestInit;
+    expect(requestInit.redirect).toBe("error");
   });
 });

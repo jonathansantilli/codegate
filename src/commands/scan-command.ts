@@ -18,6 +18,7 @@ import {
   buildLocalTextAnalysisPrompt,
   buildSecurityAnalysisPrompt,
 } from "../layer3-dynamic/meta-agent.js";
+import type { DeepResourceExecutionContext } from "../layer3-dynamic/deep-resource-executor.js";
 import type { ResourceFetchResult } from "../layer3-dynamic/resource-fetcher.js";
 import {
   layer3OutcomesToFindings,
@@ -142,7 +143,10 @@ export interface ExecuteScanCommandDeps {
     context: MetaAgentCommandConsentContext,
   ) => Promise<MetaAgentCommandRunResult> | MetaAgentCommandRunResult;
   requestRemediationConsent?: (context: RemediationConsentContext) => Promise<boolean> | boolean;
-  executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
+  executeDeepResource?: (
+    resource: DeepScanResource,
+    context?: DeepResourceExecutionContext,
+  ) => Promise<ResourceFetchResult>;
   runRemediation?: (
     input: RemediationRunnerInput,
   ) => Promise<RemediationRunnerResult> | RemediationRunnerResult;
@@ -330,7 +334,9 @@ export async function runScanAnalysis(
             return false;
           },
           async (resource) => {
-            const fetched = await deps.executeDeepResource!(resource);
+            const fetched = await deps.executeDeepResource!(resource, {
+              runtimeMode: input.config.runtime_mode,
+            });
             if (fetched.status !== "ok" || !selectedAgent) {
               return fetched;
             }
@@ -414,6 +420,9 @@ export async function runScanAnalysis(
 
         const layer3Findings = layer3OutcomesToFindings(outcomes, {
           unicodeAnalysis: input.config.unicode_analysis,
+          registryHeuristics: {
+            recentPublishDays: input.config.registry_heuristics?.recent_publish_days,
+          },
         });
         report = mergeLayer3Findings(report, layer3Findings);
 

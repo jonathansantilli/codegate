@@ -21,6 +21,10 @@ import {
   type ResolveConfigOptions,
 } from "./config.js";
 import { APP_NAME } from "./index.js";
+import {
+  createDeepResourceExecutor,
+  type DeepResourceExecutionContext,
+} from "./layer3-dynamic/deep-resource-executor.js";
 import type { ResourceFetchResult } from "./layer3-dynamic/resource-fetcher.js";
 import type { LocalTextAnalysisTarget } from "./layer3-dynamic/local-text-analysis.js";
 import { runSandboxCommand } from "./layer3-dynamic/sandbox.js";
@@ -149,7 +153,10 @@ export interface CliDeps {
   requestRunWarningConsent?: (context: RunWarningConsentContext) => Promise<boolean> | boolean;
   requestTrustConsent?: (directory: string) => Promise<boolean> | boolean;
   requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
-  executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
+  executeDeepResource?: (
+    resource: DeepScanResource,
+    context?: DeepResourceExecutionContext,
+  ) => Promise<ResourceFetchResult>;
   launchSkills?: (args: string[], cwd: string) => SkillsWrapperLaunchResult;
   launchClawhub?: (args: string[], cwd: string) => ClawhubWrapperLaunchResult;
   runSkillsWrapper?: (input: { version: string; skillsArgs: string[] }) => Promise<void>;
@@ -356,23 +363,10 @@ const defaultCliDeps: CliDeps = {
         }),
   discoverLocalTextTargets: (_scanTarget, _config, discoveryContext) =>
     discoveryContext ? discoverLocalTextAnalysisTargetsFromContext(discoveryContext) : [],
-  // Deep resource execution never makes outbound network calls.
-  // Connecting to URLs found in scanned config files is a security risk:
-  // the endpoint could be malicious (crafted responses, SSRF, IP logging).
-  // Instead, we record the URL as metadata for the agent to analyze.
-  executeDeepResource: async (resource) => {
-    return {
-      status: "ok" as const,
-      attempts: 0,
-      elapsedMs: 0,
-      metadata: {
-        resource_id: resource.id,
-        resource_kind: resource.request.kind,
-        resource_url: resource.request.locator,
-        note: "URL recorded for analysis without making outbound connections.",
-      },
-    };
-  },
+  // URL resources are never fetched (SSRF/IP-logging risk); npm/pypi registry
+  // metadata is fetched from pinned hosts only when runtime_mode is "online".
+  // See createDeepResourceExecutor for the full policy.
+  executeDeepResource: createDeepResourceExecutor(),
   launchSkills: (args, cwd) => launchSkillsPassthrough(args, cwd),
   launchClawhub: (args, cwd) => launchClawhubPassthrough(args, cwd),
 };

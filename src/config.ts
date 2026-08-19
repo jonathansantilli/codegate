@@ -47,6 +47,10 @@ export interface WorkflowAuditConfig {
   enabled: boolean;
 }
 
+export interface RegistryHeuristicsConfig {
+  recent_publish_days: number;
+}
+
 export interface CodeGateConfig {
   severity_threshold: SeverityThreshold;
   auto_proceed_below_threshold: boolean;
@@ -75,6 +79,7 @@ export interface CodeGateConfig {
   persona?: AuditPersona;
   runtime_mode?: RuntimeMode;
   workflow_audits?: WorkflowAuditConfig;
+  registry_heuristics?: RegistryHeuristicsConfig;
   suppress_findings: string[];
   suppression_rules?: SuppressionRule[];
   /** True when the scan target sits inside a globally trusted directory. */
@@ -124,6 +129,9 @@ interface PartialCodeGateConfig {
   runtime_mode?: string;
   workflow_audits?: {
     enabled?: boolean;
+  };
+  registry_heuristics?: {
+    recent_publish_days?: number;
   };
   suppress_findings?: string[];
   suppression_rules?: SuppressionRule[];
@@ -178,6 +186,7 @@ export const DEFAULT_CONFIG: CodeGateConfig = {
   persona: "regular",
   runtime_mode: "offline",
   workflow_audits: { enabled: false },
+  registry_heuristics: { recent_publish_days: 30 },
   suppress_findings: [],
   suppression_rules: [],
 };
@@ -675,6 +684,14 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
           globalConfig.workflow_audits?.enabled,
           DEFAULT_CONFIG.workflow_audits?.enabled,
         ) ?? false,
+    },
+    registry_heuristics: {
+      recent_publish_days:
+        pickFirst(
+          projectConfig.registry_heuristics?.recent_publish_days,
+          globalConfig.registry_heuristics?.recent_publish_days,
+          DEFAULT_CONFIG.registry_heuristics?.recent_publish_days,
+        ) ?? 30,
     },
     suppress_findings: unique([
       DEFAULT_CONFIG.suppress_findings,

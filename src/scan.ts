@@ -888,7 +888,7 @@ function commandResourceFromTokens(
       id: `npm:${locator}`,
       kind: "npm",
       locator,
-      preview: `npm view ${locator} --json`,
+      preview: `GET https://registry.npmjs.org/${locator}  (online mode only; offline records the package name)`,
     };
   }
 
@@ -901,7 +901,7 @@ function commandResourceFromTokens(
       id: `pypi:${locator}`,
       kind: "pypi",
       locator,
-      preview: `https://pypi.org/pypi/${locator}/json`,
+      preview: `GET https://pypi.org/pypi/${locator}/json  (online mode only; offline records the package name)`,
     };
   }
 

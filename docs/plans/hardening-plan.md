@@ -14,7 +14,7 @@ Update the checkboxes and status lines in the same PR that lands the work.
 | 1 | Trust boundary: scanned content cannot weaken the scan | done |
 | 2 | Text normalization, hidden-Unicode coverage, encoded payloads | done |
 | 3 | Skill-directory coverage | done |
-| 4 | Layer 3 capability | pending |
+| 4 | Layer 3 capability | done |
 | 5 | Signed content feed (mechanism; feed repo + key pending owner decisions) | pending |
 | 6 | Known-bad indicators + first-scan review | pending |
 
@@ -62,13 +62,13 @@ Open owner decisions (do not block implementation, block feed launch):
 
 ## Phase 4 — Layer 3 capability
 
-- [ ] `mcp-package-pinning` detector (MEDIUM, offline)
-- [ ] `popular-mcp-packages.json` + `edit-distance.ts` + `mcp-possible-typosquat` (HIGH, offline)
-- [ ] `src/layer3-dynamic/registry-client.ts` (host allowlist, https, no redirects, 5s, 1MiB, injectable fetch)
-- [ ] Wire client into default `executeDeepResource` for npm/pypi when online + consent; URLs stay record-only
-- [ ] `registry-findings.ts`: install-scripts (HIGH), recently-published, deprecated, metadata-unavailable
-- [ ] Cross-server toxic flow + enumerate all chains in `detectToxicFlows`
-- [ ] Offline-invariant test: zero network calls in default mode
+- [x] `mcp-unpinned-package` detector (MEDIUM, offline, notes npx -y auto-confirm; skips known-safe servers) in `detectors/mcp-package-hygiene.ts`
+- [x] `data/popular-mcp-packages.ts` + `text/edit-distance.ts` (Damerau-Levenshtein) + `mcp-possible-typosquat` (HIGH, offline)
+- [x] `src/layer3-dynamic/registry-client.ts` (host allowlist, https only, redirect:error, 5s timeout, 1MiB streamed cap, injectable fetch, typed subset)
+- [x] `createDeepResourceExecutor`: npm/pypi metadata fetched only when runtime_mode=online + per-resource consent; http/sse/git stay record-only always; consent previews updated to show the real GET
+- [x] `registry-findings.ts`: package-install-scripts (HIGH), package-recently-published (config `registry_heuristics.recent_publish_days`, default 30), package-deprecated; fetch failures surface via the existing layer3 error findings (metadata-unavailable rule dropped as redundant)
+- [x] Cross-server toxic flow (workspace scope, cross-origin-only, origin-labeled descriptions) + `detectToxicFlows` enumerates all chains (cap 10)
+- [x] Offline-invariant tests: zero fetch calls in offline/default mode; URL resources never fetched even online (tests/layer3/no-outbound-calls.test.ts)
 
 ## Phase 5 — Signed content feed
 
