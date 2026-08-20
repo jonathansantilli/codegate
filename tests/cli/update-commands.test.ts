@@ -79,6 +79,9 @@ describe("update commands", () => {
         const cli = createCli(
           "0.2.2",
           makeDeps({
+            // Simulate a build with no pinned key: the command must refuse
+            // before touching the network, whatever key this build ships.
+            contentUpdaterDeps: { publisherKeyPem: null },
             stderr: (message) => {
               errors += `${message}\n`;
             },

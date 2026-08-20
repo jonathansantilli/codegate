@@ -56,7 +56,12 @@ import {
   listTrustedDirectories,
   removeTrustedDirectory,
 } from "./commands/trust.js";
-import { checkContentUpdate, rollbackContent, updateContent } from "./content/content-updater.js";
+import {
+  checkContentUpdate,
+  rollbackContent,
+  updateContent,
+  type ContentUpdaterDeps,
+} from "./content/content-updater.js";
 import { runInventory, type InventorySummary } from "./commands/inventory-command.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
@@ -160,6 +165,13 @@ export interface CliDeps {
     resource: DeepScanResource,
     context?: DeepResourceExecutionContext,
   ) => Promise<ResourceFetchResult>;
+  /**
+   * Overrides for the content-updater (publisher key, fetch, filesystem).
+   * Lets tests exercise the update commands hermetically — e.g. inject
+   * `publisherKeyPem: null` to cover the fail-closed path regardless of the
+   * key pinned into this build.
+   */
+  contentUpdaterDeps?: ContentUpdaterDeps;
   launchSkills?: (args: string[], cwd: string) => SkillsWrapperLaunchResult;
   launchClawhub?: (args: string[], cwd: string) => ClawhubWrapperLaunchResult;
   runSkillsWrapper?: (input: { version: string; skillsArgs: string[] }) => Promise<void>;
@@ -1143,14 +1155,16 @@ function addUpdateCommands(program: Command, deps: CliDeps): void {
       .action(async (options: { check?: boolean; rollback?: boolean; url?: string }) => {
         try {
           if (options.rollback) {
-            const rolledBack = rollbackContent();
+            const rolledBack = rollbackContent(deps.contentUpdaterDeps ?? {});
             deps.stdout(`Rolled back to content version ${rolledBack.version}.`);
             deps.setExitCode(0);
             return;
           }
 
           if (options.check) {
-            const checked = await checkContentUpdate({}, { baseUrl: options.url });
+            const checked = await checkContentUpdate(deps.contentUpdaterDeps ?? {}, {
+              baseUrl: options.url,
+            });
             deps.stdout(`Installed content: ${checked.currentVersion ?? "bundled only"}`);
             deps.stdout(`Latest published:  ${checked.remoteVersion}`);
             deps.stdout(
@@ -1162,7 +1176,9 @@ function addUpdateCommands(program: Command, deps: CliDeps): void {
             return;
           }
 
-          const updated = await updateContent({}, { baseUrl: options.url });
+          const updated = await updateContent(deps.contentUpdaterDeps ?? {}, {
+            baseUrl: options.url,
+          });
           if (updated.changed) {
             deps.stdout(
               `Updated content: ${updated.previousVersion ?? "bundled only"} -> ${updated.version}`,

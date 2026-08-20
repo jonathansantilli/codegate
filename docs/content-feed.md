@@ -48,11 +48,10 @@ published as GitHub Release assets, and the default download URL here
 at that repo's `releases/latest/download/`.
 
 The Ed25519 signing key is held **offline by the repository owner** — never
-in either repository or any CI secret. One step remains before the feed is
-live: generate the keypair (`node scripts/content-feed/generate-keypair.mjs`),
-store the private key offline, and paste the printed public PEM into
-`src/content/publisher-key.ts`. Until then the pinned key is null, the update
-commands refuse to fetch, and loaders use bundled content.
+in either repository or any CI secret. The matching public key is pinned in
+`src/content/publisher-key.ts`; releases are signed locally by the owner
+(`scripts/content-feed/sign-bundle.mjs`, also copied into the content repo)
+before the bundle and its `.sig` are uploaded as release assets.
 
 Key rotation means shipping a new CodeGate release with the new public key;
 old builds will reject bundles signed by the new key, which is the intended
