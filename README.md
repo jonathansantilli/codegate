@@ -104,18 +104,19 @@ See the [Configuration](#configuration) section for full settings and examples.
 
 ## Core Commands
 
-| Command                  | Purpose                                                                |
-| ------------------------ | ---------------------------------------------------------------------- |
-| `codegate scan [target]` | Scan a directory, file, or URL target for AI tool config risks.        |
-| `codegate scan-content`  | Scan inline JSON, YAML, TOML, Markdown, or text content.               |
-| `codegate run <tool>`    | Scan current directory, then launch selected AI tool if policy allows. |
-| `codegate skills [...]`  | Wrap `npx skills` and preflight-scan `skills add` targets.             |
-| `codegate clawhub [...]` | Wrap `npx clawhub` and preflight-scan `clawhub install` targets.       |
-| `codegate undo [dir]`    | Restore the most recent remediation backup session. Defaults to `.`.   |
-| `codegate init`          | Create `~/.codegate/config.json` with defaults.                        |
-| `codegate update-kb`     | Show knowledge-base update guidance.                                   |
-| `codegate update-rules`  | Show rules update guidance.                                            |
-| `codegate --help`        | Show CLI usage.                                                        |
+| Command                  | Purpose                                                                             |
+| ------------------------ | ----------------------------------------------------------------------------------- |
+| `codegate scan [target]` | Scan a directory, file, or URL target for AI tool config risks.                     |
+| `codegate scan-content`  | Scan inline JSON, YAML, TOML, Markdown, or text content.                            |
+| `codegate run <tool>`    | Scan current directory, then launch selected AI tool if policy allows.              |
+| `codegate skills [...]`  | Wrap `npx skills` and preflight-scan `skills add` targets.                          |
+| `codegate clawhub [...]` | Wrap `npx clawhub` and preflight-scan `clawhub install` targets.                    |
+| `codegate undo [dir]`    | Restore the most recent remediation backup session. Defaults to `.`.                |
+| `codegate init`          | Create `~/.codegate/config.json` with defaults.                                     |
+| `codegate trust [dir]`   | Trust a directory so its `.codegate.json` policy keys are honored.                  |
+| `codegate update-kb`     | Fetch, verify, and install signed knowledge-base content (`--check`, `--rollback`). |
+| `codegate update-rules`  | Fetch, verify, and install signed detection content (`--check`, `--rollback`).      |
+| `codegate --help`        | Show CLI usage.                                                                     |
 
 ## `scan` Command Flags
 

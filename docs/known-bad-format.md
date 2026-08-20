@@ -46,14 +46,17 @@ individually.
 
 ## Contributing indicators
 
-Until the content-feed repository location is finalized (see the open owner
-decisions in [plans/hardening-plan.md](plans/hardening-plan.md)), submit
-indicators as issues or PRs against this repository, including:
+Shared indicators live in the content-feed repository:
+[jonathansantilli/codegate-content](https://github.com/jonathansantilli/codegate-content).
+Open a PR there editing `bundle-src/known-bad.json` (this same shape), and
+include in the description:
 
-- the indicator value and which key it belongs under,
 - where the malicious content was observed (registry link, repo, campaign
   write-up), and
 - enough context to verify the entry independently.
 
-Indicators ship only through signed feed releases; nothing is fetched at scan
-time.
+See that repo's `CONTRIBUTING.md` for details. Maintainers verify every entry
+before it ships; indicators reach users only through signed feed releases,
+and nothing is fetched at scan time. For private indicators — or before a
+feed release picks up a submission — use the local
+`~/.codegate/known-bad.json` described above.

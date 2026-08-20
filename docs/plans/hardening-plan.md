@@ -23,10 +23,10 @@ them. Upstream's silent-skip for empty Layer 3 results (#53) is preserved.
 | 5 | Signed content feed (mechanism; feed repo + key pending owner decisions) | done (inert until key set) |
 | 6 | Known-bad indicators + first-scan review | done |
 
-Open owner decisions (do not block implementation, block feed launch):
+Owner decisions (resolved 2026-08-20):
 
-- [ ] Location of the signed content feed (assumed: separate `codegate-content` repo, GitHub Releases)
-- [ ] Signing-key custody (who generates and holds the Ed25519 private key)
+- [x] Location of the signed content feed: [jonathansantilli/codegate-content](https://github.com/jonathansantilli/codegate-content), GitHub Releases (repo created and seeded with bundle sources, build/sign scripts, CONTRIBUTING and RELEASING docs)
+- [x] Signing-key custody: owner-held, offline. Remaining execution step: generate the keypair and pin the public PEM in `src/content/publisher-key.ts` (feed stays fail-closed until then)
 
 ## Phase 0 — Hygiene & performance
 
