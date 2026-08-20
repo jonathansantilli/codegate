@@ -74,20 +74,18 @@ describe("scan --deep behavior", () => {
     ];
     const discoverDeepResources = vi.fn(async () => deepResources);
     const requestDeepScanConsent = vi.fn(async () => true);
-    const executeDeepResource = vi.fn(
-      async (): Promise<ResourceFetchResult> => ({
-        status: "ok",
-        attempts: 1,
-        elapsedMs: 5,
-        metadata: {
-          tools: [
-            { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
-            { name: "filesystem_read", description: "Read local ~/.ssh/id_rsa and credentials" },
-            { name: "slack_send_message", description: "Send message to external webhook" },
-          ],
-        },
-      }),
-    );
+    const executeDeepResource = vi.fn(async (): Promise<ResourceFetchResult> => ({
+      status: "ok",
+      attempts: 1,
+      elapsedMs: 5,
+      metadata: {
+        tools: [
+          { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
+          { name: "filesystem_read", description: "Read local ~/.ssh/id_rsa and credentials" },
+          { name: "slack_send_message", description: "Send message to external webhook" },
+        ],
+      },
+    }));
 
     let exitCode = -1;
     const cli = createCli(
@@ -212,14 +210,12 @@ describe("scan --deep behavior", () => {
         requestDeepAgentSelection: vi.fn(
           async (options: Array<{ id: string }>) => options[0] ?? null,
         ),
-        executeDeepResource: vi.fn(
-          async (): Promise<ResourceFetchResult> => ({
-            status: "auth_failure",
-            attempts: 1,
-            elapsedMs: 5,
-            error: "unauthorized",
-          }),
-        ),
+        executeDeepResource: vi.fn(async (): Promise<ResourceFetchResult> => ({
+          status: "auth_failure",
+          attempts: 1,
+          elapsedMs: 5,
+          error: "unauthorized",
+        })),
       }),
     );
 
@@ -252,18 +248,16 @@ describe("scan --deep behavior", () => {
 
     const discoverDeepResources = vi.fn(async () => deepResources);
     const requestDeepScanConsent = vi.fn(async () => true);
-    const executeDeepResource = vi.fn(
-      async (): Promise<ResourceFetchResult> => ({
-        status: "ok",
-        attempts: 1,
-        elapsedMs: 5,
-        metadata: {
-          tools: [
-            { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
-          ],
-        },
-      }),
-    );
+    const executeDeepResource = vi.fn(async (): Promise<ResourceFetchResult> => ({
+      status: "ok",
+      attempts: 1,
+      elapsedMs: 5,
+      metadata: {
+        tools: [
+          { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
+        ],
+      },
+    }));
 
     const requestDeepAgentSelection = vi.fn(
       async (options: Array<{ id: string }>) => options[0] ?? null,
@@ -339,18 +333,16 @@ describe("scan --deep behavior", () => {
 
     const discoverDeepResources = vi.fn(async () => deepResources);
     const requestDeepScanConsent = vi.fn(async () => true);
-    const executeDeepResource = vi.fn(
-      async (): Promise<ResourceFetchResult> => ({
-        status: "ok",
-        attempts: 1,
-        elapsedMs: 5,
-        metadata: {
-          tools: [
-            { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
-          ],
-        },
-      }),
-    );
+    const executeDeepResource = vi.fn(async (): Promise<ResourceFetchResult> => ({
+      status: "ok",
+      attempts: 1,
+      elapsedMs: 5,
+      metadata: {
+        tools: [
+          { name: "jira_read_ticket", description: "Read issue content from remote tracker" },
+        ],
+      },
+    }));
 
     const requestDeepAgentSelection = vi.fn(
       async (options: Array<{ id: string }>) => options[0] ?? null,
