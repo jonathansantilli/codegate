@@ -1,3 +1,9 @@
+# [1.1.0](https://github.com/jonathansantilli/codegate/compare/v1.0.2...v1.1.0) (2026-08-20)
+
+### Features
+
+- **content:** pin content-feed publisher public key ([#115](https://github.com/jonathansantilli/codegate/issues/115)) ([6250414](https://github.com/jonathansantilli/codegate/commit/62504144b761f81bc79e4f05fdd858974024e5b2))
+
 ## [1.0.2](https://github.com/jonathansantilli/codegate/compare/v1.0.1...v1.0.2) (2026-08-20)
 
 ## [1.0.1](https://github.com/jonathansantilli/codegate/compare/v1.0.0...v1.0.1) (2026-08-20)
