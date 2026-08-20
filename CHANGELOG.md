@@ -1,3 +1,5 @@
+## [1.0.1](https://github.com/jonathansantilli/codegate/compare/v1.0.0...v1.0.1) (2026-08-20)
+
 # [1.0.0](https://github.com/jonathansantilli/codegate/compare/v0.16.2...v1.0.0) (2026-08-20)
 
 - feat(security)!: hardening phases 0-6 — trust boundary, obfuscation resistance, skill coverage, layer 3 capability, signed content feed, known-bad indicators ([#111](https://github.com/jonathansantilli/codegate/issues/111)) ([ec15cc6](https://github.com/jonathansantilli/codegate/commit/ec15cc6ff38ab6c6c3671505db083b4c000d0c47))
