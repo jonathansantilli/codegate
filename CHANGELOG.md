@@ -1,3 +1,120 @@
+# [1.0.0](https://github.com/jonathansantilli/codegate/compare/v0.16.2...v1.0.0) (2026-08-20)
+
+- feat(security)!: hardening phases 0-6 — trust boundary, obfuscation resistance, skill coverage, layer 3 capability, signed content feed, known-bad indicators ([#111](https://github.com/jonathansantilli/codegate/issues/111)) ([ec15cc6](https://github.com/jonathansantilli/codegate/commit/ec15cc6ff38ab6c6c3671505db083b4c000d0c47))
+
+### Bug Fixes
+
+- **deps:** patch dependency vulnerabilities via npm audit fix ([#112](https://github.com/jonathansantilli/codegate/issues/112)) ([dfa6549](https://github.com/jonathansantilli/codegate/commit/dfa654909bebca11824869c1cf2ab7536c1aacbb))
+
+### BREAKING CHANGES
+
+- .codegate.json policy settings in directories not
+  listed in the global trusted_directories are now ignored (reported as
+  an INFO finding). Run codegate trust <dir> to restore them.
+
+- feat(detection): normalization-first text analysis with full hidden-unicode coverage
+
+* new shared text core (src/layer2-static/text/): hidden-unicode classes
+  incl. the previously undetected Tags block U+E0000-E007F (ASCII
+  smuggling) and clustered variation selectors; NFKC + strip +
+  confusable-fold normalization; shared threat patterns; data-driven
+  override phrases with non-English seeds
+* rule-file and tool-description scanners now match against normalized
+  lines (evidence still quotes originals), so zero-width splits,
+  homoglyphs, and fullwidth forms no longer evade phrase detection
+* bounded base64/hex decode-and-rescan flags encoded payloads
+  (CRITICAL when the decoded content is a remote-shell instruction)
+* meta-agent prompt sanitizer reuses the shared hidden-char stripper
+
+- feat(detection): scan skill directories beyond the markdown entry point
+
+* skill candidates now pull in text-like sibling files (scripts, nested
+  docs; depth<=3, 200-file cap, symlinks skipped) so payloads in
+  scripts/helper.sh run through the rule-file detectors
+* binary artifacts in skill directories are flagged (skill-binary-payload,
+  HIGH for ELF/Mach-O/PE or executable files)
+* new skill-frontmatter detector: unqualified shell / wildcard
+  allowed-tools grants (HIGH), override or remote-shell language hidden
+  in frontmatter metadata (HIGH), name/directory mismatch (INFO)
+* rule files that tell the agent to fetch-and-follow remote instructions
+  get rule-file-remote-instruction-indirection (HIGH) and the URL is
+  registered as a consent-gated deep-scan resource
+
+- feat(layer3): real package analysis with strict network guarantees
+
+Offline (default) gains two supply-chain detectors that need no network:
+
+- mcp-unpinned-package (MEDIUM): npx/uvx/pipx MCP servers without an
+  exact version pin execute whatever the registry serves at launch;
+  notes npx -y auto-confirm and skips known_safe_mcp_servers
+- mcp-possible-typosquat (HIGH): Damerau-Levenshtein match against a
+  curated popular-MCP-package list
+
+Online mode (runtime_mode=online + existing per-resource consent) now
+actually fetches npm/pypi registry metadata through a hardened client:
+pinned hosts only, https only, redirects rejected, 5s timeout, 1MiB
+streamed body cap, typed subset returned. Derived findings:
+package-install-scripts (HIGH), package-deprecated,
+package-recently-published (registry_heuristics.recent_publish_days).
+URL/sse/git resources are never fetched in any mode, and consent
+previews now show the real request.
+
+Toxic-flow analysis enumerates all chains (was: first-only via .find)
+and adds a workspace-scope cross-server pass so chains whose links live
+on different MCP servers are no longer invisible.
+
+- feat(content): signed remote content feed with verify-before-parse
+
+Detection content (KB entries, rules, override phrases, popular-package
+lists, known-bad indicators) can now ship between releases as a single
+Ed25519-signed bundle:
+
+- src/content/: bundle format + signature verification (always before
+  parsing), store under ~/.codegate/content/<version> keeping the two
+  newest versions, updater with https-only, size- and time-capped
+  downloads; scanning never fetches - only the explicit commands do
+- update-kb / update-rules are now real (--check, --rollback, --url);
+  they fail closed while the publisher key placeholder is null
+- loaders prefer the active verified bundle and degrade to bundled
+  content on any failure; signatures are re-verified on every load
+- scripts/content-feed/ has keygen + signing helpers; docs/content-feed.md
+  documents format, key custody, and the two pending owner decisions
+
+* feat(detection): known-bad indicator matching and first-scan review
+
+Known-bad indicators (CRITICAL known-malicious-content):
+
+- New always-on detector matches scanned files against known-malicious
+  SHA-256 file hashes, MCP package names, and URL patterns, and
+  escalates findings whose stable fingerprint appears in the indicator
+  set. Indicators merge from the signed content feed's known_bad block
+  and a local ~/.codegate/known-bad.json (user-trusted, works before
+  the feed is live); malformed indicator data degrades to the valid
+  subset and never breaks scanning.
+
+First-scan review (trust-on-first-use fix):
+
+- mcp-server-first-seen is now MEDIUM for untrusted targets and INFO
+  for trusted ones, gated by first_scan_review (default true; disabling
+  skips the finding but still records the baseline).
+- Scan-state is now keyed per project root (v2 state-file format).
+  Previously baselines were global, so a server first seen in one
+  project silently passed first-seen review in every other project.
+  Legacy unkeyed state files are discarded on load (they carry no
+  project provenance); the cost is a one-time re-baseline per project.
+
+docs/known-bad-format.md documents the indicator format and
+contribution flow.
+
+- docs(plan): fix phase 0 commit reference after amend
+
+- test: make trust-command and content-feed tests Windows-portable
+
+Trust-command fixtures resolve their paths instead of assuming POSIX
+roots, and temp-home helpers override USERPROFILE alongside HOME
+because os.homedir() reads USERPROFILE on Windows. Fixes the
+windows-latest CI matrix.
+
 ## [0.16.2](https://github.com/jonathansantilli/codegate/compare/v0.16.1...v0.16.2) (2026-08-17)
 
 ## [0.16.1](https://github.com/jonathansantilli/codegate/compare/v0.16.0...v0.16.1) (2026-08-17)
