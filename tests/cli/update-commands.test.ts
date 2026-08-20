@@ -57,11 +57,17 @@ function makeDeps(overrides: Partial<CliDeps>): CliDeps {
 }
 
 describe("update commands", () => {
+  // Windows resolves os.homedir() from USERPROFILE, POSIX from HOME, so
+  // both must point at the temp home.
   function withTempHome<T>(run: () => Promise<T>): Promise<T> {
     const previousHome = process.env.HOME;
-    process.env.HOME = mkdtempSync(join(tmpdir(), "codegate-update-cli-"));
+    const previousProfile = process.env.USERPROFILE;
+    const tempHome = mkdtempSync(join(tmpdir(), "codegate-update-cli-"));
+    process.env.HOME = tempHome;
+    process.env.USERPROFILE = tempHome;
     return run().finally(() => {
       process.env.HOME = previousHome;
+      process.env.USERPROFILE = previousProfile;
     });
   }
 

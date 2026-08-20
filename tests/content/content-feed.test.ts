@@ -76,6 +76,25 @@ function makeTempHome(): string {
   return dir;
 }
 
+/**
+ * Point os.homedir() at a temp home for code paths using default deps.
+ * Windows resolves the home from USERPROFILE, POSIX from HOME, so both
+ * must be overridden.
+ */
+function withTempHome<T>(home: string, run: () => T): T {
+  const previousHome = process.env.HOME;
+  const previousProfile = process.env.USERPROFILE;
+  process.env.HOME = home;
+  process.env.USERPROFILE = home;
+  try {
+    return run();
+  } finally {
+    process.env.HOME = previousHome;
+    process.env.USERPROFILE = previousProfile;
+    resetContentStoreCache();
+  }
+}
+
 afterEach(() => {
   resetContentStoreCache();
   for (const dir of tempDirs.splice(0)) {
@@ -306,14 +325,11 @@ describe("known-bad feed indicators", () => {
     resetContentStoreCache();
     resetKnownBadIndicatorsCache();
 
-    const previousHome = process.env.HOME;
-    process.env.HOME = home;
     try {
-      const indicators = loadKnownBadIndicators({ homeDir: () => home });
+      const indicators = withTempHome(home, () => loadKnownBadIndicators({ homeDir: () => home }));
       expect(indicators.packageNames.has("evil-mcp-server")).toBe(true);
       expect(indicators.urlPatterns).toContain("evil.example.com");
     } finally {
-      process.env.HOME = previousHome;
       resetKnownBadIndicatorsCache();
     }
   });
@@ -332,17 +348,6 @@ describe("knowledge base resolution order", () => {
       },
     ],
   };
-
-  function withTempHome<T>(home: string, run: () => T): T {
-    const previousHome = process.env.HOME;
-    process.env.HOME = home;
-    try {
-      return run();
-    } finally {
-      process.env.HOME = previousHome;
-      resetContentStoreCache();
-    }
-  }
 
   it("prefers valid feed KB entries and falls back to bundled on invalid ones", async () => {
     const { privatePem } = await testKeys();
