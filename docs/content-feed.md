@@ -36,28 +36,23 @@ JSON schema as bundled entries; feed `rules` against the rule-pack schema.
 An invalid entry disqualifies that section entirely (bundled content is the
 fallback), never partially applies.
 
-## Publisher side (owner decisions pending)
+## Publisher side
 
-Two decisions are required before the feed can go live; until then
-`src/content/publisher-key.ts` is null and the update commands refuse to
-fetch:
+Content lives in a dedicated repository:
+**[jonathansantilli/codegate-content](https://github.com/jonathansantilli/codegate-content)**.
+Its `bundle-src/` directory holds the bundle sources (what contributor PRs
+edit), its `scripts/` build and sign the bundle, and its `CONTRIBUTING.md` /
+`RELEASING.md` document the contribution and release flows. Bundles are
+published as GitHub Release assets, and the default download URL here
+(`src/content/content-updater.ts`, `DEFAULT_CONTENT_BASE_URL`) already points
+at that repo's `releases/latest/download/`.
 
-1. **Content repository location.** The default download URL points at
-   GitHub Releases of `jonathansantilli/codegate-content`
-   (`src/content/content-updater.ts`, `DEFAULT_CONTENT_BASE_URL`). Adjust if
-   the content repo lives elsewhere.
-2. **Signing-key custody.** Generate the keypair with
-   `node scripts/content-feed/generate-keypair.mjs`. The private key must
-   never enter this repository or its CI secrets; keep it in the content
-   repo's release workflow (or offline) only. Paste the printed public PEM
-   into `src/content/publisher-key.ts` and release CodeGate.
-
-Publishing a content release:
-
-```bash
-node scripts/content-feed/sign-bundle.mjs codegate-content.json <private-key.pem>
-# upload codegate-content.json and codegate-content.json.sig as release assets
-```
+The Ed25519 signing key is held **offline by the repository owner** — never
+in either repository or any CI secret. One step remains before the feed is
+live: generate the keypair (`node scripts/content-feed/generate-keypair.mjs`),
+store the private key offline, and paste the printed public PEM into
+`src/content/publisher-key.ts`. Until then the pinned key is null, the update
+commands refuse to fetch, and loaders use bundled content.
 
 Key rotation means shipping a new CodeGate release with the new public key;
 old builds will reject bundles signed by the new key, which is the intended
