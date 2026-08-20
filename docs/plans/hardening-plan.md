@@ -10,7 +10,7 @@ Update the checkboxes and status lines in the same PR that lands the work.
 
 | Phase | Delivers | Status |
 | ----- | -------- | ------ |
-| 0 | Hygiene & performance quick wins | done (47b72dd) |
+| 0 | Hygiene & performance quick wins | done (d79794c) |
 | 1 | Trust boundary: scanned content cannot weaken the scan | done |
 | 2 | Text normalization, hidden-Unicode coverage, encoded payloads | done |
 | 3 | Skill-directory coverage | done |
