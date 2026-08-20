@@ -38,6 +38,8 @@ import {
   collectInlineIgnoreDirectives,
 } from "./config/inline-ignore.js";
 import { isTrustedDirectory } from "./config/trust.js";
+import { loadKnownBadIndicators } from "./content/known-bad.js";
+import { escalateKnownBadFindings } from "./layer2-static/detectors/known-bad.js";
 import { normalizeForMatching } from "./layer2-static/text/normalize.js";
 import { REMOTE_INSTRUCTION_INDIRECTION_PATTERN } from "./layer2-static/text/threat-patterns.js";
 import { withFindingFingerprint } from "./report/finding-fingerprint.js";
@@ -1176,6 +1178,10 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
     });
   const absoluteTarget = context.absoluteTarget;
   const kb = context.kb;
+  const scanHomeDir = input.homeDir;
+  const knownBadIndicators = loadKnownBadIndicators(
+    scanHomeDir ? { homeDir: () => scanHomeDir } : {},
+  );
   const parseErrors: Finding[] = [];
   const staticFiles: StaticFileInput[] = [];
 
@@ -1248,6 +1254,7 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
       runtimeMode: input.config.runtime_mode,
       workflowAuditsEnabled: input.config.workflow_audits?.enabled === true,
       rulePolicies: input.config.rules,
+      knownBadIndicators,
     },
   });
 
@@ -1258,16 +1265,18 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
     }
   }
 
-  const previousState = loadScanState(input.scanStatePath);
-  const stateResult = evaluateScanStateSnapshots({
-    snapshots: Array.from(snapshots.values()),
-    previousState,
-  });
-  saveScanState(stateResult.nextState, input.scanStatePath);
-
   const trustedTarget =
     input.config.project_config_trusted ??
     isTrustedDirectory(absoluteTarget, input.config.trusted_directories);
+  const previousState = loadScanState(input.scanStatePath, absoluteTarget);
+  const stateResult = evaluateScanStateSnapshots({
+    snapshots: Array.from(snapshots.values()),
+    previousState,
+    trustedTarget,
+    firstScanReview: input.config.first_scan_review,
+  });
+  saveScanState(stateResult.nextState, input.scanStatePath, absoluteTarget);
+
   const inlineIgnores = collectInlineIgnoreDirectives(
     staticFiles.map((file) => ({
       filePath: file.filePath,
@@ -1283,13 +1292,16 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
     withFindingFingerprint(makeSkillBinaryFinding(artifact)),
   );
   const findings = applyInlineIgnoreDirectives(
-    [
-      ...report.findings,
-      ...parseErrors,
-      ...stateResult.findings,
-      ...configNoticeFindings,
-      ...skillBinaryFindings,
-    ],
+    escalateKnownBadFindings(
+      [
+        ...report.findings,
+        ...parseErrors,
+        ...stateResult.findings,
+        ...configNoticeFindings,
+        ...skillBinaryFindings,
+      ],
+      knownBadIndicators,
+    ),
     inlineIgnores,
     { trustedTarget },
   );

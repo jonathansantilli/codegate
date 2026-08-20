@@ -4,12 +4,15 @@ import type { OverridePhrase } from "../layer2-static/text/override-phrases.js";
 
 export const CONTENT_BUNDLE_SCHEMA_VERSION = "1";
 
-export interface KnownBadIndicators {
-  file_sha256?: string[];
-  package_names?: string[];
-  url_patterns?: string[];
-  finding_fingerprints?: string[];
-}
+export const KNOWN_BAD_INDICATOR_KEYS = [
+  "file_sha256",
+  "package_names",
+  "url_patterns",
+  "finding_fingerprints",
+] as const;
+export type KnownBadIndicatorKey = (typeof KNOWN_BAD_INDICATOR_KEYS)[number];
+
+export type KnownBadIndicators = Partial<Record<KnownBadIndicatorKey, string[]>>;
 
 export interface ContentBundle {
   schema_version: string;
@@ -87,7 +90,7 @@ export function parseContentBundle(bundleBytes: Buffer): ContentBundle {
     if (!isRecord(parsed.known_bad)) {
       throw new Error("Content bundle known_bad must be an object");
     }
-    for (const key of ["file_sha256", "package_names", "url_patterns", "finding_fingerprints"]) {
+    for (const key of KNOWN_BAD_INDICATOR_KEYS) {
       const list = (parsed.known_bad as Record<string, unknown>)[key];
       if (list !== undefined && !isStringArray(list)) {
         throw new Error(`Content bundle known_bad.${key} must be an array of strings`);

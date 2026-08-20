@@ -5,6 +5,7 @@ import { detectEnvOverrides } from "./detectors/env-override.js";
 import { detectGitHookIssues, type GitHookEntry } from "./detectors/git-hooks.js";
 import { detectIdeSettingsIssues } from "./detectors/ide-settings.js";
 import { detectPluginManifestIssues } from "./detectors/plugin-manifest.js";
+import { detectKnownBadContent } from "./detectors/known-bad.js";
 import { detectMcpPackageHygiene } from "./detectors/mcp-package-hygiene.js";
 import { detectRuleFileIssues } from "./detectors/rule-file.js";
 import { detectSkillFrontmatterIssues } from "./detectors/skill-frontmatter.js";
@@ -60,6 +61,7 @@ import { FINDING_CATEGORIES, type Finding } from "../types/finding.js";
 import type { DiscoveryFormat } from "../types/discovery.js";
 import { buildFindingEvidence } from "./evidence.js";
 import { evaluateRule, loadRulePacks, type DetectionRule } from "./rule-engine.js";
+import type { ResolvedKnownBadIndicators } from "../content/known-bad.js";
 
 export interface StaticFileInput {
   filePath: string;
@@ -84,6 +86,7 @@ export interface StaticEngineConfig {
   runtimeMode?: RuntimeMode;
   workflowAuditsEnabled?: boolean;
   rulePolicies?: Record<string, { disable?: boolean; config?: Record<string, unknown> }>;
+  knownBadIndicators?: ResolvedKnownBadIndicators;
 }
 
 export interface StaticEngineInput {
@@ -327,6 +330,18 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
           parsed: file.parsed,
           knownSafeMcpServers: input.config.knownSafeMcpServers,
         }),
+    },
+    {
+      id: "known-bad",
+      run: ({ file, input }) =>
+        input.config.knownBadIndicators
+          ? detectKnownBadContent({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              indicators: input.config.knownBadIndicators,
+            })
+          : [],
     },
     {
       id: "workflow-unpinned-uses",

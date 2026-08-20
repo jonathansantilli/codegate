@@ -25,7 +25,7 @@ const EXACT_PYPI_VERSION_PATTERN = /^==\s*\d+(?:\.\d+)*(?:[a-z0-9.]*)$/iu;
 
 const MIN_TYPOSQUAT_NAME_LENGTH = 4;
 
-interface PackageLaunch {
+export interface PackageLaunch {
   registry: PackageRegistry;
   locator: string;
   serverPath: string;
@@ -203,9 +203,15 @@ function makeFinding(
   };
 }
 
-export function detectMcpPackageHygiene(input: McpPackageHygieneInput): Finding[] {
+/** MCP server package launches (npx/uvx/pipx style) found in a parsed config. */
+export function collectMcpPackageLaunches(parsed: unknown): PackageLaunch[] {
   const launches: PackageLaunch[] = [];
-  collectPackageLaunches(input.parsed, "", launches);
+  collectPackageLaunches(parsed, "", launches);
+  return launches;
+}
+
+export function detectMcpPackageHygiene(input: McpPackageHygieneInput): Finding[] {
+  const launches = collectMcpPackageLaunches(input.parsed);
   if (launches.length === 0) {
     return [];
   }

@@ -67,6 +67,8 @@ export interface CodeGateConfig {
   known_safe_hooks: string[];
   unicode_analysis: boolean;
   check_ide_settings: boolean;
+  /** Emit review findings for MCP servers seen for the first time in a project. */
+  first_scan_review?: boolean;
   owasp_mapping: boolean;
   trusted_api_domains: string[];
   rule_pack_paths?: string[];
@@ -116,6 +118,7 @@ interface PartialCodeGateConfig {
   known_safe_hooks?: string[];
   unicode_analysis?: boolean;
   check_ide_settings?: boolean;
+  first_scan_review?: boolean;
   owasp_mapping?: boolean;
   trusted_api_domains?: string[];
   rule_pack_paths?: string[];
@@ -176,6 +179,7 @@ export const DEFAULT_CONFIG: CodeGateConfig = {
   known_safe_hooks: [],
   unicode_analysis: true,
   check_ide_settings: true,
+  first_scan_review: true,
   owasp_mapping: true,
   trusted_api_domains: [],
   rule_pack_paths: [],
@@ -617,6 +621,12 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
         globalConfig.check_ide_settings,
         DEFAULT_CONFIG.check_ide_settings,
       ) ?? DEFAULT_CONFIG.check_ide_settings,
+    first_scan_review:
+      pickFirst(
+        projectConfig.first_scan_review,
+        globalConfig.first_scan_review,
+        DEFAULT_CONFIG.first_scan_review,
+      ) ?? true,
     owasp_mapping:
       pickFirst(
         projectConfig.owasp_mapping,

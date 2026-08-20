@@ -15,6 +15,7 @@ import {
   rollbackContent,
   updateContent,
 } from "../../src/content/content-updater";
+import { loadKnownBadIndicators, resetKnownBadIndicatorsCache } from "../../src/content/known-bad";
 import { loadKnowledgeBase } from "../../src/layer1-discovery/knowledge-base";
 
 vi.mock("../../src/content/publisher-key", async () => {
@@ -277,6 +278,44 @@ describe("content store loading", () => {
     // Cold start: nothing installed.
     resetContentStoreCache();
     expect(loadActiveContentBundle({ homeDir: () => makeTempHome() })).toBeNull();
+  });
+});
+
+describe("known-bad feed indicators", () => {
+  it("merges known_bad indicators from the verified feed", async () => {
+    const { privatePem } = await testKeys();
+    const home = makeTempHome();
+    const deps = { homeDir: () => home };
+    const bundleBytes = makeBundle("2026.08.02", {
+      known_bad: {
+        package_names: ["Evil-MCP-Server"],
+        url_patterns: ["evil.example.com"],
+      },
+    });
+
+    await updateContent(
+      {
+        ...deps,
+        fetchImpl: fetchServing({
+          "codegate-content.json": bundleBytes,
+          "codegate-content.json.sig": signBundle(bundleBytes, privatePem),
+        }),
+      },
+      { baseUrl: "https://example.com/feed" },
+    );
+    resetContentStoreCache();
+    resetKnownBadIndicatorsCache();
+
+    const previousHome = process.env.HOME;
+    process.env.HOME = home;
+    try {
+      const indicators = loadKnownBadIndicators({ homeDir: () => home });
+      expect(indicators.packageNames.has("evil-mcp-server")).toBe(true);
+      expect(indicators.urlPatterns).toContain("evil.example.com");
+    } finally {
+      process.env.HOME = previousHome;
+      resetKnownBadIndicatorsCache();
+    }
   });
 });
 

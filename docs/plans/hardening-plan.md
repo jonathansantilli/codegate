@@ -16,7 +16,7 @@ Update the checkboxes and status lines in the same PR that lands the work.
 | 3 | Skill-directory coverage | done |
 | 4 | Layer 3 capability | done |
 | 5 | Signed content feed (mechanism; feed repo + key pending owner decisions) | done (inert until key set) |
-| 6 | Known-bad indicators + first-scan review | pending |
+| 6 | Known-bad indicators + first-scan review | done |
 
 Open owner decisions (do not block implementation, block feed launch):
 
@@ -81,8 +81,8 @@ Open owner decisions (do not block implementation, block feed launch):
 
 ## Phase 6 — Known-bad indicators & first-scan review
 
-- [ ] `src/layer2-static/detectors/known-bad.ts` (hashes, package names, URL patterns, fingerprints) ⇒ CRITICAL `known-malicious-content`; reads local `~/.codegate/known-bad.json` until the feed exists
-- [ ] `docs/known-bad-format.md` contribution format
-- [ ] `mcp-server-first-seen` findings on first scan of untrusted targets (`first_scan_review`, default true)
-- [ ] Scan-state keyed per project root (verify + fix if global)
-- [ ] Indicator match / first-seen / no-collision tests
+- [x] `src/layer2-static/detectors/known-bad.ts` (hashes, package names, URL patterns, fingerprints) ⇒ CRITICAL `known-malicious-content`; reads local `~/.codegate/known-bad.json` until the feed exists (loader in `src/content/known-bad.ts` merges feed `known_bad` + local file)
+- [x] `docs/known-bad-format.md` contribution format
+- [x] `mcp-server-first-seen` findings MEDIUM on untrusted targets / INFO on trusted (`first_scan_review`, default true; disabling skips the finding but still records the baseline)
+- [x] Scan-state keyed per project root (was global — v2 state-file format `{version, projects}`; legacy unkeyed files are discarded on load because honoring them would be a cross-project TOFU bypass; one-time re-baseline per project)
+- [x] Indicator match (unit + local-file e2e exit 2 + feed merge), first-seen severity, cross-project no-collision, rescan-quiet tests (tests/layer2/known-bad.test.ts, tests/layer2/first-scan-review.test.ts, tests/content/content-feed.test.ts)

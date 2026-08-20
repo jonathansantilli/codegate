@@ -11,9 +11,27 @@ export interface ScanStateServerEntry {
   last_seen: string;
 }
 
+/** Scan state for a single project root (one slice of the state file). */
 export interface ScanState {
   servers: Record<string, ScanStateServerEntry>;
 }
+
+/**
+ * On-disk format: server baselines keyed per project root so a server
+ * trusted-on-first-use in one project cannot suppress first-seen review in
+ * another. Legacy files (top-level `servers`, no project keying) are
+ * discarded on load: their entries have no project provenance, and honoring
+ * them would be a cross-project TOFU bypass. The cost is a one-time
+ * re-baseline per project.
+ */
+interface ScanStateFile {
+  version: number;
+  projects: Record<string, ScanState>;
+}
+
+const SCAN_STATE_FILE_VERSION = 2;
+/** Bucket used when no project root is supplied (direct API use, tooling). */
+const SHARED_PROJECT_KEY = "*";
 
 export interface McpServerSnapshot {
   serverId: string;
@@ -27,6 +45,10 @@ export interface EvaluateScanStateSnapshotsInput {
   snapshots: McpServerSnapshot[];
   previousState: ScanState;
   nowIso?: string;
+  /** Trusted targets get INFO first-seen findings; untrusted get MEDIUM. */
+  trustedTarget?: boolean;
+  /** When false, first-seen findings are skipped (state is still recorded). */
+  firstScanReview?: boolean;
 }
 
 export interface EvaluateScanStateSnapshotsResult {
@@ -154,22 +176,37 @@ function normalizedUrlServerId(rawUrl: string): string {
   }
 }
 
+const STATE_FINDING_KIND = {
+  NewServer: "NEW_SERVER",
+  ConfigChange: "CONFIG_CHANGE",
+} as const;
+type StateFindingKind = (typeof STATE_FINDING_KIND)[keyof typeof STATE_FINDING_KIND];
+
+/** First-use of a server in an untrusted project deserves a visible review. */
+function firstSeenSeverity(trustedTarget: boolean): Finding["severity"] {
+  return trustedTarget ? "INFO" : "MEDIUM";
+}
+
 function makeStateFinding(
-  kind: "NEW_SERVER" | "CONFIG_CHANGE",
+  kind: StateFindingKind,
   snapshot: McpServerSnapshot,
   previousLastSeen: string | null,
+  trustedTarget: boolean,
 ): Finding {
   const locationField = snapshot.serverPath ?? `mcpServers.${snapshot.serverName}`;
-  if (kind === "NEW_SERVER") {
+  if (kind === STATE_FINDING_KIND.NewServer) {
+    const reviewNote = trustedTarget
+      ? "Not previously scanned."
+      : "Not previously scanned in this untrusted project; review its configuration before use.";
     return {
       rule_id: "mcp-server-first-seen",
       finding_id: `NEW_SERVER-${snapshot.serverId}`,
-      severity: "INFO",
+      severity: firstSeenSeverity(trustedTarget),
       category: "NEW_SERVER",
       layer: "L2",
       file_path: snapshot.configPath,
       location: { field: locationField },
-      description: `MCP server "${snapshot.serverId}" first seen in this project. Not previously scanned.`,
+      description: `MCP server "${snapshot.serverId}" first seen in this project. ${reviewNote}`,
       affected_tools: ["claude-code", "cursor", "windsurf", "codex-cli", "opencode"],
       cve: null,
       owasp: ["ASI08"],
@@ -205,32 +242,24 @@ export function getScanStatePath(customPath?: string): string {
   return resolve(expandHomePath(customPath ?? defaultPath()));
 }
 
-export function loadScanState(customPath?: string): ScanState {
-  const path = getScanStatePath(customPath);
-  if (!existsSync(path)) {
-    return { servers: {} };
-  }
+function projectStateKey(projectRoot?: string): string {
+  return projectRoot === undefined ? SHARED_PROJECT_KEY : resolve(projectRoot);
+}
 
-  let parsed: unknown;
-  try {
-    const raw = readFileSync(path, "utf8");
-    parsed = JSON.parse(raw) as unknown;
-  } catch {
-    return { servers: {} };
-  }
-  if (!isRecord(parsed) || !isRecord(parsed.servers)) {
-    return { servers: {} };
+function parseServerEntries(value: unknown): Record<string, ScanStateServerEntry> {
+  if (!isRecord(value)) {
+    return {};
   }
 
   const entries: Record<string, ScanStateServerEntry> = {};
-  for (const [key, value] of Object.entries(parsed.servers as Record<string, unknown>)) {
-    if (!isRecord(value)) {
+  for (const [key, entry] of Object.entries(value)) {
+    if (!isRecord(entry)) {
       continue;
     }
-    const config_hash = typeof value.config_hash === "string" ? value.config_hash : "";
-    const config_path = typeof value.config_path === "string" ? value.config_path : "";
-    const first_seen = typeof value.first_seen === "string" ? value.first_seen : "";
-    const last_seen = typeof value.last_seen === "string" ? value.last_seen : "";
+    const config_hash = typeof entry.config_hash === "string" ? entry.config_hash : "";
+    const config_path = typeof entry.config_path === "string" ? entry.config_path : "";
+    const first_seen = typeof entry.first_seen === "string" ? entry.first_seen : "";
+    const last_seen = typeof entry.last_seen === "string" ? entry.last_seen : "";
     if (!config_hash || !config_path || !first_seen || !last_seen) {
       continue;
     }
@@ -242,13 +271,53 @@ export function loadScanState(customPath?: string): ScanState {
     };
   }
 
-  return { servers: entries };
+  return entries;
 }
 
-export function saveScanState(state: ScanState, customPath?: string): void {
+function loadScanStateFile(customPath?: string): ScanStateFile {
+  const empty: ScanStateFile = { version: SCAN_STATE_FILE_VERSION, projects: {} };
   const path = getScanStatePath(customPath);
+  if (!existsSync(path)) {
+    return empty;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+  } catch {
+    return empty;
+  }
+  // Legacy (unversioned, top-level `servers`) and malformed files both reset:
+  // legacy entries carry no project provenance, so trusting them would leak
+  // baselines across projects.
+  if (
+    !isRecord(parsed) ||
+    parsed.version !== SCAN_STATE_FILE_VERSION ||
+    !isRecord(parsed.projects)
+  ) {
+    return empty;
+  }
+
+  const projects: Record<string, ScanState> = {};
+  for (const [projectKey, slice] of Object.entries(parsed.projects)) {
+    if (isRecord(slice)) {
+      projects[projectKey] = { servers: parseServerEntries(slice.servers) };
+    }
+  }
+  return { version: SCAN_STATE_FILE_VERSION, projects };
+}
+
+export function loadScanState(customPath?: string, projectRoot?: string): ScanState {
+  const file = loadScanStateFile(customPath);
+  return file.projects[projectStateKey(projectRoot)] ?? { servers: {} };
+}
+
+export function saveScanState(state: ScanState, customPath?: string, projectRoot?: string): void {
+  const path = getScanStatePath(customPath);
+  const file = loadScanStateFile(customPath);
+  file.projects[projectStateKey(projectRoot)] = state;
   mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  writeFileSync(path, `${JSON.stringify(file, null, 2)}\n`, "utf8");
 }
 
 export function resetScanState(customPath?: string): void {
@@ -260,6 +329,8 @@ export function evaluateScanStateSnapshots(
   input: EvaluateScanStateSnapshotsInput,
 ): EvaluateScanStateSnapshotsResult {
   const nowIso = input.nowIso ?? new Date().toISOString();
+  const trustedTarget = input.trustedTarget ?? false;
+  const firstScanReview = input.firstScanReview ?? true;
   const nextState: ScanState = {
     servers: { ...input.previousState.servers },
   };
@@ -268,7 +339,11 @@ export function evaluateScanStateSnapshots(
   for (const snapshot of input.snapshots) {
     const previous = nextState.servers[snapshot.serverId];
     if (!previous) {
-      findings.push(makeStateFinding("NEW_SERVER", snapshot, null));
+      if (firstScanReview) {
+        findings.push(
+          makeStateFinding(STATE_FINDING_KIND.NewServer, snapshot, null, trustedTarget),
+        );
+      }
       nextState.servers[snapshot.serverId] = {
         config_hash: snapshot.configHash,
         config_path: snapshot.configPath,
@@ -279,7 +354,14 @@ export function evaluateScanStateSnapshots(
     }
 
     if (previous.config_hash !== snapshot.configHash) {
-      findings.push(makeStateFinding("CONFIG_CHANGE", snapshot, previous.last_seen));
+      findings.push(
+        makeStateFinding(
+          STATE_FINDING_KIND.ConfigChange,
+          snapshot,
+          previous.last_seen,
+          trustedTarget,
+        ),
+      );
       nextState.servers[snapshot.serverId] = {
         config_hash: snapshot.configHash,
         config_path: snapshot.configPath,
