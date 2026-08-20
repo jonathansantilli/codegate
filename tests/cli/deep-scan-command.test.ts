@@ -63,9 +63,9 @@ describe("scan --deep behavior", () => {
   it("executes deep scan resources with consent and merges findings into exit code", async () => {
     const deepResources: DeepScanResource[] = [
       {
-        id: "http:https://mcp.example/tools",
+        id: "https://mcp.example/tools",
         request: {
-          id: "http:https://mcp.example/tools",
+          id: "https://mcp.example/tools",
           kind: "http",
           locator: "https://mcp.example/tools",
         },
@@ -115,9 +115,9 @@ describe("scan --deep behavior", () => {
       async () =>
         [
           {
-            id: "http:https://mcp.example/tools",
+            id: "https://mcp.example/tools",
             request: {
-              id: "http:https://mcp.example/tools",
+              id: "https://mcp.example/tools",
               kind: "http",
               locator: "https://mcp.example/tools",
             },
@@ -190,9 +190,9 @@ describe("scan --deep behavior", () => {
     const stdout: string[] = [];
     const deepResources: DeepScanResource[] = [
       {
-        id: "http:https://mcp.example/tools",
+        id: "https://mcp.example/tools",
         request: {
-          id: "http:https://mcp.example/tools",
+          id: "https://mcp.example/tools",
           kind: "http",
           locator: "https://mcp.example/tools",
         },
@@ -240,9 +240,9 @@ describe("scan --deep behavior", () => {
   it("allows choosing a deep agent and runs approved meta-agent commands", async () => {
     const deepResources: DeepScanResource[] = [
       {
-        id: "http:https://mcp.example/tools",
+        id: "https://mcp.example/tools",
         request: {
-          id: "http:https://mcp.example/tools",
+          id: "https://mcp.example/tools",
           kind: "http",
           locator: "https://mcp.example/tools",
         },
@@ -327,9 +327,9 @@ describe("scan --deep behavior", () => {
   it("unwraps Claude JSON result envelopes from meta-agent output", async () => {
     const deepResources: DeepScanResource[] = [
       {
-        id: "http:https://mcp.example/tools",
+        id: "https://mcp.example/tools",
         request: {
-          id: "http:https://mcp.example/tools",
+          id: "https://mcp.example/tools",
           kind: "http",
           locator: "https://mcp.example/tools",
         },
@@ -406,9 +406,9 @@ describe("scan --deep behavior", () => {
   it("disables deep-scan prompts when --no-tui is passed", async () => {
     const deepResources: DeepScanResource[] = [
       {
-        id: "http:https://mcp.example/tools",
+        id: "https://mcp.example/tools",
         request: {
-          id: "http:https://mcp.example/tools",
+          id: "https://mcp.example/tools",
           kind: "http",
           locator: "https://mcp.example/tools",
         },

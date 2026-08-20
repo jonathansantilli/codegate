@@ -1,0 +1,96 @@
+{
+  "tool": "openclaw",
+  "version_range": ">=0.1.0",
+  "config_paths": [
+    {
+      "path": ".openclaw/openclaw.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["agent_config", "channel_bindings", "provider_credentials", "mcp_config"],
+      "fields_of_interest": {
+        "agents": "agent definitions and the messaging channels they expose",
+        "providers": "configured LLM providers (API keys, custom base URLs)",
+        "channels": "enabled inbound/outbound channels (whatsapp, telegram, signal, slack, imessage, discord, line, matrix, teams, zalo, voice)",
+        "mcpServers": "MCP servers exposed to the agent",
+        "tools": "plugin-provided tools registered on the agent"
+      }
+    },
+    {
+      "path": ".openclaw/custom.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["agent_config", "user_override"]
+    },
+    {
+      "path": ".openclaw/hooks.json5",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["hooks", "command_exec", "consent_bypass"],
+      "fields_of_interest": {
+        "pre": "pre-tool-use shell commands (runs with agent privileges)",
+        "post": "post-tool-use shell commands"
+      }
+    },
+    {
+      "path": ".openclaw/exec-approvals.json",
+      "scope": "user",
+      "format": "jsonc",
+      "risk_surface": ["consent_bypass", "command_exec"],
+      "fields_of_interest": {
+        "approved": "commands the agent can run without prompting the operator"
+      }
+    },
+    {
+      "path": ".openclaw/.env",
+      "scope": "user",
+      "format": "dotenv",
+      "risk_surface": ["secret_leak", "env_override"]
+    },
+    {
+      "path": ".openclaw/telegram.token",
+      "scope": "user",
+      "format": "text",
+      "risk_surface": ["secret_leak", "channel_token"]
+    }
+  ],
+  "skill_paths": [
+    {
+      "path": ".openclaw/extensions/*/package.json",
+      "scope": "user",
+      "type": "plugin_manifest",
+      "risk_surface": ["plugin_install", "supply_chain", "command_exec", "remote_resource"]
+    },
+    {
+      "path": ".openclaw/agents/*/agent",
+      "scope": "user",
+      "type": "agent",
+      "risk_surface": ["agent_config", "tool_access", "channel_bindings", "prompt_injection"]
+    },
+    {
+      "path": ".openclaw/workspace/IDENTITY.md",
+      "scope": "user",
+      "type": "identity",
+      "risk_surface": ["prompt_injection", "persona_override"]
+    }
+  ],
+  "extension_mechanisms": [
+    {
+      "type": "npm_plugin",
+      "install_pattern": ".openclaw/extensions/*/package.json",
+      "risk": "Plugins install via `npm install --omit=dev` with arbitrary package content; lifecycle scripts (postinstall, etc.) execute during install. Plugin code runs in-process with agent privileges.",
+      "fetchable": false
+    },
+    {
+      "type": "messaging_channel",
+      "install_pattern": ".openclaw/credentials/*",
+      "risk": "Inbound messages from external channels (WhatsApp, Telegram, Signal, Slack, iMessage, Discord, LINE, Matrix, Teams, Zalo, voice) feed untrusted text directly into LLM tool-use. Classic prompt-injection surface — every connected channel is an attacker-controllable input to the agent.",
+      "fetchable": false
+    },
+    {
+      "type": "hook",
+      "install_pattern": ".openclaw/hooks.json5",
+      "risk": "hooks.json5 declares shell commands to run before/after agent tool calls. An attacker with write access to this file can silently intercept or tamper with every agent action.",
+      "fetchable": false
+    }
+  ]
+}

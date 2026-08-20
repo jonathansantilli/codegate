@@ -1,3 +1,59 @@
+## [0.16.2](https://github.com/jonathansantilli/codegate/compare/v0.16.1...v0.16.2) (2026-08-17)
+
+## [0.16.1](https://github.com/jonathansantilli/codegate/compare/v0.16.0...v0.16.1) (2026-08-17)
+
+# [0.16.0](https://github.com/jonathansantilli/codegate/compare/v0.15.2...v0.16.0) (2026-04-23)
+
+### Features
+
+- **layer3:** run Claude meta-agent via Agent SDK instead of CLI spawn ([#58](https://github.com/jonathansantilli/codegate/issues/58)) ([5e3c6c8](https://github.com/jonathansantilli/codegate/commit/5e3c6c81a0ae7f44c0d9be1ca3b9e3ee72b059de)), closes [openai/codex#7144](https://github.com/openai/codex/issues/7144)
+
+## [0.15.2](https://github.com/jonathansantilli/codegate/compare/v0.15.1...v0.15.2) (2026-04-23)
+
+## [0.15.1](https://github.com/jonathansantilli/codegate/compare/v0.15.0...v0.15.1) (2026-04-23)
+
+# [0.15.0](https://github.com/jonathansantilli/codegate/compare/v0.14.4...v0.15.0) (2026-04-22)
+
+### Features
+
+- **kb:** add OpenClaw — messaging-channel gateway for LLM agents ([#56](https://github.com/jonathansantilli/codegate/issues/56)) ([854505f](https://github.com/jonathansantilli/codegate/commit/854505f28bd2e86534e6a1ece615dea27f50ee47))
+
+## [0.14.4](https://github.com/jonathansantilli/codegate/compare/v0.14.3...v0.14.4) (2026-04-22)
+
+### Bug Fixes
+
+- **scan:** close cross-scan leak for single-file targets of any format ([#55](https://github.com/jonathansantilli/codegate/issues/55)) ([46e2148](https://github.com/jonathansantilli/codegate/commit/46e2148e6fc57d27a0b47a63ebbc095ed9fd83a7)), closes [#54](https://github.com/jonathansantilli/codegate/issues/54) [#54](https://github.com/jonathansantilli/codegate/issues/54)
+
+## [0.14.3](https://github.com/jonathansantilli/codegate/compare/v0.14.2...v0.14.3) (2026-04-22)
+
+### Bug Fixes
+
+- **scan:** disable user-scope walk when CLI scans a single file ([#54](https://github.com/jonathansantilli/codegate/issues/54)) ([6799651](https://github.com/jonathansantilli/codegate/commit/67996514e24aaef3ff39a7c171f9bb34b5b56ace))
+
+## [0.14.2](https://github.com/jonathansantilli/codegate/compare/v0.14.1...v0.14.2) (2026-04-22)
+
+### Bug Fixes
+
+- **scan:** stop attributing host-wide findings to per-target scans ([#53](https://github.com/jonathansantilli/codegate/issues/53)) ([77f9627](https://github.com/jonathansantilli/codegate/commit/77f962761c35a96fb6e8d8ec074781591785d593))
+
+## [0.14.1](https://github.com/jonathansantilli/codegate/compare/v0.14.0...v0.14.1) (2026-04-22)
+
+### Bug Fixes
+
+- **layer3:** clean remote-resource URLs + configurable timeout & byte-size guards ([#52](https://github.com/jonathansantilli/codegate/issues/52)) ([750c422](https://github.com/jonathansantilli/codegate/commit/750c4229d6c08f7fa4fc58e3922394bce5b66647))
+
+# [0.14.0](https://github.com/jonathansantilli/codegate/compare/v0.13.0...v0.14.0) (2026-04-21)
+
+### Features
+
+- **cli:** add `inventory` subcommand to enumerate KB-known AI artifacts ([#51](https://github.com/jonathansantilli/codegate/issues/51)) ([620b112](https://github.com/jonathansantilli/codegate/commit/620b1127e14200273e9fe899da5487d1c4cd5d2b))
+
+# [0.13.0](https://github.com/jonathansantilli/codegate/compare/v0.12.4...v0.13.0) (2026-04-21)
+
+### Features
+
+- **knowledge-base:** recognize Anthropic Skills layout for claude-code ([#49](https://github.com/jonathansantilli/codegate/issues/49)) ([8762adf](https://github.com/jonathansantilli/codegate/commit/8762adf7da9b0302f0891a8614863511f8107a12))
+
 ## [0.12.4](https://github.com/jonathansantilli/codegate/compare/v0.12.3...v0.12.4) (2026-03-24)
 
 ## [0.12.3](https://github.com/jonathansantilli/codegate/compare/v0.12.2...v0.12.3) (2026-03-24)

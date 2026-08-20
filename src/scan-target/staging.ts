@@ -121,6 +121,7 @@ export function stageLocalFile(absolutePath: string): ResolvedScanTarget {
       scanTarget: tempRoot,
       displayTarget: absolutePath,
       explicitCandidates: collectExplicitCandidates(tempRoot),
+      stagedFromLocalFile: true,
       cleanup: () => cleanupTempDir(tempRoot),
     };
   }
@@ -134,6 +135,7 @@ export function stageLocalFile(absolutePath: string): ResolvedScanTarget {
     scanTarget: tempRoot,
     displayTarget: absolutePath,
     explicitCandidates: collectExplicitCandidates(tempRoot),
+    stagedFromLocalFile: true,
     cleanup: () => cleanupTempDir(tempRoot),
   };
 }

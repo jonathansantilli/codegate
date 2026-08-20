@@ -13,6 +13,7 @@ import {
   collectLocalTextAnalysisTargets,
   type LocalTextAnalysisTarget,
 } from "./layer3-dynamic/local-text-analysis.js";
+import { buildResourceId, normalizeRemoteUrl } from "./layer3-dynamic/url-validation.js";
 import { runStaticPipeline } from "./pipeline.js";
 import type { StaticFileInput } from "./layer2-static/engine.js";
 import { applyReportSummary } from "./report-summary.js";
@@ -292,6 +293,84 @@ function isRegularFile(path: string): boolean {
   }
 }
 
+/** True when `candidatePath` resolves at or below `root`. */
+function isPathInside(root: string, candidatePath: string): boolean {
+  const resolvedCandidate = resolve(candidatePath);
+  const resolvedRoot = resolve(root);
+  if (resolvedCandidate === resolvedRoot) {
+    return true;
+  }
+  const rel = relative(resolvedRoot, resolvedCandidate);
+  if (rel === "" || rel === ".") {
+    return true;
+  }
+  if (rel.startsWith("..")) {
+    return false;
+  }
+  // On Windows, relative() may return an absolute path across drives.
+  if (rel.includes(":")) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Decide whether a user-scope candidate at `candidatePath` should be attached
+ * to a scan of `scanTarget` rooted at `homeDir`.
+ *
+ * User-scope patterns (e.g. `~/.agents/skills/&ast;/SKILL.md`) walk the whole
+ * home directory, so they can match files belonging to completely unrelated
+ * skills or agents. When the scan target is itself a specific location
+ * **inside** the user's home — e.g. scanning a single skill directory or a
+ * single config file like `~/.claude/settings.json` — any user-scope match
+ * that does not belong to that target is a cross-scan leak and must be
+ * dropped.
+ *
+ * Three cases:
+ * - `scanTarget` is a directory inside `homeDir`: only keep candidates inside
+ *   that directory (existing PR #53 behavior).
+ * - `scanTarget` is a file inside `homeDir`: only keep candidates that resolve
+ *   to that exact file. "Inside" semantics do not apply to files, so the
+ *   previous check let every sibling through.
+ * - `scanTarget` lives outside the home directory (or cannot be stat'd,
+ *   e.g. a URL or a staged path that has been cleaned up): user-scope
+ *   matches are accepted as legitimate host-wide context.
+ */
+function shouldKeepUserScopeCandidate(
+  scanTarget: string,
+  homeDir: string,
+  candidatePath: string,
+): boolean {
+  if (!isPathInside(homeDir, scanTarget)) {
+    return true;
+  }
+
+  // Follow symlinks the same way the rest of the scan code does (walker,
+  // wildcard-base check, `isRegularFile`): `statSync` resolves them. If the
+  // target cannot be stat'd (missing / permission denied / URL that was never
+  // a local path), fall through to the pre-PR-#53 outside-home behavior so
+  // we do not over-filter project-scope scans on unusual inputs.
+  let targetStat;
+  try {
+    targetStat = statSync(scanTarget);
+  } catch {
+    return true;
+  }
+
+  if (targetStat.isFile()) {
+    // Nothing is "inside" a file. The only user-scope candidate that can
+    // legitimately belong to a file-target scan is the file itself.
+    return resolve(candidatePath) === resolve(scanTarget);
+  }
+
+  if (targetStat.isDirectory()) {
+    return isPathInside(scanTarget, candidatePath);
+  }
+
+  // Sockets, devices, etc. — behave like the outside-home case.
+  return true;
+}
+
 function toUserReportPath(pattern: string): string {
   const normalized = normalizeUserScopePattern(pattern);
   return `~/${normalized}`;
@@ -472,6 +551,14 @@ function collectSelectedCandidates(
       const userPattern = normalizeUserScopePattern(candidate.pattern);
       if (userPattern.includes("*")) {
         for (const match of collectUserScopeWildcardMatches(options.homeDir, userPattern)) {
+          // A scan whose target itself lives under the user's home directory
+          // (e.g. a single skill at `~/.codex/skills/foo`) must only report
+          // findings about files inside that target. User-scope wildcards
+          // walk the whole home tree, so they can match sibling skills or
+          // other agents that belong to different scans; drop those here.
+          if (!shouldKeepUserScopeCandidate(absoluteTarget, options.homeDir, match.absolutePath)) {
+            continue;
+          }
           const reportPath = toUserReportPath(match.relativePath);
           if (!matchesCollectionKinds(reportPath, options.collectKinds)) {
             continue;
@@ -489,6 +576,9 @@ function collectSelectedCandidates(
       }
       const absolutePath = resolve(options.homeDir, userPattern);
       if (!existsSync(absolutePath) || !isRegularFile(absolutePath)) {
+        continue;
+      }
+      if (!shouldKeepUserScopeCandidate(absoluteTarget, options.homeDir, absolutePath)) {
         continue;
       }
       const reportPath = toUserReportPath(userPattern);
@@ -966,18 +1056,21 @@ function collectDeepScanResourcesFromParsed(
       }
 
       if (typeof config.url === "string" && isHttpLikeUrl(config.url)) {
-        const kind = inferHttpKind(config.url);
-        const id = `${kind}:${config.url}`;
-        if (!resources.has(id)) {
-          resources.set(id, {
-            id,
-            request: {
+        const normalized = normalizeRemoteUrl(config.url);
+        if (normalized.ok) {
+          const kind = inferHttpKind(normalized.url);
+          const id = buildResourceId(kind, normalized.url);
+          if (!resources.has(id)) {
+            resources.set(id, {
               id,
-              kind,
-              locator: config.url,
-            },
-            commandPreview: `GET ${config.url}  (from ${filePath} -> ${container.key}.${serverName}.url)`,
-          });
+              request: {
+                id,
+                kind,
+                locator: normalized.url,
+              },
+              commandPreview: `GET ${normalized.url}  (from ${filePath} -> ${container.key}.${serverName}.url)`,
+            });
+          }
         }
       }
 
@@ -1009,8 +1102,12 @@ function collectDeepScanResourcesFromParsed(
       if (typeof config.url !== "string" || !isHttpLikeUrl(config.url)) {
         return;
       }
-      const kind = inferHttpKind(config.url);
-      const id = `${kind}:${config.url}`;
+      const normalized = normalizeRemoteUrl(config.url);
+      if (!normalized.ok) {
+        return;
+      }
+      const kind = inferHttpKind(normalized.url);
+      const id = buildResourceId(kind, normalized.url);
       if (resources.has(id)) {
         return;
       }
@@ -1019,9 +1116,9 @@ function collectDeepScanResourcesFromParsed(
         request: {
           id,
           kind,
-          locator: config.url,
+          locator: normalized.url,
         },
-        commandPreview: `GET ${config.url}  (from ${filePath} -> ${remoteArray.key}.${index}.url)`,
+        commandPreview: `GET ${normalized.url}  (from ${filePath} -> ${remoteArray.key}.${index}.url)`,
       });
     });
   }

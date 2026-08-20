@@ -8,8 +8,8 @@ const RESOURCES: DeepScanResource[] = [
     commandPreview: "fetch npm metadata",
   },
   {
-    id: "http:https://example.com",
-    request: { id: "http:https://example.com", kind: "http", locator: "https://example.com" },
+    id: "https://example.com",
+    request: { id: "https://example.com", kind: "http", locator: "https://example.com" },
     commandPreview: "fetch remote metadata",
   },
 ];
@@ -25,7 +25,7 @@ describe("task 26 deep scan consent flow", () => {
 
     const outcomes = await runDeepScanWithConsent(
       RESOURCES,
-      async (resource) => resource.id === "http:https://example.com",
+      async (resource) => resource.id === "https://example.com",
       execute,
     );
 

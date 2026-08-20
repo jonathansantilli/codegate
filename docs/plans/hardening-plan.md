@@ -6,6 +6,11 @@ Baseline: v0.12.4, `main` @ 9898e25. Readable report: the "CodeGate Hardening Pl
 
 Update the checkboxes and status lines in the same PR that lands the work.
 
+2026-08-20: branch reconciled with upstream `main` v0.16.2 (Agent SDK meta-agent, `inventory`
+command, Layer 3 fetch guards, single-file scan fixes). Upstream's `layer3_remote_fetch_*`
+keys are policy keys under the Phase 1 trust model: untrusted project config cannot change
+them. Upstream's silent-skip for empty Layer 3 results (#53) is preserved.
+
 ## Status
 
 | Phase | Delivers | Status |

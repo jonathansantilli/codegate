@@ -28,6 +28,7 @@ import {
 import type { ResourceFetchResult } from "./layer3-dynamic/resource-fetcher.js";
 import type { LocalTextAnalysisTarget } from "./layer3-dynamic/local-text-analysis.js";
 import { runSandboxCommand } from "./layer3-dynamic/sandbox.js";
+import { runClaudeViaSdk } from "./layer3-dynamic/claude-sdk-provider.js";
 import { loadKnowledgeBase } from "./layer1-discovery/knowledge-base.js";
 import { type DeepScanResource } from "./pipeline.js";
 import {
@@ -56,6 +57,7 @@ import {
   removeTrustedDirectory,
 } from "./commands/trust.js";
 import { checkContentUpdate, rollbackContent, updateContent } from "./content/content-updater.js";
+import { runInventory, type InventorySummary } from "./commands/inventory-command.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
   executeScanContentCommand,
@@ -227,6 +229,27 @@ export function isDirectCliInvocation(
 async function runMetaAgentCommandWithSandbox(
   context: MetaAgentCommandConsentContext,
 ): Promise<MetaAgentCommandRunResult> {
+  // Claude runs through the Agent SDK so we get structured message
+  // iteration and reuse the user's `claude login` session without
+  // having to shell-escape prompts or parse stdout JSON envelopes.
+  // Codex and generic/OpenCode still spawn their CLIs — swap those
+  // once the Codex SDK auth story (see openai/codex#7144) is
+  // dependable enough to adopt.
+  if (context.agent.metaTool === "claude") {
+    const sdkResult = await runClaudeViaSdk({
+      prompt: context.command.prompt,
+      cwd: context.command.cwd,
+      readOnly: context.command.readOnly,
+      timeoutMs: context.command.timeoutMs,
+    });
+    return {
+      command: context.command,
+      code: sdkResult.code,
+      stdout: sdkResult.stdout,
+      stderr: sdkResult.stderr,
+    };
+  }
+
   const commandResult = await runSandboxCommand({
     command: context.command.command,
     args: context.command.args,
@@ -493,8 +516,25 @@ function addScanCommand(program: Command, version: string, deps: CliDeps): void 
                 ? true
                 : (baseConfig.workflow_audits?.enabled ?? false),
           },
+          // When the raw input was a single local file (now staged into a
+          // temp dir), walking the full user-scope tree is off-target — the
+          // user asked to scan one file, not their whole home. Without
+          // this guard, sibling findings (e.g. `~/.agents/skills/*/SKILL.md`)
+          // leak into scans of files like `.claude/settings.json` or
+          // `.idea/workspace.xml`.
+          //
+          // Earlier we gated on `explicitCandidates.length > 0`, but that
+          // falsely passed for files whose extension is not in the
+          // text-like format list (XML, binary-ish configs, etc.) — those
+          // produce zero explicit candidates and the guard never fired.
+          // Using `stagedFromLocalFile` is the reliable signal.
+          // Explicit opt-in via `--include-user-scope` still forces it on.
           scan_user_scope:
-            options.includeUserScope === true ? true : (baseConfig.scan_user_scope ?? false),
+            options.includeUserScope === true
+              ? true
+              : resolvedTarget.stagedFromLocalFile === true
+                ? false
+                : (baseConfig.scan_user_scope ?? false),
         };
 
         if (options.resetState) {
@@ -985,6 +1025,102 @@ function addInitCommand(program: Command, deps: CliDeps): void {
     });
 }
 
+const INVENTORY_SCOPES = ["user", "project", "all"] as const;
+const INVENTORY_KINDS = ["skills", "configs", "all"] as const;
+
+type InventoryScope = (typeof INVENTORY_SCOPES)[number];
+type InventoryKind = (typeof INVENTORY_KINDS)[number];
+
+interface InventoryCliOptions {
+  scope?: InventoryScope;
+  kind?: InventoryKind;
+  onlyExisting?: boolean;
+  workspace?: string[];
+  format?: "text" | "json";
+}
+
+function addInventoryCommand(program: Command, deps: CliDeps): void {
+  program
+    .command("inventory")
+    .description(
+      "List the AI-tool config + skill artifacts the knowledge base knows about, resolved against this machine.",
+    )
+    .addOption(
+      new Option("--scope <scope>", "scope filter")
+        .choices(INVENTORY_SCOPES as unknown as string[])
+        .default("all"),
+    )
+    .addOption(
+      new Option("--kind <kind>", "artifact kind filter")
+        .choices(INVENTORY_KINDS as unknown as string[])
+        .default("all"),
+    )
+    .option("--only-existing", "return only items that currently exist on disk")
+    .option(
+      "--workspace <path>",
+      "additional project-scope root (repeatable); defaults to cwd when omitted",
+      collectRepeatable,
+      [] as string[],
+    )
+    .addOption(
+      new Option("--format <format>", "output format").choices(["text", "json"]).default("text"),
+    )
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate inventory",
+        "codegate inventory --format json --kind skills --only-existing",
+        "codegate inventory --scope user --format json",
+        "codegate inventory --workspace . --workspace /path/to/other/repo",
+      ]),
+    )
+    .action((options: InventoryCliOptions) => {
+      try {
+        const home = deps.homeDir?.() ?? homedir();
+        const explicitWorkspaces = options.workspace ?? [];
+        const workspaces =
+          explicitWorkspaces.length > 0
+            ? explicitWorkspaces.map((w) => resolve(deps.cwd(), w))
+            : [deps.cwd()];
+
+        const summary: InventorySummary = runInventory({
+          scope: options.scope ?? "all",
+          kind: options.kind ?? "all",
+          onlyExisting: options.onlyExisting === true,
+          workspaces,
+          homeDir: home,
+        });
+
+        if (options.format === "json") {
+          deps.stdout(JSON.stringify(summary, null, 2));
+        } else {
+          renderInventoryText(summary, deps.stdout);
+        }
+        deps.setExitCode(0);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`Inventory failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
+function collectRepeatable(value: string, previous: string[]): string[] {
+  return [...previous, value];
+}
+
+function renderInventoryText(summary: InventorySummary, stdout: (line: string) => void): void {
+  stdout(`Knowledge base v${summary.kb_version}`);
+  stdout(`Tools: ${summary.tools.map((t) => t.name).join(", ")}`);
+  stdout(`Items: ${summary.items.length}`);
+  stdout("");
+  for (const item of summary.items) {
+    const mark = item.exists ? "✓" : "·";
+    const tag = item.kind === "skill" ? `${item.kind}:${item.type ?? "?"}` : item.kind;
+    stdout(`  ${mark} [${item.tool}] ${tag} (${item.scope}) ${item.path}`);
+  }
+}
+
 function addUpdateCommands(program: Command, deps: CliDeps): void {
   const registerUpdateCommand = (name: string, description: string): void => {
     program
@@ -1093,6 +1229,7 @@ export function createCli(
   addTrustCommand(program, deps);
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
+  addInventoryCommand(program, deps);
   addUpdateCommands(program, deps);
   return program;
 }
