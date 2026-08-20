@@ -33,6 +33,7 @@ node_modules/
 .env
 .env.*
 !.env.example
+*.pem
 
 # Logs and temporary files
 *.log
