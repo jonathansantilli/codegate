@@ -21,6 +21,10 @@ import {
   type ResolveConfigOptions,
 } from "./config.js";
 import { APP_NAME } from "./index.js";
+import {
+  createDeepResourceExecutor,
+  type DeepResourceExecutionContext,
+} from "./layer3-dynamic/deep-resource-executor.js";
 import type { ResourceFetchResult } from "./layer3-dynamic/resource-fetcher.js";
 import type { LocalTextAnalysisTarget } from "./layer3-dynamic/local-text-analysis.js";
 import { runSandboxCommand } from "./layer3-dynamic/sandbox.js";
@@ -47,6 +51,12 @@ import {
   type RemediationRunnerResult,
 } from "./layer4-remediation/remediation-runner.js";
 import { undoLatestSession } from "./commands/undo.js";
+import {
+  addTrustedDirectory,
+  listTrustedDirectories,
+  removeTrustedDirectory,
+} from "./commands/trust.js";
+import { checkContentUpdate, rollbackContent, updateContent } from "./content/content-updater.js";
 import { runInventory, type InventorySummary } from "./commands/inventory-command.js";
 import { executeScanCommand } from "./commands/scan-command.js";
 import {
@@ -144,8 +154,12 @@ export interface CliDeps {
   ) => Promise<MetaAgentCommandRunResult> | MetaAgentCommandRunResult;
   requestRemediationConsent?: (context: RemediationConsentContext) => Promise<boolean> | boolean;
   requestRunWarningConsent?: (context: RunWarningConsentContext) => Promise<boolean> | boolean;
+  requestTrustConsent?: (directory: string) => Promise<boolean> | boolean;
   requestSkillSelection?: (options: string[]) => Promise<string | null> | string | null;
-  executeDeepResource?: (resource: DeepScanResource) => Promise<ResourceFetchResult>;
+  executeDeepResource?: (
+    resource: DeepScanResource,
+    context?: DeepResourceExecutionContext,
+  ) => Promise<ResourceFetchResult>;
   launchSkills?: (args: string[], cwd: string) => SkillsWrapperLaunchResult;
   launchClawhub?: (args: string[], cwd: string) => ClawhubWrapperLaunchResult;
   runSkillsWrapper?: (input: { version: string; skillsArgs: string[] }) => Promise<void>;
@@ -373,23 +387,10 @@ const defaultCliDeps: CliDeps = {
         }),
   discoverLocalTextTargets: (_scanTarget, _config, discoveryContext) =>
     discoveryContext ? discoverLocalTextAnalysisTargetsFromContext(discoveryContext) : [],
-  // Deep resource execution never makes outbound network calls.
-  // Connecting to URLs found in scanned config files is a security risk:
-  // the endpoint could be malicious (crafted responses, SSRF, IP logging).
-  // Instead, we record the URL as metadata for the agent to analyze.
-  executeDeepResource: async (resource) => {
-    return {
-      status: "ok" as const,
-      attempts: 0,
-      elapsedMs: 0,
-      metadata: {
-        resource_id: resource.id,
-        resource_kind: resource.request.kind,
-        resource_url: resource.request.locator,
-        note: "URL recorded for analysis without making outbound connections.",
-      },
-    };
-  },
+  // URL resources are never fetched (SSRF/IP-logging risk); npm/pypi registry
+  // metadata is fetched from pinned hosts only when runtime_mode is "online".
+  // See createDeepResourceExecutor for the full policy.
+  executeDeepResource: createDeepResourceExecutor(),
   launchSkills: (args, cwd) => launchSkillsPassthrough(args, cwd),
   launchClawhub: (args, cwd) => launchClawhubPassthrough(args, cwd),
 };
@@ -851,6 +852,117 @@ function addClawhubCommand(program: Command, version: string, deps: CliDeps): vo
     });
 }
 
+async function promptTrustConsent(directory: string): Promise<boolean> {
+  const rl = createInterface({
+    input: process.stdin,
+    output: process.stdout,
+  });
+
+  const prompt = [
+    `Trusting ${directory} lets its .codegate.json set scanner policy`,
+    "(allowlists, rule skips, suppressions) and relaxes launch gating for it.",
+    "Only trust directories whose contents you control.",
+    "Proceed? [y/N]: ",
+  ].join("\n");
+
+  try {
+    const answer = await rl.question(prompt);
+    return /^y(es)?$/iu.test(answer.trim());
+  } finally {
+    rl.close();
+  }
+}
+
+function addTrustCommand(program: Command, deps: CliDeps): void {
+  program
+    .command("trust [dir]")
+    .description("Manage trusted directories where project config policy is honored")
+    .option("--list", "list trusted directories")
+    .option("--remove <dir>", "remove a directory from the trusted list")
+    .option("--config <path>", "use a specific global config file")
+    .option("--yes", "skip the confirmation prompt")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate trust",
+        "codegate trust ./project --yes",
+        "codegate trust --list",
+        "codegate trust --remove ./project",
+      ]),
+    )
+    .action(
+      async (
+        dir: string | undefined,
+        options: { list?: boolean; remove?: string; config?: string; yes?: boolean },
+      ) => {
+        try {
+          if (options.list) {
+            const listed = listTrustedDirectories({ configPath: options.config });
+            if (listed.trustedDirectories.length === 0) {
+              deps.stdout(`No trusted directories configured (${listed.configPath}).`);
+            } else {
+              deps.stdout(`Trusted directories (${listed.configPath}):`);
+              for (const entry of listed.trustedDirectories) {
+                deps.stdout(`  ${entry}`);
+              }
+            }
+            deps.setExitCode(0);
+            return;
+          }
+
+          if (options.remove) {
+            const removed = removeTrustedDirectory({
+              dir: options.remove,
+              cwd: deps.cwd(),
+              configPath: options.config,
+            });
+            deps.stdout(
+              removed.changed
+                ? `Removed ${removed.directory} from trusted directories.`
+                : `${removed.directory} was not in the trusted list.`,
+            );
+            deps.setExitCode(0);
+            return;
+          }
+
+          const targetDir = dir ?? ".";
+          const resolvedPreview = resolve(deps.cwd(), targetDir);
+          if (!options.yes) {
+            const requestConsent =
+              deps.requestTrustConsent ?? (deps.isTTY() ? promptTrustConsent : undefined);
+            if (!requestConsent) {
+              deps.stderr("Confirmation required. Re-run with --yes to trust non-interactively.");
+              deps.setExitCode(3);
+              return;
+            }
+            const approved = await requestConsent(resolvedPreview);
+            if (!approved) {
+              deps.stdout("Trust not granted.");
+              deps.setExitCode(1);
+              return;
+            }
+          }
+
+          const added = addTrustedDirectory({
+            dir: targetDir,
+            cwd: deps.cwd(),
+            configPath: options.config,
+          });
+          deps.stdout(
+            added.changed
+              ? `Trusted ${added.directory} (${added.configPath}).`
+              : `${added.directory} is already trusted.`,
+          );
+          deps.setExitCode(0);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          deps.stderr(`Trust failed: ${message}`);
+          deps.setExitCode(3);
+        }
+      },
+    );
+}
+
 function addUndoCommand(program: Command, deps: CliDeps): void {
   program
     .command("undo [dir]")
@@ -1010,35 +1122,71 @@ function renderInventoryText(summary: InventorySummary, stdout: (line: string) =
 }
 
 function addUpdateCommands(program: Command, deps: CliDeps): void {
-  const guidance = [
-    "Updates are bundled with CodeGate releases in v1/v2.",
-    "Run: npm update -g codegate-ai",
-    "Or run latest directly: npx codegate-ai@latest scan .",
-  ];
+  const registerUpdateCommand = (name: string, description: string): void => {
+    program
+      .command(name)
+      .description(description)
+      .option("--check", "check for a newer signed content bundle without installing")
+      .option("--rollback", "switch back to the previously installed content version")
+      .option(
+        "--url <baseUrl>",
+        "override the content download base URL (the signature is still required to verify)",
+      )
+      .addHelpText(
+        "after",
+        renderExampleHelp([
+          `codegate ${name}`,
+          `codegate ${name} --check`,
+          `codegate ${name} --rollback`,
+        ]),
+      )
+      .action(async (options: { check?: boolean; rollback?: boolean; url?: string }) => {
+        try {
+          if (options.rollback) {
+            const rolledBack = rollbackContent();
+            deps.stdout(`Rolled back to content version ${rolledBack.version}.`);
+            deps.setExitCode(0);
+            return;
+          }
 
-  program
-    .command("update-kb")
-    .description("Check for newer knowledge-base content")
-    .addHelpText("after", renderExampleHelp(["codegate update-kb"]))
-    .action(() => {
-      deps.stdout("update-kb:");
-      for (const line of guidance) {
-        deps.stdout(line);
-      }
-      deps.setExitCode(0);
-    });
+          if (options.check) {
+            const checked = await checkContentUpdate({}, { baseUrl: options.url });
+            deps.stdout(`Installed content: ${checked.currentVersion ?? "bundled only"}`);
+            deps.stdout(`Latest published:  ${checked.remoteVersion}`);
+            deps.stdout(
+              checked.updateAvailable
+                ? `Update available. Run: codegate ${name}`
+                : "Content is up to date.",
+            );
+            deps.setExitCode(0);
+            return;
+          }
 
-  program
-    .command("update-rules")
-    .description("Check for newer rules content")
-    .addHelpText("after", renderExampleHelp(["codegate update-rules"]))
-    .action(() => {
-      deps.stdout("update-rules:");
-      for (const line of guidance) {
-        deps.stdout(line);
-      }
-      deps.setExitCode(0);
-    });
+          const updated = await updateContent({}, { baseUrl: options.url });
+          if (updated.changed) {
+            deps.stdout(
+              `Updated content: ${updated.previousVersion ?? "bundled only"} -> ${updated.version}`,
+            );
+            if (updated.pruned.length > 0) {
+              deps.stdout(`Pruned old versions: ${updated.pruned.join(", ")}`);
+            }
+          } else {
+            deps.stdout(`Content already up to date (${updated.version}).`);
+          }
+          deps.setExitCode(0);
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          deps.stderr(`${name} failed: ${message}`);
+          deps.setExitCode(3);
+        }
+      });
+  };
+
+  registerUpdateCommand(
+    "update-kb",
+    "Fetch and verify the signed content bundle (knowledge base, rules, phrase lists)",
+  );
+  registerUpdateCommand("update-rules", "Alias of update-kb: content ships as one signed bundle");
 }
 
 function resolveKnowledgeBaseVersion(): string {
@@ -1078,6 +1226,7 @@ export function createCli(
   addSkillsCommand(program, version, deps);
   addClawhubCommand(program, version, deps);
   addRunCommand(program, version, deps);
+  addTrustCommand(program, deps);
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
   addInventoryCommand(program, deps);

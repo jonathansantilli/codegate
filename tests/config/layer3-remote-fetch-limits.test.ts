@@ -34,13 +34,16 @@ describe("layer3 remote fetch limits config", () => {
     expect(DEFAULT_CONFIG.layer3_remote_fetch_max_bytes).toBe(1_048_576);
   });
 
-  it("honours project config > global config > defaults", () => {
+  it("honours trusted project config > global config > defaults", () => {
     const home = makeTempDir("codegate-l3-files-home-");
     const project = makeTempDir("codegate-l3-files-project-");
     mkdirSync(join(home, ".codegate"), { recursive: true });
     writeFileSync(
       join(home, ".codegate", "config.json"),
       JSON.stringify({
+        // Fetch limits are policy keys, so the project override only
+        // applies when the target directory is trusted.
+        trusted_directories: [project],
         layer3_remote_fetch_timeout_ms: 7000,
         layer3_remote_fetch_max_bytes: 2048,
       }),
@@ -57,6 +60,26 @@ describe("layer3 remote fetch limits config", () => {
     expect(resolved.layer3_remote_fetch_timeout_ms).toBe(2500);
     // No project override on max_bytes => global value applies.
     expect(resolved.layer3_remote_fetch_max_bytes).toBe(2048);
+  });
+
+  it("ignores fetch-limit overrides from untrusted project config", () => {
+    const home = makeTempDir("codegate-l3-untrusted-home-");
+    const project = makeTempDir("codegate-l3-untrusted-project-");
+    mkdirSync(join(home, ".codegate"), { recursive: true });
+    writeFileSync(
+      join(home, ".codegate", "config.json"),
+      JSON.stringify({ layer3_remote_fetch_timeout_ms: 7000 }),
+      "utf8",
+    );
+    writeFileSync(
+      join(project, ".codegate.json"),
+      JSON.stringify({ layer3_remote_fetch_timeout_ms: 60000 }),
+      "utf8",
+    );
+
+    const resolved = resolveEffectiveConfig({ scanTarget: project, homeDir: home });
+    expect(resolved.layer3_remote_fetch_timeout_ms).toBe(7000);
+    expect(resolved.ignored_project_settings).toContain("layer3_remote_fetch_timeout_ms");
   });
 
   it("env var takes precedence over project and global config", () => {

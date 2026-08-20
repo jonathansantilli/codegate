@@ -1,4 +1,4 @@
-import type { Finding } from "../types/finding.js";
+import { SUPPRESSION_SOURCE, type Finding } from "../types/finding.js";
 
 export interface SuppressionRule {
   rule_id?: string;
@@ -213,10 +213,13 @@ export function applySuppressionPolicy<T extends Finding>(
     const ruleDisabled = rulePolicy?.disable === true;
     const ruleIgnoreMatch =
       rulePolicy?.ignore?.some((location) => matchesRulePolicyIgnore(finding, location)) ?? false;
+    const policyMatch = legacyMatch || ruleMatch || ruleDisabled || ruleIgnoreMatch;
 
     return {
       ...finding,
-      suppressed: finding.suppressed || legacyMatch || ruleMatch || ruleDisabled || ruleIgnoreMatch,
+      suppressed: finding.suppressed || policyMatch,
+      suppression_source:
+        finding.suppression_source ?? (policyMatch ? SUPPRESSION_SOURCE.Config : undefined),
     };
   });
 }

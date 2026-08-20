@@ -12,6 +12,10 @@ import {
   type ToolDescription,
 } from "./layer3-dynamic/tool-description-scanner.js";
 import { detectToxicFlows, type ToxicToolClass } from "./layer3-dynamic/toxic-flow.js";
+import {
+  deriveRegistryFindings,
+  type RegistryHeuristicsOptions,
+} from "./layer3-dynamic/registry-findings.js";
 import { applyReportSummary } from "./report-summary.js";
 import { withFindingFingerprint } from "./report/finding-fingerprint.js";
 import type { Finding } from "./types/finding.js";
@@ -256,14 +260,20 @@ function parseToolClassifications(
   return map;
 }
 
-function deriveLayer3ToolFindings(
+interface Layer3ToolAnalysis {
+  findings: Finding[];
+  toolDescriptions: ToolDescription[];
+  knownClassifications: ToolClassificationMap;
+}
+
+function analyzeLayer3Tools(
   resourceId: string,
   metadata: unknown,
   options: { unicodeAnalysis?: boolean } = {},
-): Finding[] {
+): Layer3ToolAnalysis {
   const toolEntries = parseToolEntries(metadata);
   if (toolEntries.length === 0) {
-    return [];
+    return { findings: [], toolDescriptions: [], knownClassifications: {} };
   }
 
   const toolDescriptions: ToolDescription[] = toolEntries.map((entry) => ({
@@ -272,18 +282,22 @@ function deriveLayer3ToolFindings(
   }));
   const knownClassifications = parseToolClassifications(metadata, toolEntries);
 
-  return [
-    ...scanToolDescriptions({
-      serverId: resourceId,
-      tools: toolDescriptions,
-      unicodeAnalysis: options.unicodeAnalysis,
-    }).map(withFindingFingerprint),
-    ...detectToxicFlows({
-      scopeId: resourceId,
-      tools: toolDescriptions,
-      knownClassifications,
-    }).map(withFindingFingerprint),
-  ];
+  return {
+    findings: [
+      ...scanToolDescriptions({
+        serverId: resourceId,
+        tools: toolDescriptions,
+        unicodeAnalysis: options.unicodeAnalysis,
+      }).map(withFindingFingerprint),
+      ...detectToxicFlows({
+        scopeId: resourceId,
+        tools: toolDescriptions,
+        knownClassifications,
+      }).map(withFindingFingerprint),
+    ],
+    toolDescriptions,
+    knownClassifications,
+  };
 }
 
 function layer3ErrorFinding(
@@ -314,11 +328,37 @@ function layer3ErrorFinding(
   });
 }
 
+export interface Layer3FindingOptions {
+  unicodeAnalysis?: boolean;
+  registryHeuristics?: RegistryHeuristicsOptions;
+}
+
 export function layer3OutcomesToFindings(
   outcomes: DeepScanOutcome[],
-  options: { unicodeAnalysis?: boolean } = {},
+  options: Layer3FindingOptions = {},
 ): Finding[] {
   const findings: Finding[] = [];
+  const workspaceTools: ToolDescription[] = [];
+  const workspaceClassifications: ToolClassificationMap = {};
+  const workspaceOrigins: Record<string, string> = {};
+  const contributingServers = new Set<string>();
+
+  const addWorkspaceTools = (resourceId: string, analysis: Layer3ToolAnalysis): void => {
+    for (const tool of analysis.toolDescriptions) {
+      // Keep workspace tool names unique across servers so origins stay unambiguous.
+      const uniqueName =
+        workspaceOrigins[tool.name] === undefined ? tool.name : `${tool.name}@${resourceId}`;
+      workspaceTools.push({ name: uniqueName, description: tool.description });
+      workspaceOrigins[uniqueName] = resourceId;
+      const classifications = analysis.knownClassifications[tool.name];
+      if (classifications && classifications.length > 0) {
+        workspaceClassifications[uniqueName] = classifications;
+      }
+    }
+    if (analysis.toolDescriptions.length > 0) {
+      contributingServers.add(resourceId);
+    }
+  };
 
   for (const outcome of outcomes) {
     if (!outcome.approved || outcome.status === "skipped_without_consent") {
@@ -344,8 +384,14 @@ export function layer3OutcomesToFindings(
     }
 
     const parsed = parseLayer3Response(outcome.resourceId, outcome.result.metadata);
-    const derived = deriveLayer3ToolFindings(outcome.resourceId, outcome.result.metadata, options);
-    const combined = [...parsed, ...derived];
+    const analysis = analyzeLayer3Tools(outcome.resourceId, outcome.result.metadata, options);
+    addWorkspaceTools(outcome.resourceId, analysis);
+    const registryFindings = deriveRegistryFindings(
+      outcome.resourceId,
+      outcome.result.metadata,
+      options.registryHeuristics,
+    ).map(withFindingFingerprint);
+    const combined = [...parsed, ...analysis.findings, ...registryFindings];
 
     // If a Layer 3 resource was fetched successfully but carries no
     // actionable metadata (no `findings[]`, no `tools[]`), that is not an
@@ -361,6 +407,20 @@ export function layer3OutcomesToFindings(
       continue;
     }
     findings.push(...combined);
+  }
+
+  // Cross-server pass: a toxic chain whose links live on different servers
+  // is invisible to the per-server analysis above.
+  if (contributingServers.size >= 2) {
+    findings.push(
+      ...detectToxicFlows({
+        scopeId: "workspace",
+        tools: workspaceTools,
+        knownClassifications: workspaceClassifications,
+        origins: workspaceOrigins,
+        crossOriginOnly: true,
+      }).map(withFindingFingerprint),
+    );
   }
 
   return findings;

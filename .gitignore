@@ -9,9 +9,14 @@ node_modules/
 !/docs/
 !/docs/assets/
 !/docs/assets/codegate-logo.png
+!/docs/content-feed.md
 !/docs/deep-scan.md
+!/docs/known-bad-format.md
+!/docs/plans/
+!/docs/plans/hardening-plan.md
 !/docs/public-evidence-map.md
 !/docs/remediation.md
+!/docs/trust-model.md
 !/docs/why-codegate.md
 
 # Internal/private assets kept out of the public repo
@@ -22,6 +27,7 @@ node_modules/
 # Runtime state and scan artifacts
 /.codegate/
 /.codegate-backup/
+/reports/
 /~/
 *.sarif
 

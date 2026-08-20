@@ -10,6 +10,7 @@ export default tseslint.config(
       "coverage/**",
       "docs/plans/**",
       "docs/showcase/**",
+      "reports/**",
       "showcase/**",
       "scripts/showcase/**",
       "~/**",
@@ -22,6 +23,14 @@ export default tseslint.config(
   ...tseslint.configs.recommended,
   {
     files: ["**/*.ts", "**/*.tsx"],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+  {
+    files: ["scripts/**/*.mjs"],
     languageOptions: {
       globals: {
         ...globals.node,

@@ -1,6 +1,14 @@
-import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import {
+  closeSync,
+  existsSync,
+  openSync,
+  readSync,
+  readdirSync,
+  readFileSync,
+  statSync,
+} from "node:fs";
 import { homedir } from "node:os";
-import { basename, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import {
   collectLocalTextAnalysisTargets,
   type LocalTextAnalysisTarget,
@@ -30,6 +38,12 @@ import {
   applyInlineIgnoreDirectives,
   collectInlineIgnoreDirectives,
 } from "./config/inline-ignore.js";
+import { isTrustedDirectory } from "./config/trust.js";
+import { loadKnownBadIndicators } from "./content/known-bad.js";
+import { escalateKnownBadFindings } from "./layer2-static/detectors/known-bad.js";
+import { normalizeForMatching } from "./layer2-static/text/normalize.js";
+import { REMOTE_INSTRUCTION_INDIRECTION_PATTERN } from "./layer2-static/text/threat-patterns.js";
+import { withFindingFingerprint } from "./report/finding-fingerprint.js";
 import { isGitHubDependabotPath } from "./layer2-static/dependabot/parser.js";
 import type { DiscoveryFormat } from "./types/discovery.js";
 import type { Finding } from "./types/finding.js";
@@ -48,6 +62,44 @@ const MCP_SERVER_CONTAINER_KEYS = ["mcpServers", "mcp_servers", "context_servers
 const REMOTE_MCP_SERVER_ARRAY_KEYS = ["remoteMCPServers", "remote_mcp_servers"] as const;
 const USER_SCOPE_WILDCARD_MAX_DEPTH = 6;
 const USER_SCOPE_WILDCARD_MAX_FILES = 500;
+const SKILL_FILE_NAME = "skill.md";
+const SKILL_SIBLING_MAX_DEPTH = 3;
+const SKILL_SIBLING_MAX_FILES = 200;
+const BINARY_SNIFF_BYTES = 512;
+
+const SKILL_SIBLING_FORMATS: Readonly<Record<string, DiscoveryFormat>> = {
+  md: "markdown",
+  markdown: "markdown",
+  json: "json",
+  yaml: "yaml",
+  yml: "yaml",
+  toml: "toml",
+  sh: "text",
+  bash: "text",
+  zsh: "text",
+  ps1: "text",
+  py: "text",
+  js: "text",
+  mjs: "text",
+  cjs: "text",
+  ts: "text",
+  rb: "text",
+  txt: "text",
+};
+
+export const SKILL_BINARY_KIND = {
+  Elf: "elf",
+  MachO: "mach-o",
+  Pe: "pe",
+  Unknown: "binary",
+} as const;
+export type SkillBinaryKind = (typeof SKILL_BINARY_KIND)[keyof typeof SKILL_BINARY_KIND];
+
+export interface SkillBinaryArtifact {
+  reportPath: string;
+  kind: SkillBinaryKind;
+  executable: boolean;
+}
 
 export interface ScanEngineInput {
   version: string;
@@ -91,6 +143,7 @@ export interface ScanDiscoveryContext {
   walked: WalkResult;
   selected: ScanDiscoveryCandidate[];
   parsedCandidates?: ParsedScanDiscoveryCandidate[];
+  skillBinaries?: SkillBinaryArtifact[];
 }
 
 export interface ScanDiscoveryContextOptions {
@@ -137,12 +190,20 @@ function escapeRegex(value: string): string {
   return value.replace(/[|\\{}()[\]^$+?.*]/g, "\\$&");
 }
 
+const wildcardRegexCache = new Map<string, RegExp>();
+
 function wildcardToRegex(pattern: string): RegExp {
+  const cached = wildcardRegexCache.get(pattern);
+  if (cached) {
+    return cached;
+  }
   let escaped = escapeRegex(pattern);
   escaped = escaped.replace(/\\\*\\\*\//g, "(?:[^/]+/)*");
   escaped = escaped.replace(/\\\*\\\*/g, ".*");
   escaped = escaped.replace(/\\\*/g, "[^/]*");
-  return new RegExp(`^${escaped}$`, "u");
+  const regex = new RegExp(`^${escaped}$`, "u");
+  wildcardRegexCache.set(pattern, regex);
+  return regex;
 }
 
 function normalizePathForMatch(path: string): string {
@@ -433,15 +494,16 @@ function collectSelectedCandidates(
     }))
     .filter((entry) => !entry.relativePath.startsWith(".."));
 
+  const projectPatterns = patterns
+    .filter((candidate) => candidate.scope === "project")
+    .map((candidate) => ({ candidate, regex: wildcardToRegex(candidate.pattern) }));
+
   for (const file of filesByRelativePath) {
     if (!includeProject) {
       continue;
     }
-    for (const candidate of patterns) {
-      if (candidate.scope !== "project") {
-        continue;
-      }
-      if (!wildcardToRegex(candidate.pattern).test(file.relativePath)) {
+    for (const { candidate, regex } of projectPatterns) {
+      if (!regex.test(file.relativePath)) {
         continue;
       }
       if (!matchesCollectionKinds(file.relativePath, options.collectKinds)) {
@@ -591,6 +653,163 @@ function mergeExplicitCandidates(
   return Array.from(merged.values());
 }
 
+interface SniffResult {
+  binaryKind: SkillBinaryKind | null;
+  hasShebang: boolean;
+}
+
+function sniffFileHead(path: string): SniffResult {
+  const buffer = Buffer.alloc(BINARY_SNIFF_BYTES);
+  let bytesRead: number;
+  try {
+    const fd = openSync(path, "r");
+    try {
+      bytesRead = readSync(fd, buffer, 0, BINARY_SNIFF_BYTES, 0);
+    } finally {
+      closeSync(fd);
+    }
+  } catch {
+    return { binaryKind: null, hasShebang: false };
+  }
+
+  const head = buffer.subarray(0, bytesRead);
+  const hasShebang = bytesRead >= 2 && head[0] === 0x23 && head[1] === 0x21;
+
+  if (
+    bytesRead >= 4 &&
+    head[0] === 0x7f &&
+    head[1] === 0x45 &&
+    head[2] === 0x4c &&
+    head[3] === 0x46
+  ) {
+    return { binaryKind: SKILL_BINARY_KIND.Elf, hasShebang: false };
+  }
+  const magic = bytesRead >= 4 ? head.readUInt32BE(0) : 0;
+  if (
+    magic === 0xfeedface ||
+    magic === 0xfeedfacf ||
+    magic === 0xcefaedfe ||
+    magic === 0xcffaedfe ||
+    magic === 0xcafebabe
+  ) {
+    return { binaryKind: SKILL_BINARY_KIND.MachO, hasShebang: false };
+  }
+  if (bytesRead >= 2 && head[0] === 0x4d && head[1] === 0x5a) {
+    return { binaryKind: SKILL_BINARY_KIND.Pe, hasShebang: false };
+  }
+  if (head.includes(0)) {
+    return { binaryKind: SKILL_BINARY_KIND.Unknown, hasShebang: false };
+  }
+  return { binaryKind: null, hasShebang };
+}
+
+function isSkillCandidate(candidate: ScanDiscoveryCandidate): boolean {
+  return basename(normalizePathForMatch(candidate.reportPath)).toLowerCase() === SKILL_FILE_NAME;
+}
+
+function siblingReportPath(candidate: ScanDiscoveryCandidate, siblingAbsolute: string): string {
+  const skillDir = dirname(candidate.absolutePath);
+  const relFromSkillDir = normalizePathForMatch(relative(skillDir, siblingAbsolute));
+  const normalizedReport = normalizePathForMatch(candidate.reportPath);
+  const slashIndex = normalizedReport.lastIndexOf("/");
+  const parentReport = slashIndex >= 0 ? normalizedReport.slice(0, slashIndex) : "";
+  return parentReport ? `${parentReport}/${relFromSkillDir}` : relFromSkillDir;
+}
+
+/**
+ * Skills ship payloads next to SKILL.md (helper scripts, nested docs,
+ * sometimes binaries). Collect text-like siblings as scan candidates so the
+ * rule-file detectors see them, and record binary artifacts for reporting.
+ */
+function collectSkillSiblings(selected: ScanDiscoveryCandidate[]): {
+  candidates: ScanDiscoveryCandidate[];
+  binaries: SkillBinaryArtifact[];
+} {
+  const known = new Set(selected.map((candidate) => normalizePathForMatch(candidate.reportPath)));
+  const candidates: ScanDiscoveryCandidate[] = [];
+  const binaries: SkillBinaryArtifact[] = [];
+  const visitedDirs = new Set<string>();
+
+  for (const skillCandidate of selected.filter(isSkillCandidate)) {
+    const skillDir = dirname(skillCandidate.absolutePath);
+    if (visitedDirs.has(skillDir)) {
+      continue;
+    }
+    visitedDirs.add(skillDir);
+
+    let filesSeen = 0;
+    const queue: Array<{ dir: string; depth: number }> = [{ dir: skillDir, depth: 0 }];
+    while (queue.length > 0 && filesSeen < SKILL_SIBLING_MAX_FILES) {
+      const current = queue.pop();
+      if (!current) {
+        break;
+      }
+
+      let entries;
+      try {
+        entries = readdirSync(current.dir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+
+      for (const entry of entries) {
+        if (filesSeen >= SKILL_SIBLING_MAX_FILES) {
+          break;
+        }
+        if (entry.isSymbolicLink()) {
+          continue;
+        }
+        const absolutePath = join(current.dir, entry.name);
+        if (entry.isDirectory()) {
+          if (current.depth < SKILL_SIBLING_MAX_DEPTH) {
+            queue.push({ dir: absolutePath, depth: current.depth + 1 });
+          }
+          continue;
+        }
+        if (!entry.isFile() || absolutePath === skillCandidate.absolutePath) {
+          continue;
+        }
+        filesSeen += 1;
+
+        const reportPath = siblingReportPath(skillCandidate, absolutePath);
+        if (known.has(reportPath)) {
+          continue;
+        }
+
+        const sniffed = sniffFileHead(absolutePath);
+        if (sniffed.binaryKind) {
+          let executable: boolean;
+          try {
+            executable = (statSync(absolutePath).mode & 0o111) !== 0;
+          } catch {
+            executable = false;
+          }
+          binaries.push({ reportPath, kind: sniffed.binaryKind, executable });
+          continue;
+        }
+
+        const extension = entry.name.includes(".")
+          ? (entry.name.split(".").pop() ?? "").toLowerCase()
+          : "";
+        const format = SKILL_SIBLING_FORMATS[extension] ?? (sniffed.hasShebang ? "text" : null);
+        if (!format) {
+          continue;
+        }
+
+        known.add(reportPath);
+        candidates.push({
+          reportPath,
+          absolutePath,
+          format,
+          tool: skillCandidate.tool,
+        });
+      }
+    }
+  }
+
+  return { candidates, binaries };
+}
+
 function inferArtifactCandidate(
   relativePath: string,
   absolutePath: string,
@@ -628,6 +847,63 @@ function ensureParsedCandidates(context: ScanDiscoveryContext): ParsedScanDiscov
     context.parsedCandidates = parseSelectedCandidates(context.selected);
   }
   return context.parsedCandidates;
+}
+
+function makeUntrustedProjectConfigFinding(ignoredSettings: string[]): Finding {
+  return {
+    rule_id: "untrusted-project-config",
+    finding_id: "UNTRUSTED_PROJECT_CONFIG-.codegate.json",
+    severity: "INFO",
+    category: "CONFIG_CHANGE",
+    layer: "L1",
+    file_path: ".codegate.json",
+    location: { field: ignoredSettings.join(", ") },
+    description:
+      `Ignored ${ignoredSettings.length} policy setting(s) from untrusted project config: ` +
+      `${ignoredSettings.join(", ")}. Project config in untrusted directories may only set ` +
+      "presentation options. Run `codegate trust <dir>` to honor its policy settings.",
+    affected_tools: [],
+    cve: null,
+    owasp: [],
+    cwe: "CWE-807",
+    confidence: "HIGH",
+    fixable: false,
+    remediation_actions: [],
+    suppressed: false,
+  };
+}
+
+function makeSkillBinaryFinding(artifact: SkillBinaryArtifact): Finding {
+  const isExecutableFormat = artifact.kind !== SKILL_BINARY_KIND.Unknown;
+  const severity: Finding["severity"] =
+    artifact.executable || isExecutableFormat ? "HIGH" : "MEDIUM";
+  const kindLabel = isExecutableFormat ? `${artifact.kind} executable` : "binary file";
+
+  return {
+    rule_id: "skill-binary-payload",
+    finding_id: `SKILL_BINARY-${artifact.reportPath}`,
+    severity,
+    category: "COMMAND_EXEC",
+    layer: "L1",
+    file_path: artifact.reportPath,
+    location: { field: "content" },
+    description:
+      `Skill directory ships a ${kindLabel}${artifact.executable ? " with execute permissions" : ""}. ` +
+      "Binary payloads cannot be reviewed as text and have no place in an instruction skill.",
+    affected_tools: ["claude-code", "codex-cli", "opencode", "cursor"],
+    cve: null,
+    owasp: ["ASI02"],
+    cwe: "CWE-506",
+    confidence: "HIGH",
+    fixable: true,
+    remediation_actions: ["quarantine_file"],
+    metadata: {
+      sources: [artifact.reportPath],
+      risk_tags: ["skill", "binary-payload"],
+      origin: "skill-siblings",
+    },
+    suppressed: false,
+  };
 }
 
 function makeParseErrorFinding(
@@ -704,7 +980,7 @@ function commandResourceFromTokens(
       id: `npm:${locator}`,
       kind: "npm",
       locator,
-      preview: `npm view ${locator} --json`,
+      preview: `GET https://registry.npmjs.org/${locator}  (online mode only; offline records the package name)`,
     };
   }
 
@@ -717,7 +993,7 @@ function commandResourceFromTokens(
       id: `pypi:${locator}`,
       kind: "pypi",
       locator,
-      preview: `https://pypi.org/pypi/${locator}/json`,
+      preview: `GET https://pypi.org/pypi/${locator}/json  (online mode only; offline records the package name)`,
     };
   }
 
@@ -884,7 +1160,7 @@ export function createScanDiscoveryContext(
   const collectModes = normalizeCollectionModes(options.collectModes);
   const collectKinds = normalizeCollectionKinds(options.collectKinds);
   const explicitOnly = collectModes.size === 1 && collectModes.has("explicit");
-  const selected = mergeExplicitCandidates(
+  const baseSelected = mergeExplicitCandidates(
     explicitOnly
       ? []
       : collectSelectedCandidates(absoluteTarget, walked.files, patterns, {
@@ -896,6 +1172,8 @@ export function createScanDiscoveryContext(
     options.explicitCandidates,
     collectKinds,
   );
+  const skillSiblings = collectSkillSiblings(baseSelected);
+  const selected = [...baseSelected, ...skillSiblings.candidates];
 
   return {
     absoluteTarget,
@@ -903,7 +1181,37 @@ export function createScanDiscoveryContext(
     walked,
     selected,
     parsedCandidates: options.parseSelected ? parseSelectedCandidates(selected) : undefined,
+    skillBinaries: skillSiblings.binaries,
   };
+}
+
+function collectIndirectionUrlResources(
+  textContent: string,
+  filePath: string,
+  resources: Map<string, DeepScanResource>,
+): void {
+  const lines = textContent.split(/\r?\n/u);
+  for (const line of lines) {
+    const normalized = normalizeForMatching(line);
+    if (!REMOTE_INSTRUCTION_INDIRECTION_PATTERN.test(normalized)) {
+      continue;
+    }
+    const urlMatch = line.match(/https?:\/\/[^\s)\]"'`<>]+/iu);
+    if (!urlMatch) {
+      continue;
+    }
+    const url = urlMatch[0];
+    const kind = inferHttpKind(url);
+    const id = `${kind}:${url}`;
+    if (resources.has(id)) {
+      continue;
+    }
+    resources.set(id, {
+      id,
+      request: { id, kind, locator: url },
+      commandPreview: `GET ${url}  (from ${filePath} -> remote instruction indirection)`,
+    });
+  }
 }
 
 export function discoverDeepScanResourcesFromContext(
@@ -911,10 +1219,12 @@ export function discoverDeepScanResourcesFromContext(
 ): DeepScanResource[] {
   const discovered = new Map<string, DeepScanResource>();
   for (const item of ensureParsedCandidates(context)) {
-    if (!item.parsed.ok) {
-      continue;
+    if (item.parsed.ok) {
+      collectDeepScanResourcesFromParsed(item.parsed.data, item.reportPath, discovered);
     }
-    collectDeepScanResourcesFromParsed(item.parsed.data, item.reportPath, discovered);
+    if (item.format === "markdown" || item.format === "text") {
+      collectIndirectionUrlResources(readCandidateText(item), item.reportPath, discovered);
+    }
   }
 
   return Array.from(discovered.values()).sort((a, b) => a.id.localeCompare(b.id));
@@ -965,6 +1275,10 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
     });
   const absoluteTarget = context.absoluteTarget;
   const kb = context.kb;
+  const scanHomeDir = input.homeDir;
+  const knownBadIndicators = loadKnownBadIndicators(
+    scanHomeDir ? { homeDir: () => scanHomeDir } : {},
+  );
   const parseErrors: Finding[] = [];
   const staticFiles: StaticFileInput[] = [];
 
@@ -1037,6 +1351,7 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
       runtimeMode: input.config.runtime_mode,
       workflowAuditsEnabled: input.config.workflow_audits?.enabled === true,
       rulePolicies: input.config.rules,
+      knownBadIndicators,
     },
   });
 
@@ -1047,12 +1362,17 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
     }
   }
 
-  const previousState = loadScanState(input.scanStatePath);
+  const trustedTarget =
+    input.config.project_config_trusted ??
+    isTrustedDirectory(absoluteTarget, input.config.trusted_directories);
+  const previousState = loadScanState(input.scanStatePath, absoluteTarget);
   const stateResult = evaluateScanStateSnapshots({
     snapshots: Array.from(snapshots.values()),
     previousState,
+    trustedTarget,
+    firstScanReview: input.config.first_scan_review,
   });
-  saveScanState(stateResult.nextState, input.scanStatePath);
+  saveScanState(stateResult.nextState, input.scanStatePath, absoluteTarget);
 
   const inlineIgnores = collectInlineIgnoreDirectives(
     staticFiles.map((file) => ({
@@ -1060,9 +1380,27 @@ export async function runScanEngine(input: ScanEngineInput): Promise<CodeGateRep
       textContent: file.textContent,
     })),
   );
+  const ignoredProjectSettings = input.config.ignored_project_settings ?? [];
+  const configNoticeFindings =
+    ignoredProjectSettings.length > 0
+      ? [withFindingFingerprint(makeUntrustedProjectConfigFinding(ignoredProjectSettings))]
+      : [];
+  const skillBinaryFindings = (context.skillBinaries ?? []).map((artifact) =>
+    withFindingFingerprint(makeSkillBinaryFinding(artifact)),
+  );
   const findings = applyInlineIgnoreDirectives(
-    [...report.findings, ...parseErrors, ...stateResult.findings],
+    escalateKnownBadFindings(
+      [
+        ...report.findings,
+        ...parseErrors,
+        ...stateResult.findings,
+        ...configNoticeFindings,
+        ...skillBinaryFindings,
+      ],
+      knownBadIndicators,
+    ),
     inlineIgnores,
+    { trustedTarget },
   );
   return applyReportSummary({
     ...report,

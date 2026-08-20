@@ -5,7 +5,10 @@ import { detectEnvOverrides } from "./detectors/env-override.js";
 import { detectGitHookIssues, type GitHookEntry } from "./detectors/git-hooks.js";
 import { detectIdeSettingsIssues } from "./detectors/ide-settings.js";
 import { detectPluginManifestIssues } from "./detectors/plugin-manifest.js";
+import { detectKnownBadContent } from "./detectors/known-bad.js";
+import { detectMcpPackageHygiene } from "./detectors/mcp-package-hygiene.js";
 import { detectRuleFileIssues } from "./detectors/rule-file.js";
+import { detectSkillFrontmatterIssues } from "./detectors/skill-frontmatter.js";
 import { detectSymlinkEscapes, type SymlinkEscapeEntry } from "./detectors/symlink.js";
 import { detectWorkflowExcessivePermissions } from "./detectors/workflow-excessive-permissions.js";
 import { detectWorkflowDangerousTriggers } from "./detectors/workflow-dangerous-triggers.js";
@@ -58,6 +61,7 @@ import { FINDING_CATEGORIES, type Finding } from "../types/finding.js";
 import type { DiscoveryFormat } from "../types/discovery.js";
 import { buildFindingEvidence } from "./evidence.js";
 import { evaluateRule, loadRulePacks, type DetectionRule } from "./rule-engine.js";
+import type { ResolvedKnownBadIndicators } from "../content/known-bad.js";
 
 export interface StaticFileInput {
   filePath: string;
@@ -82,6 +86,7 @@ export interface StaticEngineConfig {
   runtimeMode?: RuntimeMode;
   workflowAuditsEnabled?: boolean;
   rulePolicies?: Record<string, { disable?: boolean; config?: Record<string, unknown> }>;
+  knownBadIndicators?: ResolvedKnownBadIndicators;
 }
 
 export interface StaticEngineInput {
@@ -193,13 +198,8 @@ function findingFromRulePackMatch(file: StaticFileInput, rule: DetectionRule): F
   };
 }
 
-function hasEquivalentFinding(findings: Finding[], candidate: Finding): boolean {
-  return findings.some(
-    (finding) =>
-      finding.rule_id === candidate.rule_id &&
-      finding.file_path === candidate.file_path &&
-      (finding.location.field ?? "") === (candidate.location.field ?? ""),
-  );
+function findingEquivalenceKey(finding: Finding): string {
+  return `${finding.rule_id} ${finding.file_path} ${finding.location.field ?? ""}`;
 }
 
 function dedupeFindings(findings: Finding[]): Finding[] {
@@ -309,6 +309,37 @@ function buildFileAudits(): Array<RegisteredAudit<FileAuditContext>> {
               filePath: file.filePath,
               textContent: file.textContent,
               unicodeAnalysis: input.config.unicodeAnalysis,
+            })
+          : [],
+    },
+    {
+      id: "skill-frontmatter",
+      run: ({ file }) =>
+        file.format === "markdown"
+          ? detectSkillFrontmatterIssues({
+              filePath: file.filePath,
+              textContent: file.textContent,
+            })
+          : [],
+    },
+    {
+      id: "mcp-package-hygiene",
+      run: ({ file, input }) =>
+        detectMcpPackageHygiene({
+          filePath: file.filePath,
+          parsed: file.parsed,
+          knownSafeMcpServers: input.config.knownSafeMcpServers,
+        }),
+    },
+    {
+      id: "known-bad",
+      run: ({ file, input }) =>
+        input.config.knownBadIndicators
+          ? detectKnownBadContent({
+              filePath: file.filePath,
+              parsed: file.parsed,
+              textContent: file.textContent,
+              indicators: input.config.knownBadIndicators,
             })
           : [],
     },
@@ -832,6 +863,13 @@ function buildGlobalAudits(): Array<RegisteredAudit<GlobalAuditContext>> {
 
 export async function runStaticEngine(input: StaticEngineInput): Promise<Finding[]> {
   const findings: Finding[] = [];
+  const seenEquivalenceKeys = new Set<string>();
+  const pushFindings = (batch: Finding[]): void => {
+    for (const finding of batch) {
+      findings.push(finding);
+      seenEquivalenceKeys.add(findingEquivalenceKey(finding));
+    }
+  };
   const runtimeSelection = {
     persona: input.config.persona,
     runtimeMode: input.config.runtimeMode,
@@ -847,7 +885,7 @@ export async function runStaticEngine(input: StaticEngineInput): Promise<Finding
 
   for (const file of input.files) {
     for (const audit of activeFileAudits) {
-      findings.push(...(await audit.run({ file, input })));
+      pushFindings(await audit.run({ file, input }));
     }
 
     for (const rule of rulePackRules) {
@@ -863,14 +901,14 @@ export async function runStaticEngine(input: StaticEngineInput): Promise<Finding
       }
 
       const candidate = findingFromRulePackMatch(file, rule);
-      if (!hasEquivalentFinding(findings, candidate)) {
-        findings.push(candidate);
+      if (!seenEquivalenceKeys.has(findingEquivalenceKey(candidate))) {
+        pushFindings([candidate]);
       }
     }
   }
 
   for (const audit of activeGlobalAudits) {
-    findings.push(...(await audit.run({ input })));
+    pushFindings(await audit.run({ input }));
   }
 
   return dedupeFindings(findings);

@@ -4,6 +4,7 @@ import { join, resolve } from "node:path";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { Finding } from "./types/finding.js";
 import type { CodeGateReport } from "./types/report.js";
+import { isTrustedDirectory } from "./config/trust.js";
 import { applyReportSummary, computeExitCode as computeReportExitCode } from "./report-summary.js";
 import {
   applySuppressionPolicy,
@@ -46,6 +47,10 @@ export interface WorkflowAuditConfig {
   enabled: boolean;
 }
 
+export interface RegistryHeuristicsConfig {
+  recent_publish_days: number;
+}
+
 export interface CodeGateConfig {
   severity_threshold: SeverityThreshold;
   auto_proceed_below_threshold: boolean;
@@ -62,6 +67,8 @@ export interface CodeGateConfig {
   known_safe_hooks: string[];
   unicode_analysis: boolean;
   check_ide_settings: boolean;
+  /** Emit review findings for MCP servers seen for the first time in a project. */
+  first_scan_review?: boolean;
   owasp_mapping: boolean;
   trusted_api_domains: string[];
   rule_pack_paths?: string[];
@@ -74,6 +81,7 @@ export interface CodeGateConfig {
   persona?: AuditPersona;
   runtime_mode?: RuntimeMode;
   workflow_audits?: WorkflowAuditConfig;
+  registry_heuristics?: RegistryHeuristicsConfig;
   suppress_findings: string[];
   suppression_rules?: SuppressionRule[];
   /**
@@ -92,6 +100,10 @@ export interface CodeGateConfig {
    * `CODEGATE_LAYER3_REMOTE_FETCH_MAX_BYTES`.
    */
   layer3_remote_fetch_max_bytes: number;
+  /** True when the scan target sits inside a globally trusted directory. */
+  project_config_trusted?: boolean;
+  /** Policy keys present in the target's .codegate.json that were ignored because the target is untrusted. */
+  ignored_project_settings?: string[];
 }
 
 interface PartialTuiConfig {
@@ -122,6 +134,7 @@ interface PartialCodeGateConfig {
   known_safe_hooks?: string[];
   unicode_analysis?: boolean;
   check_ide_settings?: boolean;
+  first_scan_review?: boolean;
   owasp_mapping?: boolean;
   trusted_api_domains?: string[];
   rule_pack_paths?: string[];
@@ -135,6 +148,9 @@ interface PartialCodeGateConfig {
   runtime_mode?: string;
   workflow_audits?: {
     enabled?: boolean;
+  };
+  registry_heuristics?: {
+    recent_publish_days?: number;
   };
   suppress_findings?: string[];
   suppression_rules?: SuppressionRule[];
@@ -181,6 +197,7 @@ export const DEFAULT_CONFIG: CodeGateConfig = {
   known_safe_hooks: [],
   unicode_analysis: true,
   check_ide_settings: true,
+  first_scan_review: true,
   owasp_mapping: true,
   trusted_api_domains: [],
   rule_pack_paths: [],
@@ -191,6 +208,7 @@ export const DEFAULT_CONFIG: CodeGateConfig = {
   persona: "regular",
   runtime_mode: "offline",
   workflow_audits: { enabled: false },
+  registry_heuristics: { recent_publish_days: 30 },
   suppress_findings: [],
   suppression_rules: [],
   layer3_remote_fetch_timeout_ms: 5000,
@@ -469,13 +487,67 @@ function pickFirst<T>(...values: Array<T | undefined>): T | undefined {
   return undefined;
 }
 
+// Presentation-only keys the scan target's .codegate.json may always set.
+// Every other key is policy: it changes what is detected, suppressed,
+// executed, or gated, so untrusted targets must not control it.
+export const PROJECT_COSMETIC_KEYS = ["output_format", "tui", "owasp_mapping"] as const;
+export type ProjectCosmeticKey = (typeof PROJECT_COSMETIC_KEYS)[number];
+
+// Keys never honored from project config, whether the target is trusted or not.
+export const PROJECT_FORBIDDEN_KEYS = ["trusted_directories"] as const;
+export type ProjectForbiddenKey = (typeof PROJECT_FORBIDDEN_KEYS)[number];
+
+function isProjectCosmeticKey(key: string): key is ProjectCosmeticKey {
+  return (PROJECT_COSMETIC_KEYS as readonly string[]).includes(key);
+}
+
+function isProjectForbiddenKey(key: string): key is ProjectForbiddenKey {
+  return (PROJECT_FORBIDDEN_KEYS as readonly string[]).includes(key);
+}
+
+function isProjectKeyHonored(key: string, trusted: boolean): boolean {
+  if (isProjectForbiddenKey(key)) {
+    return false;
+  }
+  return trusted || isProjectCosmeticKey(key);
+}
+
+function partitionProjectConfig(
+  projectConfig: PartialCodeGateConfig,
+  trusted: boolean,
+): { effective: PartialCodeGateConfig; ignoredKeys: string[] } {
+  const effective: PartialCodeGateConfig = {};
+  const ignoredKeys: string[] = [];
+
+  for (const [key, value] of Object.entries(projectConfig)) {
+    if (value === undefined) {
+      continue;
+    }
+    if (isProjectKeyHonored(key, trusted)) {
+      (effective as Record<string, unknown>)[key] = value;
+      continue;
+    }
+    ignoredKeys.push(key);
+  }
+
+  return { effective, ignoredKeys: ignoredKeys.sort() };
+}
+
 export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateConfig {
   const home = options.homeDir ?? homedir();
   const scanTarget = resolve(options.scanTarget);
   const globalConfigPath = options.cli?.configPath ?? join(home, ".codegate", "config.json");
 
   const globalConfig = readConfigFile(globalConfigPath);
-  const projectConfig = readConfigFile(join(scanTarget, ".codegate.json"));
+  const rawProjectConfig = readConfigFile(join(scanTarget, ".codegate.json"));
+  const projectConfigTrusted = isTrustedDirectory(
+    scanTarget,
+    unique([DEFAULT_CONFIG.trusted_directories, globalConfig.trusted_directories]),
+  );
+  const { effective: projectConfig, ignoredKeys: ignoredProjectSettings } = partitionProjectConfig(
+    rawProjectConfig,
+    projectConfigTrusted,
+  );
 
   const severity_threshold =
     pickFirst(
@@ -595,6 +667,12 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
         globalConfig.check_ide_settings,
         DEFAULT_CONFIG.check_ide_settings,
       ) ?? DEFAULT_CONFIG.check_ide_settings,
+    first_scan_review:
+      pickFirst(
+        projectConfig.first_scan_review,
+        globalConfig.first_scan_review,
+        DEFAULT_CONFIG.first_scan_review,
+      ) ?? true,
     owasp_mapping:
       pickFirst(
         projectConfig.owasp_mapping,
@@ -663,6 +741,14 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
           DEFAULT_CONFIG.workflow_audits?.enabled,
         ) ?? false,
     },
+    registry_heuristics: {
+      recent_publish_days:
+        pickFirst(
+          projectConfig.registry_heuristics?.recent_publish_days,
+          globalConfig.registry_heuristics?.recent_publish_days,
+          DEFAULT_CONFIG.registry_heuristics?.recent_publish_days,
+        ) ?? 30,
+    },
     suppress_findings: unique([
       DEFAULT_CONFIG.suppress_findings,
       globalConfig.suppress_findings,
@@ -687,6 +773,9 @@ export function resolveEffectiveConfig(options: ResolveConfigOptions): CodeGateC
         normalizePositiveInteger(globalConfig.layer3_remote_fetch_max_bytes),
         DEFAULT_CONFIG.layer3_remote_fetch_max_bytes,
       ) ?? DEFAULT_CONFIG.layer3_remote_fetch_max_bytes,
+    project_config_trusted: projectConfigTrusted,
+    ignored_project_settings:
+      ignoredProjectSettings.length > 0 ? ignoredProjectSettings : undefined,
   };
 }
 

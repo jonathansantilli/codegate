@@ -25,6 +25,27 @@ export type FindingCategory = (typeof FINDING_CATEGORIES)[number];
 export type FindingLayer = "L1" | "L2" | "L3";
 export type FindingConfidence = "HIGH" | "MEDIUM" | "LOW";
 
+/**
+ * Where a suppression came from. InlineUntrusted marks inline
+ * `codegate: ignore[...]` directives found in content the user has not
+ * trusted; such findings stay visibly suppressed in reports but still
+ * count toward the exit code so untrusted content cannot self-approve.
+ */
+export const SUPPRESSION_SOURCE = {
+  Inline: "inline",
+  InlineUntrusted: "inline-untrusted",
+  Config: "config",
+} as const;
+export type SuppressionSource = (typeof SUPPRESSION_SOURCE)[keyof typeof SUPPRESSION_SOURCE];
+
+export function isUntrustedInlineSuppression(
+  finding: Pick<Finding, "suppressed" | "suppression_source">,
+): boolean {
+  return (
+    finding.suppressed === true && finding.suppression_source === SUPPRESSION_SOURCE.InlineUntrusted
+  );
+}
+
 export interface FindingLocation {
   field?: string;
   line?: number;
@@ -77,4 +98,5 @@ export interface Finding {
   incident_primary?: boolean | null;
   source_config?: FindingSourceConfig | null;
   suppressed: boolean;
+  suppression_source?: SuppressionSource | null;
 }
