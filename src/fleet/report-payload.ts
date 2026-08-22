@@ -142,6 +142,9 @@ export function toReportFinding(
     ...(finding.location?.line !== undefined ? { line: finding.location.line } : {}),
     ...(finding.location?.column !== undefined ? { column: finding.location.column } : {}),
     description: finding.description,
+    // The scanner's evidence is authoritative: it already carries the
+    // offending line with its invisible characters intact, which is precisely
+    // what the console needs to show.
     ...(finding.evidence ? { evidence: finding.evidence } : {}),
     owasp: finding.owasp ?? [],
     cwe: finding.cwe,
