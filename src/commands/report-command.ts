@@ -3,6 +3,7 @@ import { resolveFleetConfig, type FleetConfigDeps } from "../fleet/fleet-config.
 import { resolveMachineId, type MachineIdentityDeps } from "../fleet/machine-identity.js";
 import { sendReport, type SendReportDeps } from "../fleet/report-client.js";
 import { buildReportPayload, type HashDeps, type HostFacts } from "../fleet/report-payload.js";
+import type { Finding } from "../types/finding.js";
 import type { InventorySummary } from "./inventory-command.js";
 
 /**
@@ -16,13 +17,25 @@ import type { InventorySummary } from "./inventory-command.js";
 export interface ReportCommandDeps
   extends MachineIdentityDeps, FleetConfigDeps, SendReportDeps, HashDeps {
   collectInventory: () => InventorySummary;
+  /**
+   * Runs a scan of this machine. Omitted when the caller wants an
+   * inventory-only report — which the server reads as "nothing asserted about
+   * findings", not as "this machine is clean".
+   */
+  collectFindings?: () => Promise<Finding[]> | Finding[];
   agentVersion?: string;
   now?: () => Date;
   hostFacts?: () => HostFacts;
 }
 
 export type ReportOutcome =
-  | { status: "sent"; hostId: string; itemsAccepted: number; itemsHashed: number }
+  | {
+      status: "sent";
+      hostId: string;
+      itemsAccepted: number;
+      itemsHashed: number;
+      findingsSent: number | null;
+    }
   | { status: "not-configured"; reason: string }
   | { status: "failed"; reason: string; retryable: boolean };
 
@@ -48,12 +61,15 @@ export async function runReport(deps: ReportCommandDeps): Promise<ReportOutcome>
     return { status: "not-configured", reason: configured.reason };
   }
 
+  const findings = deps.collectFindings ? await deps.collectFindings() : undefined;
+
   const payload = buildReportPayload(
     {
       machineId: resolveMachineId(deps),
       agentVersion: deps.agentVersion,
       host: (deps.hostFacts ?? defaultHostFacts)(),
       inventory: deps.collectInventory(),
+      findings,
       collectedAt: (deps.now ?? (() => new Date()))(),
     },
     deps,
@@ -71,6 +87,7 @@ export async function runReport(deps: ReportCommandDeps): Promise<ReportOutcome>
         hostId: result.hostId,
         itemsAccepted: result.itemsAccepted,
         itemsHashed,
+        findingsSent: payload.findings?.length ?? null,
       }
     : { status: "failed", reason: result.reason, retryable: result.retryable };
 }

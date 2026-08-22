@@ -26,6 +26,7 @@ import {
   type ResolveConfigOptions,
 } from "./config.js";
 import { runReport } from "./commands/report-command.js";
+import type { Finding } from "./types/finding.js";
 import { resolveMachineId } from "./fleet/machine-identity.js";
 import { buildReportPayload } from "./fleet/report-payload.js";
 import { APP_NAME } from "./index.js";
@@ -1062,6 +1063,7 @@ interface InventoryCliOptions {
 interface ReportCliOptions {
   workspace?: string[];
   dryRun?: boolean;
+  inventoryOnly?: boolean;
 }
 
 function addReportCommand(program: Command, version: string, deps: CliDeps): void {
@@ -1077,11 +1079,16 @@ function addReportCommand(program: Command, version: string, deps: CliDeps): voi
       [] as string[],
     )
     .option("--dry-run", "print the report that would be sent, without sending it")
+    .option(
+      "--inventory-only",
+      "report installed artifacts without scanning them; the server then asserts nothing about findings",
+    )
     .addHelpText(
       "after",
       renderExampleHelp([
         "codegate report",
         "codegate report --dry-run",
+        "codegate report --inventory-only",
         "codegate report --workspace . --workspace /path/to/other/repo",
       ]),
     )
@@ -1099,6 +1106,23 @@ function addReportCommand(program: Command, version: string, deps: CliDeps): voi
           workspaces,
           homeDir: home,
         });
+
+      // Scanning is what turns an asset list into a security report. Skipping
+      // it is explicit, because the server distinguishes "no findings" from
+      // "findings not looked for".
+      const collectFindings =
+        options.inventoryOnly === true
+          ? undefined
+          : async (): Promise<Finding[]> => {
+              const scanTarget = deps.cwd();
+              const report = await deps.runScan({
+                version,
+                scanTarget,
+                config: deps.resolveConfig({ scanTarget, homeDir: home }),
+                flags: { format: "json", noTui: true, force: true },
+              });
+              return report.findings;
+            };
 
       try {
         if (options.dryRun === true) {
@@ -1121,12 +1145,17 @@ function addReportCommand(program: Command, version: string, deps: CliDeps): voi
         const outcome = await runReport({
           homeDir: () => home,
           collectInventory,
+          collectFindings,
           agentVersion: version,
         });
 
         if (outcome.status === "sent") {
+          const findings =
+            outcome.findingsSent === null
+              ? "no scan run"
+              : `${outcome.findingsSent} finding${outcome.findingsSent === 1 ? "" : "s"}`;
           deps.stdout(
-            `Reported ${outcome.itemsAccepted} artifact${outcome.itemsAccepted === 1 ? "" : "s"} (${outcome.itemsHashed} hashed).`,
+            `Reported ${outcome.itemsAccepted} artifact${outcome.itemsAccepted === 1 ? "" : "s"} (${outcome.itemsHashed} hashed, ${findings}).`,
           );
           deps.setExitCode(0);
           return;

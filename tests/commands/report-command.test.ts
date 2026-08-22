@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { InventorySummary } from "../../src/commands/inventory-command";
 import { runReport, type ReportCommandDeps } from "../../src/commands/report-command";
+import type { Finding } from "../../src/types/finding";
 import { SERVER_ENV, TOKEN_ENV } from "../../src/fleet/fleet-config";
 
 const CONTENT = "skill body";
@@ -58,6 +59,7 @@ describe("runReport", () => {
       hostId: "h-1",
       itemsAccepted: 1,
       itemsHashed: 1,
+      findingsSent: null,
     });
   });
 
@@ -163,5 +165,92 @@ describe("runReport", () => {
 
     expect(ids).toHaveLength(2);
     expect(ids[0]).toBe(ids[1]);
+  });
+});
+
+describe("runReport with findings", () => {
+  // Shaped as the scanner emits it; only the fields the wire format keeps.
+  const finding = {
+    finding_id: "f-1",
+    rule_id: "known-malicious-content",
+    fingerprint: "sha256:fp-1",
+    severity: "CRITICAL",
+    category: "RULE_INJECTION",
+    layer: "L2",
+    file_path: "/home/u/.claude/skills/podcast/SKILL.md",
+    location: { line: 7, column: 27 },
+    description: "Skill matches a known-bad indicator",
+    affected_tools: [],
+    owasp: ["ASI02"],
+    cwe: "CWE-506",
+    confidence: "HIGH",
+    fixable: false,
+    remediation_actions: [],
+    suppressed: false,
+  } as unknown as Finding;
+
+  it("sends findings when a scan ran, and ties each to the file's hash", async () => {
+    let body: { findings?: { sha256?: string; line?: number }[] } | undefined;
+
+    const outcome = await runReport(
+      deps({
+        collectFindings: () => [finding],
+        fetch: (async (_url: string, init: RequestInit) => {
+          body = JSON.parse(String(init.body));
+          return new Response(JSON.stringify({ hostId: "h", reportId: "r", itemsAccepted: 1 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }) as unknown as typeof fetch,
+      }),
+    );
+
+    expect(outcome.status).toBe("sent");
+    if (outcome.status !== "sent") return;
+    expect(outcome.findingsSent).toBe(1);
+    expect(body?.findings?.[0].sha256).toMatch(/^sha256:[0-9a-f]{64}$/);
+    expect(body?.findings?.[0].line).toBe(7);
+  });
+
+  // Omitted and empty mean different things: the server treats an empty list
+  // as "this machine is clean" and an absent one as "nothing asserted".
+  it("omits findings entirely when no scan ran", async () => {
+    let body: { findings?: unknown } | undefined;
+
+    await runReport(
+      deps({
+        fetch: (async (_url: string, init: RequestInit) => {
+          body = JSON.parse(String(init.body));
+          return new Response(JSON.stringify({ hostId: "h", reportId: "r", itemsAccepted: 1 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }) as unknown as typeof fetch,
+      }),
+    );
+
+    expect(body).not.toHaveProperty("findings");
+  });
+
+  it("sends an empty list when a scan ran and found nothing", async () => {
+    let body: { findings?: unknown[] } | undefined;
+
+    const outcome = await runReport(
+      deps({
+        collectFindings: () => [],
+        fetch: (async (_url: string, init: RequestInit) => {
+          body = JSON.parse(String(init.body));
+          return new Response(JSON.stringify({ hostId: "h", reportId: "r", itemsAccepted: 1 }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          });
+        }) as unknown as typeof fetch,
+      }),
+    );
+
+    expect(body?.findings).toEqual([]);
+    expect(outcome.status).toBe("sent");
+    if (outcome.status !== "sent") return;
+    expect(outcome.findingsSent).toBe(0);
   });
 });
