@@ -26,6 +26,7 @@ import {
   type ResolveConfigOptions,
 } from "./config.js";
 import { runReport } from "./commands/report-command.js";
+import { enrolMachine } from "./fleet/enrol-client.js";
 import type { Finding } from "./types/finding.js";
 import { resolveMachineId } from "./fleet/machine-identity.js";
 import { buildReportPayload } from "./fleet/report-payload.js";
@@ -1060,6 +1061,51 @@ interface InventoryCliOptions {
   format?: "text" | "json";
 }
 
+interface EnrolCliOptions {
+  server?: string;
+  code?: string;
+}
+
+function addEnrolCommand(program: Command, deps: CliDeps): void {
+  program
+    .command("enrol")
+    .description(
+      "Enrol this machine with a Guardian server, exchanging a code for the token it reports with.",
+    )
+    .requiredOption("--server <url>", "Guardian server URL")
+    .requiredOption("--code <code>", "enrolment code from an operator")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate enrol --server https://guardian.acme.internal --code FLEET-7K2M-9XQ4",
+      ]),
+    )
+    .action(async (options: EnrolCliOptions) => {
+      const home = deps.homeDir?.() ?? homedir();
+
+      try {
+        const result = await enrolMachine(
+          { server: options.server ?? "", code: options.code ?? "" },
+          { homeDir: () => home },
+        );
+
+        if (result.ok) {
+          deps.stdout(`Enrolled with ${result.server}.`);
+          deps.stdout(`Wrote ${result.configPath}. Run "codegate report" to check in.`);
+          deps.setExitCode(0);
+          return;
+        }
+
+        deps.stderr(`enrol failed: ${result.reason}`);
+        deps.setExitCode(3);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`enrol failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
 interface ReportCliOptions {
   workspace?: string[];
   dryRun?: boolean;
@@ -1375,6 +1421,7 @@ export function createCli(
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
   addInventoryCommand(program, deps);
+  addEnrolCommand(program, deps);
   addReportCommand(program, version, deps);
   addUpdateCommands(program, deps);
   return program;
