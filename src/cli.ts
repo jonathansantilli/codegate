@@ -2,7 +2,12 @@
 
 import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { homedir } from "node:os";
+import {
+  homedir,
+  hostname as osHostname,
+  platform as osPlatform,
+  release as osRelease,
+} from "node:os";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { pathToFileURL } from "node:url";
@@ -20,6 +25,9 @@ import {
   type OutputFormat,
   type ResolveConfigOptions,
 } from "./config.js";
+import { runReport } from "./commands/report-command.js";
+import { resolveMachineId } from "./fleet/machine-identity.js";
+import { buildReportPayload } from "./fleet/report-payload.js";
 import { APP_NAME } from "./index.js";
 import {
   createDeepResourceExecutor,
@@ -1051,6 +1059,97 @@ interface InventoryCliOptions {
   format?: "text" | "json";
 }
 
+interface ReportCliOptions {
+  workspace?: string[];
+  dryRun?: boolean;
+}
+
+function addReportCommand(program: Command, version: string, deps: CliDeps): void {
+  program
+    .command("report")
+    .description(
+      "Report this machine's AI-tool inventory to a Guardian server. Sends only; nothing is received or changed.",
+    )
+    .option(
+      "--workspace <path>",
+      "additional project-scope root (repeatable); defaults to cwd when omitted",
+      collectRepeatable,
+      [] as string[],
+    )
+    .option("--dry-run", "print the report that would be sent, without sending it")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate report",
+        "codegate report --dry-run",
+        "codegate report --workspace . --workspace /path/to/other/repo",
+      ]),
+    )
+    .action(async (options: ReportCliOptions) => {
+      const home = deps.homeDir?.() ?? homedir();
+      const explicit = options.workspace ?? [];
+      const workspaces =
+        explicit.length > 0 ? explicit.map((w) => resolve(deps.cwd(), w)) : [deps.cwd()];
+
+      const collectInventory = (): InventorySummary =>
+        runInventory({
+          scope: "all",
+          kind: "all",
+          onlyExisting: false,
+          workspaces,
+          homeDir: home,
+        });
+
+      try {
+        if (options.dryRun === true) {
+          const payload = buildReportPayload({
+            machineId: resolveMachineId({ homeDir: () => home }),
+            agentVersion: version,
+            host: {
+              hostname: osHostname(),
+              platform: osPlatform(),
+              osRelease: osRelease(),
+            },
+            inventory: collectInventory(),
+            collectedAt: new Date(),
+          });
+          deps.stdout(JSON.stringify(payload, null, 2));
+          deps.setExitCode(0);
+          return;
+        }
+
+        const outcome = await runReport({
+          homeDir: () => home,
+          collectInventory,
+          agentVersion: version,
+        });
+
+        if (outcome.status === "sent") {
+          deps.stdout(
+            `Reported ${outcome.itemsAccepted} artifact${outcome.itemsAccepted === 1 ? "" : "s"} (${outcome.itemsHashed} hashed).`,
+          );
+          deps.setExitCode(0);
+          return;
+        }
+
+        if (outcome.status === "not-configured") {
+          deps.stderr(`report: ${outcome.reason}`);
+          deps.setExitCode(3);
+          return;
+        }
+
+        deps.stderr(
+          `report failed: ${outcome.reason}${outcome.retryable ? " (will succeed on a later run if the server returns)" : ""}`,
+        );
+        deps.setExitCode(outcome.retryable ? 4 : 3);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`report failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
 function addInventoryCommand(program: Command, deps: CliDeps): void {
   program
     .command("inventory")
@@ -1246,6 +1345,7 @@ export function createCli(
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
   addInventoryCommand(program, deps);
+  addReportCommand(program, version, deps);
   addUpdateCommands(program, deps);
   return program;
 }
