@@ -131,3 +131,87 @@ describe("buildReportPayload", () => {
     expect(payload.inventory.items).toEqual([]);
   });
 });
+
+describe("finding paths", () => {
+  const finding = {
+    finding_id: "f-1",
+    rule_id: "env-base-url-override",
+    severity: "CRITICAL",
+    file_path: ".claude/settings.json",
+    location: { line: 3, column: 28 },
+    description: "Agent traffic redirected to a third party",
+    owasp: [],
+    suppressed: false,
+  } as unknown as import("../../src/types/finding").Finding;
+
+  const inventory = {
+    kb_version: "2026-08-20",
+    tools: [],
+    items: [
+      {
+        tool: "claude-code",
+        kind: "config" as const,
+        scope: "user" as const,
+        pattern: ".claude/settings.json",
+        path: "/repo/.claude/settings.json",
+        exists: true,
+        risk_surface: [],
+        resolved_against: "/repo",
+      },
+    ],
+  };
+
+  // The scanner reports paths relative to the scan root; inventory paths are
+  // absolute. This mismatch silently stripped every finding's hash until an
+  // end-to-end run exposed it.
+  it("resolves a scan-relative finding path against the scan root to find its hash", () => {
+    const payload = buildReportPayload(
+      {
+        machineId: "m",
+        host: { hostname: "h" },
+        inventory,
+        findings: [finding],
+        findingPathBase: "/repo",
+        collectedAt: new Date("2026-08-22T12:00:00Z"),
+      },
+      { readFile: () => CONTENT, fileSize: () => CONTENT.length },
+    );
+
+    expect(payload.findings?.[0].sha256).toBe(EXPECTED);
+    expect(payload.findings?.[0].file_path).toBe("/repo/.claude/settings.json");
+  });
+
+  it("leaves an already-absolute finding path alone", () => {
+    const payload = buildReportPayload(
+      {
+        machineId: "m",
+        host: { hostname: "h" },
+        inventory,
+        findings: [{ ...finding, file_path: "/repo/.claude/settings.json" } as typeof finding],
+        findingPathBase: "/somewhere/else",
+        collectedAt: new Date("2026-08-22T12:00:00Z"),
+      },
+      { readFile: () => CONTENT, fileSize: () => CONTENT.length },
+    );
+
+    expect(payload.findings?.[0].file_path).toBe("/repo/.claude/settings.json");
+    expect(payload.findings?.[0].sha256).toBe(EXPECTED);
+  });
+
+  it("sends the finding without a hash when no artifact matches", () => {
+    const payload = buildReportPayload(
+      {
+        machineId: "m",
+        host: { hostname: "h" },
+        inventory: { ...inventory, items: [] },
+        findings: [finding],
+        findingPathBase: "/repo",
+        collectedAt: new Date("2026-08-22T12:00:00Z"),
+      },
+      { readFile: () => CONTENT, fileSize: () => CONTENT.length },
+    );
+
+    expect(payload.findings).toHaveLength(1);
+    expect(payload.findings?.[0].sha256).toBeUndefined();
+  });
+});

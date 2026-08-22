@@ -23,6 +23,8 @@ export interface ReportCommandDeps
    * findings", not as "this machine is clean".
    */
   collectFindings?: () => Promise<Finding[]> | Finding[];
+  /** Scan root that finding paths are relative to. */
+  findingPathBase?: string;
   agentVersion?: string;
   now?: () => Date;
   hostFacts?: () => HostFacts;
@@ -70,6 +72,7 @@ export async function runReport(deps: ReportCommandDeps): Promise<ReportOutcome>
       host: (deps.hostFacts ?? defaultHostFacts)(),
       inventory: deps.collectInventory(),
       findings,
+      findingPathBase: deps.findingPathBase,
       collectedAt: (deps.now ?? (() => new Date()))(),
     },
     deps,

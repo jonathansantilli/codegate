@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { isAbsolute, resolve as resolvePath } from "node:path";
 import { readFileSync, statSync } from "node:fs";
 import type { InventoryItem, InventorySummary } from "../commands/inventory-command.js";
 import type { Finding } from "../types/finding.js";
@@ -60,6 +61,12 @@ export interface BuildReportInput {
   host: HostFacts;
   inventory: InventorySummary;
   findings?: Finding[];
+  /**
+   * Scan root that finding paths are relative to. The scanner reports paths
+   * relative to what it scanned, while inventory paths are absolute, so
+   * without this the two never line up and no finding gets a hash.
+   */
+  findingPathBase?: string;
   collectedAt: Date;
 }
 
@@ -109,8 +116,19 @@ export function withContentHashes(
  * it sits on so the server can tie it to an artifact variant rather than to a
  * path that differs between machines.
  */
-export function toReportFinding(finding: Finding, hashByPath: Map<string, string>): ReportFinding {
-  const sha256 = finding.file_path ? hashByPath.get(finding.file_path) : undefined;
+export function toReportFinding(
+  finding: Finding,
+  hashByPath: Map<string, string>,
+  pathBase?: string,
+): ReportFinding {
+  // The scanner reports paths relative to what it scanned; inventory paths are
+  // absolute. Without resolving one against the other they never line up and
+  // no finding ever gets a hash.
+  const absolutePath =
+    finding.file_path && pathBase && !isAbsolute(finding.file_path)
+      ? resolvePath(pathBase, finding.file_path)
+      : finding.file_path;
+  const sha256 = absolutePath ? hashByPath.get(absolutePath) : undefined;
 
   return {
     finding_id: finding.finding_id,
@@ -119,7 +137,7 @@ export function toReportFinding(finding: Finding, hashByPath: Map<string, string
     severity: finding.severity,
     category: finding.category,
     layer: finding.layer,
-    ...(finding.file_path ? { file_path: finding.file_path } : {}),
+    ...(absolutePath ? { file_path: absolutePath } : {}),
     ...(sha256 ? { sha256 } : {}),
     ...(finding.location?.line !== undefined ? { line: finding.location.line } : {}),
     ...(finding.location?.column !== undefined ? { column: finding.location.column } : {}),
@@ -150,7 +168,11 @@ export function buildReportPayload(input: BuildReportInput, deps: HashDeps = {})
     collectedAt: input.collectedAt.toISOString(),
     inventory: { ...input.inventory, items },
     ...(input.findings
-      ? { findings: input.findings.map((finding) => toReportFinding(finding, hashByPath)) }
+      ? {
+          findings: input.findings.map((finding) =>
+            toReportFinding(finding, hashByPath, input.findingPathBase),
+          ),
+        }
       : {}),
   };
 }

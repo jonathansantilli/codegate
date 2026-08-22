@@ -1146,6 +1146,7 @@ function addReportCommand(program: Command, version: string, deps: CliDeps): voi
           homeDir: () => home,
           collectInventory,
           collectFindings,
+          findingPathBase: deps.cwd(),
           agentVersion: version,
         });
 
