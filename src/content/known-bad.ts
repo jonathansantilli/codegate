@@ -135,7 +135,10 @@ export function loadKnownBadIndicators(deps: KnownBadDeps = {}): ResolvedKnownBa
 
   let feedIndicators: KnownBadIndicators;
   try {
-    feedIndicators = sanitizeIndicators(loadActiveContentBundle()?.known_bad);
+    // Must honour the caller's home directory. A container sets CODEGATE_HOME
+    // and a test points at a temp dir; reading the real home here leaked feed
+    // indicators across both boundaries.
+    feedIndicators = sanitizeIndicators(loadActiveContentBundle(deps)?.known_bad);
   } catch {
     feedIndicators = {};
   }
