@@ -112,6 +112,8 @@ See the [Configuration](#configuration) section for full settings and examples.
 | `codegate skills [...]`  | Wrap `npx skills` and preflight-scan `skills add` targets.                          |
 | `codegate clawhub [...]` | Wrap `npx clawhub` and preflight-scan `clawhub install` targets.                    |
 | `codegate undo [dir]`    | Restore the most recent remediation backup session. Defaults to `.`.                |
+| `codegate enrol`         | Connect this machine to a Guardian server (once, with a code from an operator).     |
+| `codegate report`        | Send this machine's inventory and findings to the Guardian server it enrolled with. |
 | `codegate init`          | Create `~/.codegate/config.json` with defaults.                                     |
 | `codegate trust [dir]`   | Trust a directory so its `.codegate.json` policy keys are honored.                  |
 | `codegate update-kb`     | Fetch, verify, and install signed knowledge-base content (`--check`, `--rollback`). |
@@ -334,6 +336,74 @@ Current local instruction-file agent support:
 - Codex CLI and OpenCode are not used for local text analysis until CodeGate can prove a shell-less mode for them.
 
 Deep scan behavior is documented in this README and verified by CLI/integration tests.
+
+## Reporting to a Guardian Server
+
+By default CodeGate is entirely local: it scans, prints, and forgets. If your
+organisation runs [CodeGate Guardian](https://github.com/jonathansantilli/codegate-guardian),
+this machine can also report what it found, so one person can see the whole
+fleet in one place.
+
+**Reporting is send-only.** Nothing comes back, and the server cannot reach
+this machine, change a file, or start a scan. Remediation still happens here,
+by you, and the next report is what shows it happened.
+
+### Connecting a machine
+
+Ask whoever runs the server for an enrolment code, then run this once:
+
+```bash
+codegate enrol --server https://guardian.example.internal --code FLEET-7K2M-9XQ4
+```
+
+That exchanges the code for a token belonging to this machine alone, written
+to `~/.codegate/fleet.json` readable only by you. **The code is single-use by
+default and expires** — it is a credential, so treat it like one, and prefer
+your MDM or configuration management over a group chat.
+
+Then check in whenever you like:
+
+```bash
+codegate report                    # scan, then send inventory and findings
+codegate report --dry-run          # print exactly what would be sent, send nothing
+codegate report --inventory-only   # send the artifact list without scanning it
+```
+
+`--dry-run` is worth using first: it prints the whole payload so you can see
+precisely what leaves the machine.
+
+### What is sent
+
+- The machine's hostname, platform, username and CodeGate version.
+- Every AI-tool artifact found — tool, kind, path, and a SHA-256 of the file's
+  contents.
+- Findings from the scan, each with the offending line as evidence.
+
+**File contents are never uploaded.** The server stores the hash, which is how
+it can tell that two machines carry the identical file without holding either.
+Evidence is the specific line that triggered a finding, not the file.
+
+`--inventory-only` skips scanning entirely. The server treats that differently
+from a clean scan: it will not mark anything as fixed on the strength of a
+report that never looked.
+
+### Enrolment can only happen once
+
+A machine that is already enrolled is refused (`409`). That is deliberate —
+otherwise anyone holding an enrolment code could claim an existing machine's
+identity and, by reporting no findings, make it look clean.
+
+If a machine genuinely needs to enrol again — re-imaged, or its
+`~/.codegate/fleet.json` lost — an operator restores it in the console first,
+which retires the old token and opens it for one new enrolment.
+
+### Exit codes
+
+| Code | Meaning                                                             |
+| ---- | ------------------------------------------------------------------- |
+| `0`  | Reported successfully.                                              |
+| `3`  | Something a person must fix: bad code, not enrolled, refused token. |
+| `4`  | Transient: server unreachable or erroring. Safe to retry.           |
 
 ## Remediation and Undo
 
