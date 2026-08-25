@@ -1,3 +1,9 @@
+## [1.2.1](https://github.com/jonathansantilli/codegate/compare/v1.2.0...v1.2.1) (2026-08-25)
+
+### Bug Fixes
+
+- **fleet:** read the machine id without checking first ([#121](https://github.com/jonathansantilli/codegate/issues/121)) ([5310c8e](https://github.com/jonathansantilli/codegate/commit/5310c8eac4d6a5008672618c303bf6abe7ebca9c))
+
 # [1.2.0](https://github.com/jonathansantilli/codegate/compare/v1.1.0...v1.2.0) (2026-08-25)
 
 ### Features
