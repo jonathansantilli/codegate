@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -44,15 +44,17 @@ function isUsable(value: string): boolean {
 export function resolveMachineId(deps: MachineIdentityDeps = {}): string {
   const path = machineIdPath(deps);
 
-  if (existsSync(path)) {
-    try {
-      const existing = readFileSync(path, "utf8").trim();
-      if (isUsable(existing)) {
-        return existing;
-      }
-    } catch {
-      // fall through and mint a new one
+  // No existsSync first: checking and then reading is a race, and the catch
+  // below already covers every reason the read can fail — absent, vanished
+  // between the two calls, unreadable, or not valid UTF-8. One syscall, one
+  // outcome.
+  try {
+    const existing = readFileSync(path, "utf8").trim();
+    if (isUsable(existing)) {
+      return existing;
     }
+  } catch {
+    // fall through and mint a new one
   }
 
   const generated = (deps.generateId ?? randomUUID)();
