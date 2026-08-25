@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { resolve as resolvePath } from "node:path";
 import { describe, expect, it } from "vitest";
 import type { InventoryItem, InventorySummary } from "../../src/commands/inventory-command";
 import {
@@ -133,6 +134,13 @@ describe("buildReportPayload", () => {
 });
 
 describe("finding paths", () => {
+  // The fixtures are written POSIX-style for readability, but the code
+  // resolves them with the host's own rules — on Windows "/repo" becomes
+  // "D:\\repo". Deriving the expectation the same way keeps this a test of
+  // the resolution behaviour rather than of the runner's platform.
+  const SCAN_ROOT = resolvePath("/repo");
+  const SETTINGS_PATH = resolvePath(SCAN_ROOT, ".claude/settings.json");
+
   const finding = {
     finding_id: "f-1",
     rule_id: "env-base-url-override",
@@ -153,10 +161,10 @@ describe("finding paths", () => {
         kind: "config" as const,
         scope: "user" as const,
         pattern: ".claude/settings.json",
-        path: "/repo/.claude/settings.json",
+        path: SETTINGS_PATH,
         exists: true,
         risk_surface: [],
-        resolved_against: "/repo",
+        resolved_against: SCAN_ROOT,
       },
     ],
   };
@@ -171,14 +179,14 @@ describe("finding paths", () => {
         host: { hostname: "h" },
         inventory,
         findings: [finding],
-        findingPathBase: "/repo",
+        findingPathBase: SCAN_ROOT,
         collectedAt: new Date("2026-08-22T12:00:00Z"),
       },
       { readFile: () => CONTENT, fileSize: () => CONTENT.length },
     );
 
     expect(payload.findings?.[0].sha256).toBe(EXPECTED);
-    expect(payload.findings?.[0].file_path).toBe("/repo/.claude/settings.json");
+    expect(payload.findings?.[0].file_path).toBe(SETTINGS_PATH);
   });
 
   it("leaves an already-absolute finding path alone", () => {
@@ -187,14 +195,14 @@ describe("finding paths", () => {
         machineId: "m",
         host: { hostname: "h" },
         inventory,
-        findings: [{ ...finding, file_path: "/repo/.claude/settings.json" } as typeof finding],
+        findings: [{ ...finding, file_path: SETTINGS_PATH } as typeof finding],
         findingPathBase: "/somewhere/else",
         collectedAt: new Date("2026-08-22T12:00:00Z"),
       },
       { readFile: () => CONTENT, fileSize: () => CONTENT.length },
     );
 
-    expect(payload.findings?.[0].file_path).toBe("/repo/.claude/settings.json");
+    expect(payload.findings?.[0].file_path).toBe(SETTINGS_PATH);
     expect(payload.findings?.[0].sha256).toBe(EXPECTED);
   });
 
@@ -205,7 +213,7 @@ describe("finding paths", () => {
         host: { hostname: "h" },
         inventory: { ...inventory, items: [] },
         findings: [finding],
-        findingPathBase: "/repo",
+        findingPathBase: SCAN_ROOT,
         collectedAt: new Date("2026-08-22T12:00:00Z"),
       },
       { readFile: () => CONTENT, fileSize: () => CONTENT.length },
