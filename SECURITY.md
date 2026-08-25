@@ -26,6 +26,20 @@ Please report vulnerabilities privately first.
 - We coordinate a fix and release timeline.
 - We publish an advisory after a fix is available (or mitigation guidance if no fix is immediately possible).
 
+## Known advisories in release tooling
+
+Dependabot reports `ip-address` and `undici` advisories against this
+repository. Both come from copies bundled inside `npm`, which is vendored by
+`@semantic-release/npm`, and both are **dev-only**: the published package
+contains `dist`, `README.md` and `LICENSE`, so none of it reaches anyone who
+installs `codegate-ai`.
+
+There is no upstream fix to take. `semantic-release` and `@semantic-release/npm`
+are already at their latest versions, `@semantic-release/npm` requires
+`npm ^11.6.2`, and npm 12.0.2 — the newest release — still bundles the same
+`ip-address@10.2.0` and `undici@6.27.0`. Upgrading changes nothing. Re-check
+when npm refreshes its bundled dependencies.
+
 ## Security Notes for Users
 
 - Use `--format sarif` in CI to keep security findings visible in code-scanning workflows.

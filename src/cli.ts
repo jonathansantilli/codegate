@@ -2,7 +2,12 @@
 
 import { existsSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { homedir } from "node:os";
+import {
+  homedir,
+  hostname as osHostname,
+  platform as osPlatform,
+  release as osRelease,
+} from "node:os";
 import { dirname, resolve } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { pathToFileURL } from "node:url";
@@ -20,6 +25,11 @@ import {
   type OutputFormat,
   type ResolveConfigOptions,
 } from "./config.js";
+import { runReport } from "./commands/report-command.js";
+import { enrolMachine } from "./fleet/enrol-client.js";
+import type { Finding } from "./types/finding.js";
+import { resolveMachineId } from "./fleet/machine-identity.js";
+import { buildReportPayload } from "./fleet/report-payload.js";
 import { APP_NAME } from "./index.js";
 import {
   createDeepResourceExecutor,
@@ -1051,6 +1061,171 @@ interface InventoryCliOptions {
   format?: "text" | "json";
 }
 
+interface EnrolCliOptions {
+  server?: string;
+  code?: string;
+}
+
+function addEnrolCommand(program: Command, deps: CliDeps): void {
+  program
+    .command("enrol")
+    .description(
+      "Enrol this machine with a Guardian server, exchanging a code for the token it reports with.",
+    )
+    .requiredOption("--server <url>", "Guardian server URL")
+    .requiredOption("--code <code>", "enrolment code from an operator")
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate enrol --server https://guardian.acme.internal --code FLEET-7K2M-9XQ4",
+      ]),
+    )
+    .action(async (options: EnrolCliOptions) => {
+      const home = deps.homeDir?.() ?? homedir();
+
+      try {
+        const result = await enrolMachine(
+          { server: options.server ?? "", code: options.code ?? "" },
+          { homeDir: () => home },
+        );
+
+        if (result.ok) {
+          deps.stdout(`Enrolled with ${result.server}.`);
+          deps.stdout(`Wrote ${result.configPath}. Run "codegate report" to check in.`);
+          deps.setExitCode(0);
+          return;
+        }
+
+        deps.stderr(`enrol failed: ${result.reason}`);
+        deps.setExitCode(3);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`enrol failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
+interface ReportCliOptions {
+  workspace?: string[];
+  dryRun?: boolean;
+  inventoryOnly?: boolean;
+}
+
+function addReportCommand(program: Command, version: string, deps: CliDeps): void {
+  program
+    .command("report")
+    .description(
+      "Report this machine's AI-tool inventory to a Guardian server. Sends only; nothing is received or changed.",
+    )
+    .option(
+      "--workspace <path>",
+      "additional project-scope root (repeatable); defaults to cwd when omitted",
+      collectRepeatable,
+      [] as string[],
+    )
+    .option("--dry-run", "print the report that would be sent, without sending it")
+    .option(
+      "--inventory-only",
+      "report installed artifacts without scanning them; the server then asserts nothing about findings",
+    )
+    .addHelpText(
+      "after",
+      renderExampleHelp([
+        "codegate report",
+        "codegate report --dry-run",
+        "codegate report --inventory-only",
+        "codegate report --workspace . --workspace /path/to/other/repo",
+      ]),
+    )
+    .action(async (options: ReportCliOptions) => {
+      const home = deps.homeDir?.() ?? homedir();
+      const explicit = options.workspace ?? [];
+      const workspaces =
+        explicit.length > 0 ? explicit.map((w) => resolve(deps.cwd(), w)) : [deps.cwd()];
+
+      const collectInventory = (): InventorySummary =>
+        runInventory({
+          scope: "all",
+          kind: "all",
+          onlyExisting: false,
+          workspaces,
+          homeDir: home,
+        });
+
+      // Scanning is what turns an asset list into a security report. Skipping
+      // it is explicit, because the server distinguishes "no findings" from
+      // "findings not looked for".
+      const collectFindings =
+        options.inventoryOnly === true
+          ? undefined
+          : async (): Promise<Finding[]> => {
+              const scanTarget = deps.cwd();
+              const report = await deps.runScan({
+                version,
+                scanTarget,
+                config: deps.resolveConfig({ scanTarget, homeDir: home }),
+                flags: { format: "json", noTui: true, force: true },
+              });
+              return report.findings;
+            };
+
+      try {
+        if (options.dryRun === true) {
+          const payload = buildReportPayload({
+            machineId: resolveMachineId({ homeDir: () => home }),
+            agentVersion: version,
+            host: {
+              hostname: osHostname(),
+              platform: osPlatform(),
+              osRelease: osRelease(),
+            },
+            inventory: collectInventory(),
+            collectedAt: new Date(),
+          });
+          deps.stdout(JSON.stringify(payload, null, 2));
+          deps.setExitCode(0);
+          return;
+        }
+
+        const outcome = await runReport({
+          homeDir: () => home,
+          collectInventory,
+          collectFindings,
+          findingPathBase: deps.cwd(),
+          agentVersion: version,
+        });
+
+        if (outcome.status === "sent") {
+          const findings =
+            outcome.findingsSent === null
+              ? "no scan run"
+              : `${outcome.findingsSent} finding${outcome.findingsSent === 1 ? "" : "s"}`;
+          deps.stdout(
+            `Reported ${outcome.itemsAccepted} artifact${outcome.itemsAccepted === 1 ? "" : "s"} (${outcome.itemsHashed} hashed, ${findings}).`,
+          );
+          deps.setExitCode(0);
+          return;
+        }
+
+        if (outcome.status === "not-configured") {
+          deps.stderr(`report: ${outcome.reason}`);
+          deps.setExitCode(3);
+          return;
+        }
+
+        deps.stderr(
+          `report failed: ${outcome.reason}${outcome.retryable ? " (will succeed on a later run if the server returns)" : ""}`,
+        );
+        deps.setExitCode(outcome.retryable ? 4 : 3);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        deps.stderr(`report failed: ${message}`);
+        deps.setExitCode(3);
+      }
+    });
+}
+
 function addInventoryCommand(program: Command, deps: CliDeps): void {
   program
     .command("inventory")
@@ -1246,6 +1421,8 @@ export function createCli(
   addUndoCommand(program, deps);
   addInitCommand(program, deps);
   addInventoryCommand(program, deps);
+  addEnrolCommand(program, deps);
+  addReportCommand(program, version, deps);
   addUpdateCommands(program, deps);
   return program;
 }

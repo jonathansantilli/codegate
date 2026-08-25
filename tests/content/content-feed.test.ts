@@ -135,6 +135,55 @@ describe("bundle signature verification", () => {
       /content_version/u,
     );
   });
+
+  // content_version names a directory the bundle is written into. Verifying
+  // the signature first means reaching that write with a hostile version
+  // already implies a compromised signing key — but one control is not a
+  // design, and the value is constrained before it can reach a path.
+  it("refuses a content_version that could escape the content directory", () => {
+    const hostile = [
+      "../../../../etc/cron.d/x",
+      "..",
+      ".",
+      "2026.08.01/../../evil",
+      "a/b",
+      "a\\b",
+      "/absolute",
+      ".hidden",
+      "with space",
+      "nul\u0000byte",
+    ];
+
+    for (const content_version of hostile) {
+      expect(() =>
+        parseContentBundle(
+          Buffer.from(
+            JSON.stringify({
+              schema_version: "1",
+              content_version,
+              released_at: "2026-08-01T00:00:00Z",
+            }),
+          ),
+        ),
+      ).toThrow(/unusable content_version/u);
+    }
+  });
+
+  it("accepts the version shapes the feed actually publishes", () => {
+    for (const content_version of ["2026.08.01", "2026.08.20.1", "2026.08.20.10"]) {
+      expect(
+        parseContentBundle(
+          Buffer.from(
+            JSON.stringify({
+              schema_version: "1",
+              content_version,
+              released_at: "2026-08-01T00:00:00Z",
+            }),
+          ),
+        ).content_version,
+      ).toBe(content_version);
+    }
+  });
 });
 
 describe("content updater", () => {
