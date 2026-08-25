@@ -1,3 +1,9 @@
+# [1.2.0](https://github.com/jonathansantilli/codegate/compare/v1.1.0...v1.2.0) (2026-08-25)
+
+### Features
+
+- **fleet:** report inventory and findings to a Guardian server ([#120](https://github.com/jonathansantilli/codegate/issues/120)) ([4ba8402](https://github.com/jonathansantilli/codegate/commit/4ba8402c691df62ccd1c4b0eb13cd6495e378d1b))
+
 # [1.1.0](https://github.com/jonathansantilli/codegate/compare/v1.0.2...v1.1.0) (2026-08-20)
 
 ### Features
