@@ -60,17 +60,24 @@ describe("enrolMachine", () => {
     expect(body.machineId?.length).toBeGreaterThan(0);
   });
 
-  // The token lets this machine report as itself; nobody else on the box needs it.
-  it("writes the token readable only by its owner", async () => {
-    const home = tempHome();
-    await enrolMachine(
-      { server: "https://guardian.acme.internal", code: "C" },
-      { homeDir: () => home, fetch: ok() },
-    );
+  // The token lets this machine report as itself; nobody else on the box needs
+  // it. POSIX modes do not exist on Windows — NTFS uses ACLs and Node's chmod
+  // cannot express 0600 there — so the assertion is made where the guarantee
+  // is real, rather than dropped or weakened everywhere to accommodate one
+  // platform. See docs on Windows permissions in the fleet README section.
+  it.skipIf(process.platform === "win32")(
+    "writes the token readable only by its owner",
+    async () => {
+      const home = tempHome();
+      await enrolMachine(
+        { server: "https://guardian.acme.internal", code: "C" },
+        { homeDir: () => home, fetch: ok() },
+      );
 
-    const mode = statSync(fleetConfigPath({ homeDir: () => home })).mode & 0o777;
-    expect(mode).toBe(0o600);
-  });
+      const mode = statSync(fleetConfigPath({ homeDir: () => home })).mode & 0o777;
+      expect(mode).toBe(0o600);
+    },
+  );
 
   it("keeps the machine id it already had", async () => {
     const home = tempHome();

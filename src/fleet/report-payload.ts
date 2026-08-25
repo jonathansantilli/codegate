@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { isAbsolute, resolve as resolvePath } from "node:path";
+import { isAbsolute, resolve as resolvePath, sep } from "node:path";
 import { readFileSync, statSync } from "node:fs";
 import type { InventoryItem, InventorySummary } from "../commands/inventory-command.js";
 import type { Finding } from "../types/finding.js";
@@ -116,6 +116,22 @@ export function withContentHashes(
  * it sits on so the server can tie it to an artifact variant rather than to a
  * path that differs between machines.
  */
+/**
+ * One spelling for a path, so a map key and a lookup cannot disagree.
+ *
+ * Inventory paths arrive as the scanner wrote them; finding paths are
+ * resolved against the scan root here. Comparing those two strings directly
+ * works only while they happen to be spelled identically — which they are not
+ * on Windows, where `resolve` returns backslashes and a finding silently
+ * loses its content hash. Both sides go through this, so the comparison is
+ * between normalised forms rather than between two spellings of the same
+ * file. Case is deliberately preserved: two names differing only in case are
+ * two files on Linux.
+ */
+function pathKey(candidate: string): string {
+  return resolvePath(candidate).split(sep).join("/");
+}
+
 export function toReportFinding(
   finding: Finding,
   hashByPath: Map<string, string>,
@@ -128,7 +144,7 @@ export function toReportFinding(
     finding.file_path && pathBase && !isAbsolute(finding.file_path)
       ? resolvePath(pathBase, finding.file_path)
       : finding.file_path;
-  const sha256 = absolutePath ? hashByPath.get(absolutePath) : undefined;
+  const sha256 = absolutePath ? hashByPath.get(pathKey(absolutePath)) : undefined;
 
   return {
     finding_id: finding.finding_id,
@@ -159,7 +175,7 @@ export function buildReportPayload(input: BuildReportInput, deps: HashDeps = {})
   const hashByPath = new Map(
     items
       .filter((item): item is InventoryItem & { sha256: string } => item.sha256 !== undefined)
-      .map((item) => [item.path, item.sha256]),
+      .map((item) => [pathKey(item.path), item.sha256]),
   );
 
   return {

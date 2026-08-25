@@ -14,6 +14,17 @@ export type KnownBadIndicatorKey = (typeof KNOWN_BAD_INDICATOR_KEYS)[number];
 
 export type KnownBadIndicators = Partial<Record<KnownBadIndicatorKey, string[]>>;
 
+/**
+ * What a content version may contain, given it names a directory on disk.
+ *
+ * Deliberately an allowlist of the characters a version could plausibly need
+ * — the feed publishes `YYYY.MM.DD` and `YYYY.MM.DD.N` today — rather than a
+ * pattern matching that exact shape, so a future `-rc1` does not break
+ * updates. What it cannot express is a path: no slash, no backslash, no NUL,
+ * no leading dot, and `..` is rejected separately.
+ */
+export const CONTENT_VERSION_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
+
 export interface ContentBundle {
   schema_version: string;
   content_version: string;
@@ -73,6 +84,18 @@ export function parseContentBundle(bundleBytes: Buffer): ContentBundle {
   }
   if (typeof parsed.content_version !== "string" || parsed.content_version.length === 0) {
     throw new Error("Content bundle is missing content_version");
+  }
+  // The version names a directory on disk, so it is constrained here rather
+  // than trusted at the point it is joined to a path. A bundle is signature
+  // verified before it is stored, so reaching that join with a hostile value
+  // already means the signing key is compromised — but a single control is
+  // not a design, and "../.." in a version string should never be one
+  // mistake away from writing outside the content root.
+  if (
+    !CONTENT_VERSION_PATTERN.test(parsed.content_version) ||
+    parsed.content_version.includes("..")
+  ) {
+    throw new Error(`Content bundle has an unusable content_version: ${parsed.content_version}`);
   }
   if (typeof parsed.released_at !== "string" || Number.isNaN(Date.parse(parsed.released_at))) {
     throw new Error("Content bundle is missing a valid released_at timestamp");

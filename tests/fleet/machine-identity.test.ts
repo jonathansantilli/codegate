@@ -26,7 +26,10 @@ describe("resolveMachineId", () => {
   });
 
   // The id correlates every report from a machine; it should not be world-readable.
-  it("writes the id readable only by its owner", () => {
+  // POSIX modes do not exist on Windows, so this is asserted where the
+  // guarantee is real rather than weakened everywhere to accommodate one
+  // platform.
+  it.skipIf(process.platform === "win32")("writes the id readable only by its owner", () => {
     const home = tempHome();
     resolveMachineId({ homeDir: () => home });
 

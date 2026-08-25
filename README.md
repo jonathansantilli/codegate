@@ -361,6 +361,12 @@ to `~/.codegate/fleet.json` readable only by you. **The code is single-use by
 default and expires** — it is a credential, so treat it like one, and prefer
 your MDM or configuration management over a group chat.
 
+On macOS and Linux that file is written with mode `0600`. Windows has no
+POSIX file modes: the file inherits the permissions of your user profile
+directory, which keeps it away from other standard users but is not the same
+guarantee. If your Windows machines share accounts, treat the token as
+readable by anyone who can log in.
+
 Then check in whenever you like:
 
 ```bash
