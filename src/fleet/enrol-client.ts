@@ -13,6 +13,17 @@ import { resolveMachineId, type MachineIdentityDeps } from "./machine-identity.j
 
 export const ENROL_PATH = "/api/agent/enrol";
 const DEFAULT_TIMEOUT_MS = 30_000;
+
+/**
+ * The longest token this will accept and write to disk.
+ *
+ * A real one is `cgm_` plus 32 base64url bytes — under fifty characters. The
+ * bound exists because the value comes from whatever server the operator
+ * pointed at: without it, a hostile or broken one can return a gigabyte of
+ * string and this writes all of it into the user's home directory. Generous
+ * enough that a longer token format would still fit.
+ */
+const MAX_TOKEN_LENGTH = 1024;
 /** The token is a fleet credential; nobody else on the machine needs it. */
 const FILE_MODE = 0o600;
 const DIR_MODE = 0o700;
@@ -88,6 +99,13 @@ export async function enrolMachine(
 
   if (typeof body.token !== "string" || body.token.length === 0) {
     return { ok: false, reason: `${url} did not return a token` };
+  }
+
+  if (body.token.length > MAX_TOKEN_LENGTH) {
+    return {
+      ok: false,
+      reason: `${url} returned a token of ${body.token.length} characters, which is not a token this server should be issuing`,
+    };
   }
 
   const configPath = fleetConfigPath(deps);

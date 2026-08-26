@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, statSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -199,6 +199,31 @@ describe("enrolMachine", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.reason).toContain("did not return a token");
+  });
+
+  // The token is whatever the server sends, and this writes it into the
+  // user's home directory. A hostile or broken server returning an enormous
+  // string should be refused rather than persisted.
+  it("refuses a token far larger than any real one, instead of writing it", async () => {
+    const home = tempHome();
+    const huge = `cgm_${"A".repeat(200_000)}`;
+
+    const result = await enrolMachine(
+      { server: "https://g.example", code: "C" },
+      {
+        homeDir: () => home,
+        fetch: (async () =>
+          new Response(JSON.stringify({ token: huge }), {
+            status: 200,
+            headers: { "content-type": "application/json" },
+          })) as unknown as typeof fetch,
+      },
+    );
+
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.reason).toContain("not a token this server should be issuing");
+    expect(existsSync(fleetConfigPath({ homeDir: () => home }))).toBe(false);
   });
 
   it("says so when enrolment worked but the config could not be written", async () => {
