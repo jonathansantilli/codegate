@@ -1,3 +1,9 @@
+## [1.2.3](https://github.com/jonathansantilli/codegate/compare/v1.2.2...v1.2.3) (2026-08-26)
+
+### Bug Fixes
+
+- **fleet:** bound the token an enrolling server can make us write ([#124](https://github.com/jonathansantilli/codegate/issues/124)) ([9e91067](https://github.com/jonathansantilli/codegate/commit/9e91067b40991a0c259c7bb9fb9ba148f9acac8c))
+
 ## [1.2.2](https://github.com/jonathansantilli/codegate/compare/v1.2.1...v1.2.2) (2026-08-25)
 
 ## [1.2.1](https://github.com/jonathansantilli/codegate/compare/v1.2.0...v1.2.1) (2026-08-25)

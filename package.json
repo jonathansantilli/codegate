@@ -1,6 +1,6 @@
 {
   "name": "codegate-ai",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "Pre-flight security scanner for AI coding tool configurations.",
   "license": "MIT",
   "type": "module",
