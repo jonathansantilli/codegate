@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import dotenv from "dotenv";
-import yaml from "js-yaml";
+import * as yaml from "js-yaml";
 import { parse as parseJsonc, printParseErrorCode, type ParseError } from "jsonc-parser";
 import { parse as parseToml } from "smol-toml";
 import type { DiscoveryFormat } from "../types/discovery.js";
@@ -51,6 +51,12 @@ export function parseConfigContent(content: string, format: DiscoveryFormat): Pa
     }
 
     if (format === "yaml") {
+      // js-yaml 5 throws on an empty document where 4 returned undefined.
+      // An empty config file is an ordinary thing to find on a machine and
+      // says nothing is configured — not a parse failure to report.
+      if (content.trim().length === 0) {
+        return { ok: true, data: undefined };
+      }
       return { ok: true, data: yaml.load(content) as unknown };
     }
 

@@ -90,3 +90,52 @@ describe("task 09 config parser", () => {
     }
   });
 });
+
+// js-yaml 5 changed three things that reach this parser: it dropped the
+// default export, it stopped resolving `<<` merge keys, and it throws on an
+// empty document where 4 returned undefined. These pin the two that are
+// observable here, so a future bump cannot quietly change them back.
+describe("YAML parsing behaviour this scanner depends on", () => {
+  it("treats an empty file as nothing configured, not as a parse failure", () => {
+    const dir = createTempDir();
+    const path = join(dir, "empty.yaml");
+    writeFileSync(path, "");
+
+    const result = parseConfigFile(path, "yaml");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toBeUndefined();
+  });
+
+  it("treats a whitespace-only file the same way", () => {
+    const dir = createTempDir();
+    const path = join(dir, "blank.yaml");
+    writeFileSync(path, "\n  \n\n");
+
+    const result = parseConfigFile(path, "yaml");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data).toBeUndefined();
+  });
+
+  // Merge keys are a YAML 1.1 feature that js-yaml 5 no longer resolves, and
+  // GitHub Actions rejects anchors in workflows anyway. Asserted so the
+  // behaviour is recorded rather than discovered: a detector reading these
+  // sees the literal "<<" key, not the merged result.
+  it("surfaces a merge key literally rather than resolving it", () => {
+    const dir = createTempDir();
+    const path = join(dir, "merge.yaml");
+    writeFileSync(path, "base: &b\n  permissions: write-all\njob:\n  <<: *b\n  name: build\n");
+
+    const result = parseConfigFile(path, "yaml");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const data = result.data as { job: Record<string, unknown> };
+    expect(data.job.name).toBe("build");
+    expect(data.job.permissions).toBeUndefined();
+    expect(data.job["<<"]).toEqual({ permissions: "write-all" });
+  });
+});
