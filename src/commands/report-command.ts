@@ -1,5 +1,7 @@
 import { hostname, platform, release, userInfo } from "node:os";
+import { collectArtifactContent, type CollectContentDeps } from "../fleet/collection-policy.js";
 import { resolveFleetConfig, type FleetConfigDeps } from "../fleet/fleet-config.js";
+import { fetchCollectionPolicy, type FetchPolicyDeps } from "../fleet/policy-client.js";
 import { resolveMachineId, type MachineIdentityDeps } from "../fleet/machine-identity.js";
 import { sendReport, type SendReportDeps } from "../fleet/report-client.js";
 import { buildReportPayload, type HashDeps, type HostFacts } from "../fleet/report-payload.js";
@@ -15,7 +17,13 @@ import type { InventorySummary } from "./inventory-command.js";
  */
 
 export interface ReportCommandDeps
-  extends MachineIdentityDeps, FleetConfigDeps, SendReportDeps, HashDeps {
+  extends
+    MachineIdentityDeps,
+    FleetConfigDeps,
+    SendReportDeps,
+    FetchPolicyDeps,
+    CollectContentDeps,
+    HashDeps {
   collectInventory: () => InventorySummary;
   /**
    * Runs a scan of this machine. Omitted when the caller wants an
@@ -37,6 +45,8 @@ export type ReportOutcome =
       itemsAccepted: number;
       itemsHashed: number;
       findingsSent: number | null;
+      /** How many artifacts this machine was willing to send the bytes of. */
+      contentsSent: number;
     }
   | { status: "not-configured"; reason: string }
   | { status: "failed"; reason: string; retryable: boolean };
@@ -82,6 +92,17 @@ export async function runReport(deps: ReportCommandDeps): Promise<ReportOutcome>
     (item) => (item as { sha256?: string }).sha256 !== undefined,
   ).length;
 
+  // Asked, not obeyed. The server names what it would accept; this machine
+  // decides what it is prepared to offer, and the answer is nothing unless the
+  // policy survives intersection with this agent's own ceiling. A server that
+  // is unreachable or unintelligible reads as "nothing", so a failure here can
+  // only ever make a check-in smaller.
+  const policy = await fetchCollectionPolicy(configured.config, deps);
+  const contents = collectArtifactContent(payload.inventory.items, policy, deps);
+  if (contents.length > 0) {
+    payload.contents = contents;
+  }
+
   const result = await sendReport(payload, configured.config, deps);
 
   return result.ok
@@ -91,6 +112,7 @@ export async function runReport(deps: ReportCommandDeps): Promise<ReportOutcome>
         itemsAccepted: result.itemsAccepted,
         itemsHashed,
         findingsSent: payload.findings?.length ?? null,
+        contentsSent: contents.length,
       }
     : { status: "failed", reason: result.reason, retryable: result.retryable };
 }

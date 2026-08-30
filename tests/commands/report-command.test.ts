@@ -60,6 +60,8 @@ describe("runReport", () => {
       itemsAccepted: 1,
       itemsHashed: 1,
       findingsSent: null,
+      // This server published no collection policy, so nothing was offered.
+      contentsSent: 0,
     });
   });
 
@@ -252,5 +254,130 @@ describe("runReport with findings", () => {
     expect(outcome.status).toBe("sent");
     if (outcome.status !== "sent") return;
     expect(outcome.findingsSent).toBe(0);
+  });
+});
+
+describe("runReport and the server's collection policy", () => {
+  const RULES = "# Rules\n\nBe careful.\n";
+
+  /**
+   * Answers the policy read and the check-in separately, and remembers the
+   * body that was posted. Both go through the same injected fetch, which is
+   * how the agent reaches a server in production too.
+   */
+  function policyAware(policy: unknown) {
+    const state: { body?: Record<string, unknown> } = {};
+    const doFetch = (async (url: string, init?: RequestInit) => {
+      if (String(url).endsWith("/api/agent/policy")) {
+        return new Response(JSON.stringify(policy), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      state.body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return new Response(JSON.stringify({ hostId: "h-1", reportId: "r-1", itemsAccepted: 1 }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+    return { doFetch, state };
+  }
+
+  function rulesSummary(riskSurface: string[]): InventorySummary {
+    return {
+      kb_version: "2026-08-20",
+      tools: [{ name: "claude-code", version_range: ">=1" }],
+      items: [
+        {
+          tool: "claude-code",
+          kind: "config",
+          scope: "project",
+          pattern: "CLAUDE.md",
+          path: "/repo/CLAUDE.md",
+          exists: true,
+          risk_surface: riskSurface,
+          resolved_against: "/repo",
+        },
+      ],
+    };
+  }
+
+  it("sends no contents when the server asks for none", async () => {
+    const { doFetch, state } = policyAware({ collect_content: false });
+    const outcome = await runReport(
+      deps({
+        fetch: doFetch,
+        collectInventory: () => rulesSummary(["prompt_injection"]),
+        readFile: () => RULES,
+        fileSize: () => RULES.length,
+      }),
+    );
+
+    expect(outcome).toMatchObject({ status: "sent", contentsSent: 0 });
+    expect(state.body?.contents).toBeUndefined();
+  });
+
+  it("sends the contents of a rules file when the server's policy asks for it", async () => {
+    const { doFetch, state } = policyAware({
+      collect_content: true,
+      allowed_risk_surfaces: ["prompt_injection"],
+      max_bytes_per_artifact: 4096,
+      max_artifacts_per_report: 10,
+    });
+
+    const outcome = await runReport(
+      deps({
+        fetch: doFetch,
+        collectInventory: () => rulesSummary(["prompt_injection"]),
+        readFile: () => RULES,
+        fileSize: () => RULES.length,
+      }),
+    );
+
+    expect(outcome).toMatchObject({ status: "sent", contentsSent: 1 });
+    const contents = state.body?.contents as { sha256: string; content: string }[];
+    expect(contents).toHaveLength(1);
+    expect(contents[0].content).toBe(RULES);
+  });
+
+  // The one that matters: a server that has been taken over cannot widen what
+  // this machine is willing to hand it.
+  it("refuses a credential-bearing artifact however loudly the server asks", async () => {
+    const { doFetch, state } = policyAware({
+      collect_content: true,
+      allowed_risk_surfaces: ["prompt_injection", "mcp_config", "env_override"],
+      max_bytes_per_artifact: 999_999_999,
+      max_artifacts_per_report: 999_999,
+    });
+
+    const outcome = await runReport(
+      deps({
+        fetch: doFetch,
+        collectInventory: () => rulesSummary(["mcp_config", "env_override"]),
+        readFile: () => '{"env":{"ANTHROPIC_API_KEY":"sk-secret"}}',
+        fileSize: () => 40,
+      }),
+    );
+
+    expect(outcome).toMatchObject({ status: "sent", contentsSent: 0 });
+    expect(state.body?.contents).toBeUndefined();
+  });
+
+  it("still reports when the policy read fails", async () => {
+    const doFetch = (async (url: string) => {
+      if (String(url).endsWith("/api/agent/policy")) {
+        throw new Error("ECONNRESET");
+      }
+      return new Response(JSON.stringify({ hostId: "h-1", reportId: "r-1", itemsAccepted: 1 }), {
+        status: 200,
+        headers: { "content-type": "application/json" },
+      });
+    }) as unknown as typeof fetch;
+
+    const outcome = await runReport(
+      deps({ fetch: doFetch, collectInventory: () => rulesSummary(["prompt_injection"]) }),
+    );
+
+    expect(outcome).toMatchObject({ status: "sent", contentsSent: 0 });
   });
 });

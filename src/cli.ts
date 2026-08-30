@@ -1204,6 +1204,14 @@ function addReportCommand(program: Command, version: string, deps: CliDeps): voi
           deps.stdout(
             `Reported ${outcome.itemsAccepted} artifact${outcome.itemsAccepted === 1 ? "" : "s"} (${outcome.itemsHashed} hashed, ${findings}).`,
           );
+          // Said out loud, every time. Sending file contents is the one thing
+          // this command does that a person would want to know about without
+          // having to go and read a server's settings to find out.
+          if (outcome.contentsSent > 0) {
+            deps.stdout(
+              `Sent the contents of ${outcome.contentsSent} artifact${outcome.contentsSent === 1 ? "" : "s"} — this server's collection policy asks for skills and rules files.`,
+            );
+          }
           deps.setExitCode(0);
           return;
         }

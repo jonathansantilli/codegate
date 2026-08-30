@@ -53,6 +53,11 @@ export interface ReportPayload {
    * asserts the machine is clean, and the server treats the two differently.
    */
   findings?: ReportFinding[];
+  /**
+   * Artifact bytes, present only when the server published a policy asking for
+   * them AND this agent was willing to send them. Omitted is the normal case.
+   */
+  contents?: { sha256: string; content: string }[];
 }
 
 export interface BuildReportInput {
