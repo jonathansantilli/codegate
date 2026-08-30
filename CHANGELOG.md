@@ -1,3 +1,9 @@
+# [1.3.0](https://github.com/jonathansantilli/codegate/compare/v1.2.4...v1.3.0) (2026-08-30)
+
+### Features
+
+- **fleet:** read the server's collection policy, and keep our own ceiling ([cd8394d](https://github.com/jonathansantilli/codegate/commit/cd8394d4495a9f8066b7811052cd00130540c466))
+
 ## [1.2.4](https://github.com/jonathansantilli/codegate/compare/v1.2.3...v1.2.4) (2026-08-26)
 
 ## [1.2.3](https://github.com/jonathansantilli/codegate/compare/v1.2.2...v1.2.3) (2026-08-26)
