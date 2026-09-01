@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/jonathansantilli/codegate/compare/v1.4.0...v1.4.1) (2026-09-01)
+
+### Bug Fixes
+
+- **fleet:** decide content upload by format, not by risk surface alone ([406ee26](https://github.com/jonathansantilli/codegate/commit/406ee262131c4abb5f0d4f5b1b6c8cff9bb6b77e))
+
 # [1.4.0](https://github.com/jonathansantilli/codegate/compare/v1.3.4...v1.4.0) (2026-09-01)
 
 ### Features
