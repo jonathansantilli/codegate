@@ -1,3 +1,9 @@
+# [1.4.0](https://github.com/jonathansantilli/codegate/compare/v1.3.4...v1.4.0) (2026-09-01)
+
+### Features
+
+- **fleet:** report how each artifact is written, not only what it declares ([37e3547](https://github.com/jonathansantilli/codegate/commit/37e35478e2c7fc756e4a4c57e8c026ddee982cc9))
+
 ## [1.3.4](https://github.com/jonathansantilli/codegate/compare/v1.3.3...v1.3.4) (2026-09-01)
 
 ### Bug Fixes
