@@ -1,3 +1,9 @@
+## [1.3.3](https://github.com/jonathansantilli/codegate/compare/v1.3.2...v1.3.3) (2026-09-01)
+
+### Bug Fixes
+
+- **fleet:** expand ~ so user-scope findings reach their artifact ([10d6844](https://github.com/jonathansantilli/codegate/commit/10d68446fc637442a734038816ee58b2c4c8929b))
+
 ## [1.3.2](https://github.com/jonathansantilli/codegate/compare/v1.3.1...v1.3.2) (2026-08-31)
 
 ## [1.3.1](https://github.com/jonathansantilli/codegate/compare/v1.3.0...v1.3.1) (2026-08-31)
