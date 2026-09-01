@@ -5,6 +5,7 @@ import type { InventoryItem, InventorySummary } from "../../src/commands/invento
 import {
   buildReportPayload,
   hashArtifact,
+  toReportFinding,
   withContentHashes,
 } from "../../src/fleet/report-payload";
 
@@ -221,5 +222,91 @@ describe("finding paths", () => {
 
     expect(payload.findings).toHaveLength(1);
     expect(payload.findings?.[0].sha256).toBeUndefined();
+  });
+});
+
+/**
+ * User scope is where skills and global configs live, which is most of what
+ * this product looks at — and every finding on one of them arrived at the
+ * server with no content hash until an end-to-end run showed the console
+ * listing a skill with a HIGH finding as "Clean".
+ */
+describe("finding paths reported with a literal tilde", () => {
+  const HOME = resolvePath("/home/u");
+  const SKILL = resolvePath(HOME, ".claude/skills/deploy-helper/SKILL.md");
+  const HASH = `sha256:${"a".repeat(64)}`;
+
+  function tildeFinding(filePath: string) {
+    return {
+      finding_id: "f-1",
+      rule_id: "rule-file-suspicious-instruction",
+      severity: "HIGH",
+      file_path: filePath,
+      location: { line: 8 },
+      description: "Rule file contains suspicious instruction pattern",
+      owasp: [],
+      suppressed: false,
+    } as unknown as import("../../src/types/finding").Finding;
+  }
+
+  const hashes = new Map([[SKILL.split(/[\\/]/).join("/"), HASH]]);
+
+  it("expands ~ so the finding matches the artifact it is about", () => {
+    const reported = toReportFinding(
+      tildeFinding("~/.claude/skills/deploy-helper/SKILL.md"),
+      hashes,
+      resolvePath("/repo"),
+      HOME,
+    );
+
+    expect(reported.sha256).toBe(HASH);
+    expect(reported.file_path).toBe(SKILL);
+  });
+
+  // The bug was not only the missing hash: ~ is not absolute, so the path was
+  // joined onto the scan root and the console displayed "/repo/~/.claude/...".
+  it("does not join a tilde path onto the scan root", () => {
+    const reported = toReportFinding(
+      tildeFinding("~/.claude/settings.json"),
+      new Map(),
+      resolvePath("/repo"),
+      HOME,
+    );
+
+    expect(reported.file_path).not.toContain("~");
+    expect(reported.file_path).toBe(resolvePath(HOME, ".claude/settings.json"));
+  });
+
+  it("expands a bare ~", () => {
+    expect(toReportFinding(tildeFinding("~"), new Map(), undefined, HOME).file_path).toBe(HOME);
+  });
+
+  // A file genuinely called ~notes.md is a file, not a home directory.
+  it("leaves a leading tilde that is part of a filename alone", () => {
+    const reported = toReportFinding(
+      tildeFinding("~notes.md"),
+      new Map(),
+      resolvePath("/repo"),
+      HOME,
+    );
+
+    expect(reported.file_path).toBe(resolvePath("/repo", "~notes.md"));
+  });
+
+  it("still resolves a scan-relative path against the scan root", () => {
+    const reported = toReportFinding(
+      tildeFinding(".claude/settings.json"),
+      new Map(),
+      resolvePath("/repo"),
+      HOME,
+    );
+
+    expect(reported.file_path).toBe(resolvePath("/repo", ".claude/settings.json"));
+  });
+
+  it("leaves an already-absolute path alone", () => {
+    const reported = toReportFinding(tildeFinding(SKILL), hashes, resolvePath("/repo"), HOME);
+    expect(reported.file_path).toBe(SKILL);
+    expect(reported.sha256).toBe(HASH);
   });
 });

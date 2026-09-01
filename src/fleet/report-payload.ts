@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
-import { isAbsolute, resolve as resolvePath, sep } from "node:path";
+import { homedir } from "node:os";
+import { isAbsolute, join as joinPath, resolve as resolvePath, sep } from "node:path";
 import { readFileSync, statSync } from "node:fs";
 import type { InventoryItem, InventorySummary } from "../commands/inventory-command.js";
 import type { Finding } from "../types/finding.js";
@@ -137,18 +138,48 @@ function pathKey(candidate: string): string {
   return resolvePath(candidate).split(sep).join("/");
 }
 
+/**
+ * Expands a leading `~` to the home directory.
+ *
+ * The scanner reports user-scope paths with a literal tilde, and `resolve`
+ * does not expand it — it treats `~` as an ordinary directory name, so
+ * `~/.claude/skills/x/SKILL.md` resolved to `<scan root>/~/.claude/...`. That
+ * matched no inventory item, so every user-scope finding arrived at the server
+ * with no content hash and could not be tied to the artifact it was about.
+ *
+ * The damage was visible: the console groups artifacts by content hash, so a
+ * skill carrying a HIGH finding was listed as "Clean". User scope is where
+ * skills and global configs live, which is most of what this product exists
+ * to look at.
+ */
+function expandHome(candidate: string, home: string): string {
+  if (candidate === "~") {
+    return home;
+  }
+  // Only a leading `~/` or `~\`. A file genuinely named `~foo` is left alone,
+  // and `~user` is somebody else's home, which is not ours to guess at.
+  if (candidate.startsWith("~/") || candidate.startsWith("~\\")) {
+    return joinPath(home, candidate.slice(2));
+  }
+  return candidate;
+}
+
 export function toReportFinding(
   finding: Finding,
   hashByPath: Map<string, string>,
   pathBase?: string,
+  home: string = homedir(),
 ): ReportFinding {
+  // Before anything else, because `~/x` is not an absolute path as far as the
+  // check below is concerned: left alone it would be joined onto the scan root
+  // and produce `<scan root>/~/x`, which is not a file anywhere.
+  const expanded = finding.file_path ? expandHome(finding.file_path, home) : finding.file_path;
+
   // The scanner reports paths relative to what it scanned; inventory paths are
   // absolute. Without resolving one against the other they never line up and
   // no finding ever gets a hash.
   const absolutePath =
-    finding.file_path && pathBase && !isAbsolute(finding.file_path)
-      ? resolvePath(pathBase, finding.file_path)
-      : finding.file_path;
+    expanded && pathBase && !isAbsolute(expanded) ? resolvePath(pathBase, expanded) : expanded;
   const sha256 = absolutePath ? hashByPath.get(pathKey(absolutePath)) : undefined;
 
   return {
