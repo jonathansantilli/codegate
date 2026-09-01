@@ -296,6 +296,7 @@ describe("runReport and the server's collection policy", () => {
           path: "/repo/CLAUDE.md",
           exists: true,
           risk_surface: riskSurface,
+          format: "markdown",
           resolved_against: "/repo",
         },
       ],

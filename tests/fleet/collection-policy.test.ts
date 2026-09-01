@@ -31,6 +31,7 @@ function item(overrides: Partial<InventoryItem> & { sha256?: string } = {}) {
     path: "/repo/CLAUDE.md",
     exists: true,
     risk_surface: ["prompt_injection"],
+    format: "markdown",
     resolved_against: "/repo",
     ...overrides,
   };
@@ -53,13 +54,16 @@ describe("resolveCollectionPolicy", () => {
     expect(resolveCollectionPolicy(undefined)).toEqual(COLLECT_NOTHING);
   });
 
-  it("keeps only the surfaces this agent will ever send", () => {
+  // mcp_config survives: a skill declaring it can influence MCP configuration,
+  // which is a risk worth reading about, not a credential in the file. What
+  // never survives is a surface that means the file holds a secret.
+  it("drops credential-bearing surfaces and keeps the rest", () => {
     const policy = resolveCollectionPolicy({
       ...OPEN_POLICY,
       allowed_risk_surfaces: ["prompt_injection", "mcp_config", "env_override"],
     });
 
-    expect(policy.allowedRiskSurfaces).toEqual(["prompt_injection"]);
+    expect(policy.allowedRiskSurfaces).toEqual(["prompt_injection", "mcp_config"]);
   });
 
   // The point of the whole file: a server asking for everything gets nothing
@@ -76,9 +80,12 @@ describe("resolveCollectionPolicy", () => {
     expect(policy.maxArtifactsPerReport).toBe(MAX_UPLOAD_ARTIFACTS);
   });
 
-  it("collects nothing when no requested surface survives", () => {
+  it("collects nothing when every requested surface is credential-bearing", () => {
     expect(
-      resolveCollectionPolicy({ ...OPEN_POLICY, allowed_risk_surfaces: ["mcp_config"] }),
+      resolveCollectionPolicy({
+        ...OPEN_POLICY,
+        allowed_risk_surfaces: ["env_override", "provider_credentials"],
+      }),
     ).toEqual(COLLECT_NOTHING);
   });
 
@@ -98,18 +105,23 @@ describe("mayUpload", () => {
   const policy = resolveCollectionPolicy(OPEN_POLICY);
 
   it("allows a rules file", () => {
-    expect(mayUpload({ risk_surface: ["prompt_injection", "unicode_backdoor"] }, policy)).toBe(
-      true,
-    );
+    expect(
+      mayUpload(
+        { risk_surface: ["prompt_injection", "unicode_backdoor"], format: "markdown" },
+        policy,
+      ),
+    ).toBe(true);
   });
 
   it("refuses anything carrying a credential-bearing surface", () => {
-    expect(mayUpload({ risk_surface: ["prompt_injection", "mcp_config"] }, policy)).toBe(false);
-    expect(mayUpload({ risk_surface: ["env_override"] }, policy)).toBe(false);
+    expect(
+      mayUpload({ risk_surface: ["prompt_injection", "mcp_config"], format: "markdown" }, policy),
+    ).toBe(false);
+    expect(mayUpload({ risk_surface: ["env_override"], format: "markdown" }, policy)).toBe(false);
   });
 
   it("refuses an artifact that declares nothing", () => {
-    expect(mayUpload({ risk_surface: [] }, policy)).toBe(false);
+    expect(mayUpload({ risk_surface: [], format: "markdown" }, policy)).toBe(false);
   });
 });
 
@@ -233,5 +245,46 @@ describe("fetchCollectionPolicy", () => {
         new Response("<html>captive portal</html>", { status: 200 })) as unknown as typeof fetch,
     });
     expect(policy).toEqual(COLLECT_NOTHING);
+  });
+});
+
+/**
+ * How a file is written decides whether it can hold a secret. Deciding on risk
+ * surfaces alone refused Claude Code skills — which declare mcp_config because
+ * a skill can influence MCP configuration, not because the markdown holds a
+ * key — while admitting .toml command files that can carry one in an env block.
+ */
+describe("mayUpload gates on format", () => {
+  const policy = resolveCollectionPolicy({
+    collect_content: true,
+    allowed_risk_surfaces: ["prompt_injection", "unicode_backdoor", "command_exec", "mcp_config"],
+    max_bytes_per_artifact: 4096,
+    max_artifacts_per_report: 50,
+  });
+
+  it("sends a Claude Code skill even though it declares mcp_config", () => {
+    expect(
+      mayUpload({ risk_surface: ["prompt_injection", "mcp_config"], format: "markdown" }, policy),
+    ).toBe(true);
+  });
+
+  it("refuses a toml command definition however harmless its surfaces look", () => {
+    expect(
+      mayUpload({ risk_surface: ["prompt_injection", "command_exec"], format: "toml" }, policy),
+    ).toBe(false);
+  });
+
+  it("refuses jsonc", () => {
+    expect(mayUpload({ risk_surface: ["prompt_injection"], format: "jsonc" }, policy)).toBe(false);
+  });
+
+  it("refuses an artifact whose format it cannot name", () => {
+    expect(mayUpload({ risk_surface: ["prompt_injection"] }, policy)).toBe(false);
+  });
+
+  it("still refuses prose that carries a credential-bearing surface", () => {
+    expect(
+      mayUpload({ risk_surface: ["prompt_injection", "env_override"], format: "markdown" }, policy),
+    ).toBe(false);
   });
 });

@@ -22,21 +22,32 @@ import type { InventoryItem } from "../commands/inventory-command.js";
  */
 
 /**
- * Surfaces whose files are prose: instructions, hidden characters in
- * instructions, and shell commands written into instructions. Skills and rules
- * files carry these.
+ * Surfaces that mean the file holds credentials, whatever its format says.
  *
- * Everything else the knowledge base declares sits on configuration —
- * mcp_config, env_override, ide_settings, provider_credentials, secret_leak,
- * channel_token — and configuration is where API keys live. Allowlisted rather
- * than denylisted so that a surface added to the knowledge base tomorrow is
- * refused until somebody widens this deliberately.
+ * Belt to the format gate's braces: a markdown file tagged env_override is
+ * describing where an API key goes, and there is no reason to ship it.
  */
-export const UPLOADABLE_RISK_SURFACES: readonly string[] = [
-  "prompt_injection",
-  "unicode_backdoor",
-  "command_exec",
+export const CREDENTIAL_SURFACES: readonly string[] = [
+  "env_override",
+  "provider_credentials",
+  "secret_leak",
+  "channel_token",
+  "ide_settings",
 ];
+
+/**
+ * Formats whose files are prose, and the only ones this agent will ever send.
+ *
+ * How a file is written is the question that matters, not what it is about. A
+ * skill that can influence MCP configuration is still markdown; a .toml
+ * command definition is still configuration, and configuration is where
+ * credentials live. Deciding on risk surfaces alone refused Claude Code skills
+ * — the artifact this product exists to look at hardest — while admitting
+ * .toml and .jsonc command files that can carry an API key in an env block.
+ *
+ * A file whose format this agent cannot name is not sent. Unknown is not safe.
+ */
+export const UPLOADABLE_FORMATS: readonly string[] = ["markdown", "text"];
 
 /** No server may raise these, whatever its policy says. */
 export const MAX_UPLOAD_BYTES = 262_144;
@@ -88,7 +99,11 @@ export function resolveCollectionPolicy(
   const requested = Array.isArray(published.allowed_risk_surfaces)
     ? published.allowed_risk_surfaces.filter((s): s is string => typeof s === "string")
     : [];
-  const allowedRiskSurfaces = requested.filter((s) => UPLOADABLE_RISK_SURFACES.includes(s));
+  // The ceiling is about credentials, not about a short list of blessed
+  // surfaces. Which risks an operator wants content for is their choice; what
+  // this agent will never send is a file that holds a secret, and that is
+  // decided by format and by the surfaces below.
+  const allowedRiskSurfaces = requested.filter((s) => !CREDENTIAL_SURFACES.includes(s));
 
   const maxBytesPerArtifact = boundedNumber(published.max_bytes_per_artifact, MAX_UPLOAD_BYTES);
   const maxArtifactsPerReport = boundedNumber(
@@ -114,19 +129,34 @@ export function resolveCollectionPolicy(
   };
 }
 
-/** True when every surface the artifact declares is one we will send. */
+/**
+ * True when the artifact is prose, and carries no surface we refuse to send.
+ *
+ * Two gates, and both must pass. Format decides whether the file can hold a
+ * secret at all; the surface list then honours what the server asked for and
+ * keeps credential-bearing prose — a rules file tagged env_override, say — out
+ * regardless.
+ */
 export function mayUpload(
-  item: Pick<InventoryItem, "risk_surface">,
+  item: Pick<InventoryItem, "risk_surface" | "format">,
   policy: EffectiveCollectionPolicy,
 ): boolean {
+  if (!(item.format && UPLOADABLE_FORMATS.includes(item.format))) {
+    return false;
+  }
+
   const surfaces = item.risk_surface ?? [];
   // Nothing declared is not the same as nothing to worry about.
   if (surfaces.length === 0) {
     return false;
   }
+
+  // The policy narrows what the server wants; CREDENTIAL_SURFACES is what this
+  // agent refuses whatever it is asked. A surface the policy does not mention
+  // simply is not requested.
   return surfaces.every(
     (surface) =>
-      UPLOADABLE_RISK_SURFACES.includes(surface) && policy.allowedRiskSurfaces.includes(surface),
+      !CREDENTIAL_SURFACES.includes(surface) && policy.allowedRiskSurfaces.includes(surface),
   );
 }
 
