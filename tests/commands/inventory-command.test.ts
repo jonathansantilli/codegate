@@ -167,3 +167,61 @@ describe("inventory command — runInventory", () => {
     expect(tools[0]).toBe(sorted[0]);
   });
 });
+
+/**
+ * The server decides whether an artifact's contents may be uploaded, and the
+ * only honest basis for that is how the file is written: markdown and text are
+ * prose, while jsonc, toml and dotenv hold configuration and therefore hold
+ * credentials. That signal has to reach the wire for the server to use it.
+ */
+describe("inventory items carry a format", () => {
+  let home: string;
+  let workspace: string;
+
+  beforeEach(() => {
+    home = mkdtempSync(join(tmpdir(), "codegate-fmt-home-"));
+    workspace = mkdtempSync(join(tmpdir(), "codegate-fmt-ws-"));
+  });
+
+  afterEach(() => {
+    for (const dir of [home, workspace]) {
+      try {
+        rmSync(dir, { recursive: true, force: true });
+      } catch {
+        /* ignore */
+      }
+    }
+  });
+
+  const inventory = () =>
+    runInventory({
+      scope: "all",
+      kind: "all",
+      onlyExisting: true,
+      workspaces: [workspace],
+      homeDir: home,
+    });
+
+  it("takes the declared format for a config entry", () => {
+    mkdirSync(join(workspace, ".claude"), { recursive: true });
+    writeFileSync(join(workspace, ".claude", "settings.json"), "{}\n");
+
+    const item = inventory().items.find((i) => i.path.endsWith("settings.json"));
+    expect(item?.format).toBe("jsonc");
+  });
+
+  it("derives a format for a skill, which the knowledge base does not declare", () => {
+    mkdirSync(join(home, ".claude", "skills", "x"), { recursive: true });
+    writeFileSync(join(home, ".claude", "skills", "x", "SKILL.md"), "x\n");
+
+    const item = inventory().items.find((i) => i.kind === "skill" && i.path.endsWith("SKILL.md"));
+    expect(item?.format).toBe("markdown");
+  });
+
+  it("marks prose as prose so a rules file can be told from a config", () => {
+    writeFileSync(join(workspace, "CLAUDE.md"), "# r\n");
+
+    const item = inventory().items.find((i) => i.path.endsWith("CLAUDE.md"));
+    expect(item?.format).toBe("markdown");
+  });
+});

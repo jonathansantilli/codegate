@@ -22,6 +22,14 @@ export interface InventoryItem {
   /** True if the filesystem shows the path exists. */
   exists: boolean;
   risk_surface: string[];
+  /**
+   * How the file is written: markdown and text are prose, the rest hold
+   * structured configuration. Declared by the knowledge base for config
+   * entries; derived from the resolved path for skills, which the knowledge
+   * base does not tag. Absent when neither is available, which a consumer
+   * should read as "unknown" rather than as "safe".
+   */
+  format?: string;
   /** Only populated for config entries that declare them. */
   fields_of_interest?: Record<string, string>;
   /** Resolution root used (e.g., the home dir or a workspace root). */
@@ -108,6 +116,7 @@ function resolveConfigEntry(
         pattern: cp.path,
         root,
         riskSurface: cp.risk_surface,
+        format: cp.format,
         fieldsOfInterest: cp.fields_of_interest,
       }),
     );
@@ -161,6 +170,7 @@ interface ResolvePatternInput {
   pattern: string;
   root: string;
   riskSurface: string[];
+  format?: string;
   fieldsOfInterest?: Record<string, string>;
 }
 
@@ -177,6 +187,46 @@ function resolvePattern(input: ResolvePatternInput): InventoryItem[] {
   return matches.map((absolute) => makeItem(input, absolute, true));
 }
 
+/**
+ * Format for an entry the knowledge base does not declare one for.
+ *
+ * Only skill entries lack it, and their resolved paths are concrete by the
+ * time this runs, so the extension is a reliable answer. Anything unrecognised
+ * stays undefined rather than being guessed at: a consumer deciding whether a
+ * file is prose should be told "unknown", not told "text" on no evidence.
+ */
+function formatFromPath(absolute: string): string | undefined {
+  const match = absolute.toLowerCase().match(/\.[a-z0-9]+$/u);
+  switch (match?.[0]) {
+    case ".md":
+    case ".markdown":
+    case ".mdc":
+    case ".clinerules":
+    case ".cursorrules":
+    case ".roorules":
+    case ".windsurfrules":
+      return "markdown";
+    case ".txt":
+      return "text";
+    case ".json":
+      return "json";
+    case ".jsonc":
+    case ".json5":
+      return "jsonc";
+    case ".toml":
+      return "toml";
+    case ".yaml":
+    case ".yml":
+      return "yaml";
+    case ".env":
+      return "dotenv";
+    case ".xml":
+      return "xml";
+    default:
+      return;
+  }
+}
+
 function makeItem(input: ResolvePatternInput, absolute: string, exists: boolean): InventoryItem {
   return {
     tool: input.tool,
@@ -187,6 +237,7 @@ function makeItem(input: ResolvePatternInput, absolute: string, exists: boolean)
     path: absolute,
     exists,
     risk_surface: input.riskSurface,
+    format: input.format ?? formatFromPath(absolute),
     fields_of_interest: input.fieldsOfInterest,
     resolved_against: input.root,
   };
