@@ -40,6 +40,18 @@ interface FindingNarrative {
 interface NormalizedLines {
   original: string[];
   normalized: string[];
+  /**
+   * Every normalized line joined by a single space.
+   *
+   * Matching line by line means a phrase that happens to wrap is two strings
+   * and matches nothing. Prose wraps; an instruction reading "ignore previous"
+   * on one line and "instructions" on the next is the same instruction, and
+   * was invisible. This is the same text as one string so a phrase spanning a
+   * line ending is still a phrase.
+   */
+  joined: string;
+  /** 1-based original line containing a given index into `joined`. */
+  lineOfIndex: (index: number) => number;
 }
 
 function makeFinding(
@@ -121,17 +133,24 @@ function buildMultilineEvidence(lines: string[], lineNumbers: number[]): Finding
 function detectSuspiciousInstruction(
   lines: NormalizedLines,
 ): { phrase: string; evidence: FindingEvidence } | null {
+  // Override phrases are matched against the whole document rather than each
+  // line, because that is the only way a phrase broken across a line ending is
+  // still the phrase. Attribution is to the line the match starts on.
+  const override = findOverridePhrase(lines.joined);
+  if (override) {
+    const line = lines.lineOfIndex(override.index);
+    return {
+      phrase: override.phrase,
+      evidence: buildLineEvidence(lines.original[line - 1] ?? "", line, 1),
+    };
+  }
+
+  // The pair below stays line-bound deliberately. A rules file that mentions
+  // .env in one paragraph and curl in another is not describing exfiltration;
+  // requiring both on one line is what keeps that from being a finding.
   for (let index = 0; index < lines.normalized.length; index += 1) {
     const normalized = lines.normalized[index] ?? "";
     const original = lines.original[index] ?? "";
-
-    const overrideMatch = findOverridePhrase(normalized);
-    if (overrideMatch) {
-      return {
-        phrase: overrideMatch.phrase,
-        evidence: buildLineEvidence(original, index + 1, overrideMatch.index + 1),
-      };
-    }
 
     const sensitiveReadMatch = normalized.match(SENSITIVE_READ_PATTERN);
     const outboundMatch = normalized.match(OUTBOUND_TRANSFER_PATTERN);
@@ -387,9 +406,34 @@ export function detectRuleFileIssues(input: RuleFileInput): Finding[] {
   findings.push(...hiddenUnicodeFindings(input));
 
   const originalLines = input.textContent.split(/\r?\n/u);
+  const normalizedLines = originalLines.map((line) => normalizeForMatching(line));
+
+  // Where each line begins inside `joined`, so a match found in the joined
+  // text can still be quoted against the line it started on.
+  const lineStarts: number[] = [];
+  let cursor = 0;
+  for (const line of normalizedLines) {
+    lineStarts.push(cursor);
+    cursor += line.length + 1;
+  }
+
   const lines: NormalizedLines = {
     original: originalLines,
-    normalized: originalLines.map((line) => normalizeForMatching(line)),
+    normalized: normalizedLines,
+    joined: normalizedLines.join(" "),
+    lineOfIndex: (index) => {
+      let low = 0;
+      let high = lineStarts.length - 1;
+      while (low < high) {
+        const mid = Math.ceil((low + high) / 2);
+        if ((lineStarts[mid] ?? 0) <= index) {
+          low = mid;
+        } else {
+          high = mid - 1;
+        }
+      }
+      return low + 1;
+    },
   };
 
   const hiddenCommentPayload = detectHiddenCommentPayload(input, lines.original);
