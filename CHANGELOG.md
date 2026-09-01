@@ -1,3 +1,9 @@
+## [1.3.4](https://github.com/jonathansantilli/codegate/compare/v1.3.3...v1.3.4) (2026-09-01)
+
+### Bug Fixes
+
+- **layer2:** stop a tab defeating instruction-override detection ([81abf36](https://github.com/jonathansantilli/codegate/commit/81abf367fb24b42a774489cb35a75604d935065c))
+
 ## [1.3.3](https://github.com/jonathansantilli/codegate/compare/v1.3.2...v1.3.3) (2026-09-01)
 
 ### Bug Fixes
