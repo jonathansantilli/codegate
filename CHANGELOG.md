@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/jonathansantilli/codegate/compare/v1.4.1...v1.4.2) (2026-09-02)
+
+### Bug Fixes
+
+- **fleet:** mask credential values in finding evidence before it leaves the machine ([bbc4fb0](https://github.com/jonathansantilli/codegate/commit/bbc4fb0ff4333d7c245d2b4fcbc8f2ca3353b2bb))
+
 ## [1.4.1](https://github.com/jonathansantilli/codegate/compare/v1.4.0...v1.4.1) (2026-09-01)
 
 ### Bug Fixes
