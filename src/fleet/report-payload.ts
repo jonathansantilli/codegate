@@ -4,6 +4,7 @@ import { isAbsolute, join as joinPath, resolve as resolvePath, sep } from "node:
 import { readFileSync, statSync } from "node:fs";
 import type { InventoryItem, InventorySummary } from "../commands/inventory-command.js";
 import type { Finding } from "../types/finding.js";
+import { redactSecrets } from "./redact-secrets.js";
 
 /**
  * Builds the body of an agent check-in.
@@ -193,11 +194,14 @@ export function toReportFinding(
     ...(sha256 ? { sha256 } : {}),
     ...(finding.location?.line !== undefined ? { line: finding.location.line } : {}),
     ...(finding.location?.column !== undefined ? { column: finding.location.column } : {}),
-    description: finding.description,
+    description: redactSecrets(finding.description),
     // The scanner's evidence is authoritative: it already carries the
     // offending line with its invisible characters intact, which is precisely
     // what the console needs to show.
-    ...(finding.evidence ? { evidence: finding.evidence } : {}),
+    // What it must not carry is the value of a credential: the console needs
+    // to know a key was set, never what it was. Masked here, at the edge of
+    // the machine.
+    ...(finding.evidence ? { evidence: redactSecrets(finding.evidence) } : {}),
     owasp: finding.owasp ?? [],
     cwe: finding.cwe,
     confidence: finding.confidence,

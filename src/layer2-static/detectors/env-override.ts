@@ -147,7 +147,7 @@ export function detectEnvOverrides(input: EnvOverrideInput): Finding[] {
           field,
           "env-api-key-override",
           "MEDIUM",
-          `${key} overrides AI tool credentials at project scope`,
+          `${key} overrides AI tool credentials`,
           evidence,
         ),
       );
