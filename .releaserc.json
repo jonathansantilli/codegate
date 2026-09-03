@@ -23,19 +23,15 @@
             "release": "patch"
           },
           {
-            "type": "docs",
-            "release": "patch"
-          },
-          {
-            "type": "refactor",
-            "release": "patch"
-          },
-          {
             "type": "perf",
             "release": "patch"
           },
           {
-            "type": "test",
+            "type": "revert",
+            "release": "patch"
+          },
+          {
+            "type": "refactor",
             "release": "patch"
           },
           {
@@ -44,19 +40,23 @@
           },
           {
             "type": "ci",
-            "release": "patch"
-          },
-          {
-            "type": "style",
-            "release": "patch"
+            "release": false
           },
           {
             "type": "chore",
-            "release": "patch"
+            "release": false
           },
           {
-            "type": "revert",
-            "release": "patch"
+            "type": "docs",
+            "release": false
+          },
+          {
+            "type": "style",
+            "release": false
+          },
+          {
+            "type": "test",
+            "release": false
           }
         ]
       }
